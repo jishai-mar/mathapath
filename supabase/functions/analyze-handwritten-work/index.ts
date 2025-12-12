@@ -74,29 +74,31 @@ serve(async (req) => {
     
     if (attemptCount === 1) {
       adaptiveInstructions = `
-This is the student's FIRST attempt. Provide:
-- Direct explanation of the exact error
-- Clear, concise feedback
-- Identify the specific misconception`;
+This is the student's FIRST attempt.
+- Identify where their reasoning went wrong
+- Ask a guiding question to help them see the error
+- Suggest a small step they should try
+- Do NOT give the answer`;
     } else if (attemptCount === 2) {
       adaptiveInstructions = `
-This is the student's SECOND attempt at a similar problem. The previous explanation did NOT work.
-YOU MUST USE A DIFFERENT TEACHING APPROACH:
-- Simplify the explanation further
-- Include a MINI-EXERCISE: a very small, simpler practice step
-- Use a different analogy or method than before
-- Previous feedback that didn't work: ${JSON.stringify(previousFeedback.slice(-1))}`;
+This is the student's SECOND attempt. The previous guidance didn't help.
+YOU MUST CHANGE YOUR TEACHING APPROACH:
+- Break the problem into smaller sub-steps
+- Include a MINI-EXERCISE: a simpler stepping-stone problem
+- Use a different analogy or explanation method
+- Ask a diagnostic question to find the root confusion
+- Previous guidance that didn't work: ${JSON.stringify(previousFeedback.slice(-1))}`;
     } else {
       adaptiveInstructions = `
-This is attempt #${attemptCount}. Previous explanations have NOT helped.
-YOU MUST COMPLETELY CHANGE YOUR APPROACH:
-- Use an entirely different method (e.g., visual approach, or step-by-step algebraic manipulation, or balancing method)
-- Include a diagnostic question to identify the root misconception
-- Provide a simpler MINI-EXERCISE as a stepping stone
-- Offer an ALTERNATIVE_APPROACH field with a completely different way to think about the problem
-- Previous failed feedback: ${JSON.stringify(previousFeedback.slice(-2))}
+This is attempt #${attemptCount}. Previous guidance has NOT helped.
+NOW you may be more direct, but still TEACH rather than just solve:
+- Explain the concept step-by-step with a clear example
+- Show WHY each step is taken
+- Include a MINI-EXERCISE as a stepping stone
+- Offer an ALTERNATIVE_APPROACH with a completely different method
+- Previous failed guidance: ${JSON.stringify(previousFeedback.slice(-2))}
 
-CRITICAL: Do NOT repeat any explanation that was given before. The student needs a fresh perspective.`;
+Even now, walk through the reasoning - don't just give the answer without explanation.`;
     }
 
     const systemPrompt = `You are an expert math tutor analyzing a student's handwritten work for the Reichman Mechina math curriculum.
