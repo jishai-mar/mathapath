@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, BookOpen, Sparkles, Trophy, Zap } from 'lucide-react';
+import { ArrowLeft, BookOpen, Sparkles, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 import ExerciseView from '@/components/ExerciseView';
+import LearnView from '@/components/LearnView';
 
 interface Topic {
   id: string;
@@ -20,6 +21,14 @@ interface Subtopic {
   id: string;
   name: string;
   order_index: number;
+  theory_explanation: string | null;
+  worked_examples: WorkedExample[] | null;
+}
+
+interface WorkedExample {
+  problem: string;
+  steps: string[];
+  answer: string;
 }
 
 interface Exercise {
@@ -39,7 +48,7 @@ interface AIFeedback {
   suggested_difficulty: 'easy' | 'medium' | 'hard';
 }
 
-type PracticeMode = 'browsing' | 'practicing';
+type PracticeMode = 'browsing' | 'learning' | 'practicing';
 
 const XP_REWARDS = { easy: 5, medium: 10, hard: 20 };
 
@@ -63,6 +72,7 @@ export default function Practice() {
   const [exercisesAttempted, setExercisesAttempted] = useState(0);
   const [exercisesCorrect, setExercisesCorrect] = useState(0);
   const [attemptedExerciseIds, setAttemptedExerciseIds] = useState<Set<string>>(new Set());
+  const [hintsUsedThisExercise, setHintsUsedThisExercise] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -94,7 +104,14 @@ export default function Practice() {
         .order('order_index');
       
       if (subtopicsError) throw subtopicsError;
-      setSubtopics(subtopicsData || []);
+      
+      // Parse worked_examples from JSON
+      const parsedSubtopics = (subtopicsData || []).map(s => ({
+        ...s,
+        worked_examples: (Array.isArray(s.worked_examples) ? s.worked_examples : []) as unknown as WorkedExample[],
+      }));
+      
+      setSubtopics(parsedSubtopics);
     } catch (error) {
       console.error('Error loading topic:', error);
       toast.error('Failed to load topic. Please try again.');
@@ -173,8 +190,13 @@ export default function Practice() {
     }
   }, [attemptedExerciseIds]);
 
-  const startPractice = async (subtopic: Subtopic) => {
+  const handleSubtopicClick = (subtopic: Subtopic) => {
     setSelectedSubtopic(subtopic);
+    setMode('learning');
+  };
+
+  const startPractice = async () => {
+    if (!selectedSubtopic) return;
     setMode('practicing');
     setExercisesAttempted(0);
     setExercisesCorrect(0);
@@ -182,11 +204,16 @@ export default function Practice() {
     setConsecutiveWrong(0);
     setCurrentDifficulty('easy');
     setAttemptedExerciseIds(new Set());
-    await loadExercise(subtopic.id, 'easy');
+    setHintsUsedThisExercise(0);
+    await loadExercise(selectedSubtopic.id, 'easy');
+  };
+
+  const handleHintReveal = () => {
+    setHintsUsedThisExercise(prev => prev + 1);
   };
 
   const handleSubmitAnswer = async (answer: string): Promise<{ isCorrect: boolean; explanation: string | null }> => {
-    if (!currentExercise || !user) {
+    if (!currentExercise || !user || !selectedSubtopic) {
       return { isCorrect: false, explanation: null };
     }
     
@@ -197,12 +224,13 @@ export default function Practice() {
       const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
       const isCorrect = normalize(answer) === normalize(currentExercise.correct_answer);
       
-      // Save attempt
+      // Save attempt with hints_used
       await supabase.from('exercise_attempts').insert({
         user_id: user.id,
         exercise_id: currentExercise.id,
         user_answer: answer,
         is_correct: isCorrect,
+        hints_used: hintsUsedThisExercise,
       });
       
       // Update local tracking
@@ -238,8 +266,9 @@ export default function Practice() {
         setConsecutiveCorrect(0);
       }
       
-      // Update topic progress
+      // Update topic and subtopic progress
       await updateTopicProgress(isCorrect);
+      await updateSubtopicProgress(selectedSubtopic.id, isCorrect, hintsUsedThisExercise);
       
       return { isCorrect, explanation: currentExercise.explanation };
     } catch (error) {
@@ -251,7 +280,7 @@ export default function Practice() {
   };
 
   const handleSubmitImage = async (file: File): Promise<AIFeedback> => {
-    if (!currentExercise || !user) {
+    if (!currentExercise || !user || !selectedSubtopic) {
       return {
         what_went_well: '',
         where_it_breaks: 'No exercise loaded',
@@ -290,13 +319,14 @@ export default function Practice() {
       
       const feedback = data as AIFeedback;
       
-      // Save attempt with AI feedback
+      // Save attempt with AI feedback and hints_used
       await supabase.from('exercise_attempts').insert({
         user_id: user.id,
         exercise_id: currentExercise.id,
         user_answer: '[handwritten work]',
         is_correct: feedback.is_correct,
         ai_feedback: JSON.stringify(feedback),
+        hints_used: hintsUsedThisExercise,
       });
       
       // Update tracking
@@ -317,6 +347,7 @@ export default function Practice() {
       }
       
       await updateTopicProgress(feedback.is_correct);
+      await updateSubtopicProgress(selectedSubtopic.id, feedback.is_correct, hintsUsedThisExercise);
       
       return feedback;
     } catch (error) {
@@ -336,6 +367,9 @@ export default function Practice() {
 
   const handleNextExercise = async (suggestedDifficulty?: 'easy' | 'medium' | 'hard') => {
     if (!selectedSubtopic) return;
+    
+    // Reset hints for next exercise
+    setHintsUsedThisExercise(0);
     
     // Determine next difficulty
     let nextDifficulty = currentDifficulty;
@@ -423,10 +457,49 @@ export default function Practice() {
     }
   };
 
+  const updateSubtopicProgress = async (subtopicId: string, isCorrect: boolean, hintsUsed: number) => {
+    if (!user) return;
+    
+    const { data: existing } = await supabase
+      .from('user_subtopic_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('subtopic_id', subtopicId)
+      .single();
+    
+    if (existing) {
+      const newCompleted = existing.exercises_completed + 1;
+      const newCorrect = existing.exercises_correct + (isCorrect ? 1 : 0);
+      const newHints = existing.hints_used + hintsUsed;
+      const mastery = Math.round((newCorrect / newCompleted) * 100);
+      
+      await supabase.from('user_subtopic_progress').update({
+        exercises_completed: newCompleted,
+        exercises_correct: newCorrect,
+        hints_used: newHints,
+        mastery_percentage: mastery,
+      }).eq('id', existing.id);
+    } else {
+      await supabase.from('user_subtopic_progress').insert({
+        user_id: user.id,
+        subtopic_id: subtopicId,
+        exercises_completed: 1,
+        exercises_correct: isCorrect ? 1 : 0,
+        hints_used: hintsUsed,
+        mastery_percentage: isCorrect ? 100 : 0,
+      });
+    }
+  };
+
   const exitPractice = () => {
-    setMode('browsing');
-    setSelectedSubtopic(null);
-    setCurrentExercise(null);
+    if (mode === 'practicing') {
+      setMode('learning');
+      setCurrentExercise(null);
+      setHintsUsedThisExercise(0);
+    } else {
+      setMode('browsing');
+      setSelectedSubtopic(null);
+    }
   };
 
   if (authLoading || isLoading) {
@@ -453,11 +526,11 @@ export default function Practice() {
           <Button 
             variant="ghost" 
             size="sm" 
-            onClick={mode === 'practicing' ? exitPractice : () => navigate('/')}
+            onClick={mode === 'browsing' ? () => navigate('/') : exitPractice}
             className="text-muted-foreground hover:text-foreground -ml-2"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            {mode === 'practicing' ? 'Exit Practice' : 'Back to Topics'}
+            {mode === 'browsing' ? 'Back to Topics' : mode === 'learning' ? 'Back to Subtopics' : 'Exit Practice'}
           </Button>
         </div>
       </header>
@@ -499,13 +572,13 @@ export default function Practice() {
                       key={subtopic.id}
                       className="border-border/50 hover:border-primary/30 transition-colors cursor-pointer animate-fade-in"
                       style={{ animationDelay: `${index * 50}ms` }}
-                      onClick={() => startPractice(subtopic)}
+                      onClick={() => handleSubtopicClick(subtopic)}
                     >
                       <CardHeader className="py-4">
                         <CardTitle className="text-base font-medium flex items-center justify-between">
                           <span>{subtopic.name}</span>
                           <span className="text-xs text-primary bg-primary/10 px-3 py-1 rounded-full">
-                            Start Practice →
+                            Learn & Practice →
                           </span>
                         </CardTitle>
                       </CardHeader>
@@ -514,6 +587,21 @@ export default function Practice() {
                 </div>
               )}
             </div>
+          </>
+        ) : mode === 'learning' ? (
+          <>
+            {/* Learning Mode */}
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">{topic?.name}</p>
+              <h2 className="text-xl font-semibold">{selectedSubtopic?.name}</h2>
+            </div>
+            
+            <LearnView
+              subtopicName={selectedSubtopic?.name || ''}
+              theoryExplanation={selectedSubtopic?.theory_explanation || null}
+              workedExamples={selectedSubtopic?.worked_examples || []}
+              onStartPractice={startPractice}
+            />
           </>
         ) : (
           <>
@@ -555,6 +643,7 @@ export default function Practice() {
                 onSubmitAnswer={handleSubmitAnswer}
                 onSubmitImage={handleSubmitImage}
                 onNextExercise={handleNextExercise}
+                onHintReveal={handleHintReveal}
                 isSubmitting={isSubmitting}
               />
             ) : (

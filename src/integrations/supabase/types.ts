@@ -19,6 +19,7 @@ export type Database = {
           ai_feedback: string | null
           created_at: string
           exercise_id: string
+          hints_used: number | null
           id: string
           is_correct: boolean
           time_spent_seconds: number | null
@@ -29,6 +30,7 @@ export type Database = {
           ai_feedback?: string | null
           created_at?: string
           exercise_id: string
+          hints_used?: number | null
           id?: string
           is_correct: boolean
           time_spent_seconds?: number | null
@@ -39,6 +41,7 @@ export type Database = {
           ai_feedback?: string | null
           created_at?: string
           exercise_id?: string
+          hints_used?: number | null
           id?: string
           is_correct?: boolean
           time_spent_seconds?: number | null
@@ -135,21 +138,27 @@ export type Database = {
           id: string
           name: string
           order_index: number
+          theory_explanation: string | null
           topic_id: string
+          worked_examples: Json | null
         }
         Insert: {
           created_at?: string
           id?: string
           name: string
           order_index?: number
+          theory_explanation?: string | null
           topic_id: string
+          worked_examples?: Json | null
         }
         Update: {
           created_at?: string
           id?: string
           name?: string
           order_index?: number
+          theory_explanation?: string | null
           topic_id?: string
+          worked_examples?: Json | null
         }
         Relationships: [
           {
@@ -187,6 +196,47 @@ export type Database = {
           order_index?: number
         }
         Relationships: []
+      }
+      user_subtopic_progress: {
+        Row: {
+          exercises_completed: number
+          exercises_correct: number
+          hints_used: number
+          id: string
+          mastery_percentage: number
+          subtopic_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          exercises_completed?: number
+          exercises_correct?: number
+          hints_used?: number
+          id?: string
+          mastery_percentage?: number
+          subtopic_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          exercises_completed?: number
+          exercises_correct?: number
+          hints_used?: number
+          id?: string
+          mastery_percentage?: number
+          subtopic_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subtopic_progress_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_topic_progress: {
         Row: {

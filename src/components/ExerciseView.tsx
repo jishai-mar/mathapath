@@ -39,6 +39,7 @@ interface ExerciseViewProps {
   onSubmitAnswer: (answer: string) => Promise<{ isCorrect: boolean; explanation: string | null }>;
   onSubmitImage: (file: File) => Promise<AIFeedback>;
   onNextExercise: (suggestedDifficulty?: 'easy' | 'medium' | 'hard') => void;
+  onHintReveal?: () => void;
   isSubmitting: boolean;
 }
 
@@ -53,6 +54,7 @@ export default function ExerciseView({
   onSubmitAnswer,
   onSubmitImage,
   onNextExercise,
+  onHintReveal,
   isSubmitting,
 }: ExerciseViewProps) {
   const [answer, setAnswer] = useState('');
@@ -105,6 +107,8 @@ export default function ExerciseView({
   const revealNextHint = () => {
     if (exercise.hints && revealedHints < exercise.hints.length) {
       setRevealedHints(prev => prev + 1);
+      // Notify parent about hint reveal for tracking
+      onHintReveal?.();
     }
   };
 

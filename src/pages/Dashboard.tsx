@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { TopicCard } from '@/components/TopicCard';
 import { StatsBar } from '@/components/StatsBar';
+import PerformanceCard from '@/components/PerformanceCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Calculator, LogOut, BookOpen } from 'lucide-react';
@@ -15,6 +16,12 @@ interface Topic {
   description: string | null;
   icon: string;
   order_index: number;
+}
+
+interface Subtopic {
+  id: string;
+  name: string;
+  topic_id: string;
 }
 
 interface Profile {
@@ -30,6 +37,15 @@ interface TopicProgress {
   exercises_completed: number;
 }
 
+interface SubtopicProgress {
+  subtopic_id: string;
+  subtopic_name: string;
+  mastery_percentage: number;
+  exercises_completed: number;
+  exercises_correct: number;
+  hints_used: number;
+}
+
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -37,6 +53,7 @@ export default function Dashboard() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [progress, setProgress] = useState<TopicProgress[]>([]);
+  const [subtopicProgress, setSubtopicProgress] = useState<SubtopicProgress[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -62,6 +79,14 @@ export default function Dashboard() {
       if (topicsError) throw topicsError;
       setTopics(topicsData || []);
 
+      // Load subtopics for name mapping
+      const { data: subtopicsData, error: subtopicsError } = await supabase
+        .from('subtopics')
+        .select('id, name, topic_id');
+      
+      if (subtopicsError) throw subtopicsError;
+      const subtopicMap = new Map((subtopicsData || []).map(s => [s.id, s.name]));
+
       // Load profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -74,7 +99,7 @@ export default function Dashboard() {
       }
       setProfile(profileData);
 
-      // Load progress
+      // Load topic progress
       const { data: progressData, error: progressError } = await supabase
         .from('user_topic_progress')
         .select('*')
@@ -82,6 +107,26 @@ export default function Dashboard() {
       
       if (progressError) throw progressError;
       setProgress(progressData || []);
+
+      // Load subtopic progress
+      const { data: subtopicProgressData, error: subtopicProgressError } = await supabase
+        .from('user_subtopic_progress')
+        .select('*')
+        .eq('user_id', user!.id);
+      
+      if (subtopicProgressError) throw subtopicProgressError;
+      
+      // Enrich with subtopic names
+      const enrichedSubtopicProgress = (subtopicProgressData || []).map(sp => ({
+        subtopic_id: sp.subtopic_id,
+        subtopic_name: subtopicMap.get(sp.subtopic_id) || 'Unknown',
+        mastery_percentage: sp.mastery_percentage,
+        exercises_completed: sp.exercises_completed,
+        exercises_correct: sp.exercises_correct,
+        hints_used: sp.hints_used,
+      }));
+      
+      setSubtopicProgress(enrichedSubtopicProgress);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load your data. Please refresh the page.');
@@ -107,12 +152,18 @@ export default function Dashboard() {
     navigate(`/practice/${topicId}`);
   };
 
+  // Calculate overall mastery
+  const overallMastery = progress.length > 0
+    ? Math.round(progress.reduce((sum, p) => sum + p.mastery_percentage, 0) / progress.length)
+    : 0;
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background p-4 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           <Skeleton className="h-12 w-48" />
           <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-32 w-full" />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {[...Array(6)].map((_, i) => (
               <Skeleton key={i} className="h-40" />
@@ -166,6 +217,12 @@ export default function Dashboard() {
           totalXp={profile?.total_xp || 0}
           currentStreak={profile?.current_streak || 0}
           longestStreak={profile?.longest_streak || 0}
+        />
+
+        {/* Performance Insights */}
+        <PerformanceCard 
+          subtopicProgress={subtopicProgress}
+          overallMastery={overallMastery}
         />
 
         {/* Topics grid */}
