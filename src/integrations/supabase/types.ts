@@ -14,6 +14,148 @@ export type Database = {
   }
   public: {
     Tables: {
+      diagnostic_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string
+          diagnostic_test_id: string
+          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          hints: Json | null
+          id: string
+          order_index: number
+          question: string
+          subtopic_id: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string
+          diagnostic_test_id: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          hints?: Json | null
+          id?: string
+          order_index?: number
+          question: string
+          subtopic_id: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string
+          diagnostic_test_id?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          hints?: Json | null
+          id?: string
+          order_index?: number
+          question?: string
+          subtopic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_questions_diagnostic_test_id_fkey"
+            columns: ["diagnostic_test_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_questions_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostic_responses: {
+        Row: {
+          ai_analysis: Json | null
+          created_at: string
+          diagnostic_question_id: string
+          id: string
+          is_correct: boolean
+          misconception_tag: string | null
+          time_spent_seconds: number | null
+          user_answer: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          created_at?: string
+          diagnostic_question_id: string
+          id?: string
+          is_correct: boolean
+          misconception_tag?: string | null
+          time_spent_seconds?: number | null
+          user_answer?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_analysis?: Json | null
+          created_at?: string
+          diagnostic_question_id?: string
+          id?: string
+          is_correct?: boolean
+          misconception_tag?: string | null
+          time_spent_seconds?: number | null
+          user_answer?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_responses_diagnostic_question_id_fkey"
+            columns: ["diagnostic_question_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diagnostic_tests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          questions_answered: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["diagnostic_status"]
+          topic_id: string
+          total_questions: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          questions_answered?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+          topic_id: string
+          total_questions?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          questions_answered?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["diagnostic_status"]
+          topic_id?: string
+          total_questions?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_tests_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_attempts: {
         Row: {
           ai_feedback: string | null
@@ -101,6 +243,66 @@ export type Database = {
             columns: ["subtopic_id"]
             isOneToOne: false
             referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          learning_style_notes: string | null
+          misconception_patterns: Json
+          overall_level: number
+          recommended_starting_subtopic: string | null
+          strengths: Json
+          subtopic_levels: Json
+          topic_id: string
+          updated_at: string
+          user_id: string
+          weaknesses: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          learning_style_notes?: string | null
+          misconception_patterns?: Json
+          overall_level?: number
+          recommended_starting_subtopic?: string | null
+          strengths?: Json
+          subtopic_levels?: Json
+          topic_id: string
+          updated_at?: string
+          user_id: string
+          weaknesses?: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          learning_style_notes?: string | null
+          misconception_patterns?: Json
+          overall_level?: number
+          recommended_starting_subtopic?: string | null
+          strengths?: Json
+          subtopic_levels?: Json
+          topic_id?: string
+          updated_at?: string
+          user_id?: string
+          weaknesses?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_profiles_recommended_starting_subtopic_fkey"
+            columns: ["recommended_starting_subtopic"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_profiles_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
             referencedColumns: ["id"]
           },
         ]
@@ -290,6 +492,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      diagnostic_status: "not_started" | "in_progress" | "completed"
       difficulty_level: "easy" | "medium" | "hard"
     }
     CompositeTypes: {
@@ -418,6 +621,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      diagnostic_status: ["not_started", "in_progress", "completed"],
       difficulty_level: ["easy", "medium", "hard"],
     },
   },

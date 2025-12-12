@@ -1,0 +1,279 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+interface Subtopic {
+  id: string;
+  name: string;
+  order_index: number;
+}
+
+interface DiagnosticQuestion {
+  subtopic_id: string;
+  question: string;
+  correct_answer: string;
+  difficulty: "easy" | "medium" | "hard";
+  hints: string[];
+  order_index: number;
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { topicId, userId } = await req.json();
+
+    if (!topicId || !userId) {
+      return new Response(
+        JSON.stringify({ error: "topicId and userId are required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY")!;
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get topic info
+    const { data: topic, error: topicError } = await supabase
+      .from("topics")
+      .select("id, name, description")
+      .eq("id", topicId)
+      .single();
+
+    if (topicError || !topic) {
+      console.error("Topic error:", topicError);
+      return new Response(
+        JSON.stringify({ error: "Topic not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Get all subtopics for this topic
+    const { data: subtopics, error: subtopicsError } = await supabase
+      .from("subtopics")
+      .select("id, name, order_index")
+      .eq("topic_id", topicId)
+      .order("order_index");
+
+    if (subtopicsError || !subtopics || subtopics.length === 0) {
+      console.error("Subtopics error:", subtopicsError);
+      return new Response(
+        JSON.stringify({ error: "No subtopics found for this topic" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Generating diagnostic test for topic: ${topic.name} with ${subtopics.length} subtopics`);
+
+    // Create or get existing diagnostic test
+    let diagnosticTest;
+    const { data: existingTest } = await supabase
+      .from("diagnostic_tests")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("topic_id", topicId)
+      .single();
+
+    if (existingTest) {
+      // If test exists and is completed, return it
+      if (existingTest.status === "completed") {
+        const { data: existingQuestions } = await supabase
+          .from("diagnostic_questions")
+          .select("*")
+          .eq("diagnostic_test_id", existingTest.id)
+          .order("order_index");
+
+        return new Response(
+          JSON.stringify({
+            test: existingTest,
+            questions: existingQuestions || [],
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // If in progress, check if questions exist
+      const { data: existingQuestions } = await supabase
+        .from("diagnostic_questions")
+        .select("*")
+        .eq("diagnostic_test_id", existingTest.id)
+        .order("order_index");
+
+      if (existingQuestions && existingQuestions.length > 0) {
+        return new Response(
+          JSON.stringify({
+            test: existingTest,
+            questions: existingQuestions,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      diagnosticTest = existingTest;
+    } else {
+      // Create new diagnostic test
+      const { data: newTest, error: createError } = await supabase
+        .from("diagnostic_tests")
+        .insert({
+          user_id: userId,
+          topic_id: topicId,
+          status: "not_started",
+          total_questions: subtopics.length * 2, // 2 questions per subtopic
+        })
+        .select()
+        .single();
+
+      if (createError) {
+        console.error("Create test error:", createError);
+        return new Response(
+          JSON.stringify({ error: "Failed to create diagnostic test" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      diagnosticTest = newTest;
+    }
+
+    // Generate questions using AI
+    const systemPrompt = `You are a patient, supportive math tutor creating a diagnostic assessment.
+Your goal is to understand where the student currently is in their learning - NOT to grade them.
+
+IMPORTANT GUIDELINES:
+- Create questions that feel conversational and low-pressure, like a tutor getting to know a student
+- Vary difficulty to get a complete picture (one easier, one moderate per subtopic)
+- Questions should be clear and not tricky - we want to see what they know, not confuse them
+- Include helpful hints that gently guide without giving away the answer
+- Use LaTeX for mathematical notation (e.g., \\frac{a}{b}, x^2, \\sqrt{x})
+
+The tone should be supportive: "Let's see how you approach this..." not "Solve this problem."`;
+
+    const userPrompt = `Create a diagnostic assessment for the topic "${topic.name}" (${topic.description || ""}).
+
+For each of these subtopics, generate exactly 2 questions (one easy, one medium difficulty):
+${subtopics.map((s: Subtopic, i: number) => `${i + 1}. ${s.name} (ID: ${s.id})`).join("\n")}
+
+Return a JSON array of questions with this exact structure:
+{
+  "questions": [
+    {
+      "subtopic_id": "uuid-here",
+      "subtopic_name": "Name for reference",
+      "question": "Clear, supportive question text with LaTeX for math",
+      "correct_answer": "The correct answer",
+      "difficulty": "easy" or "medium",
+      "hints": ["Gentle hint 1", "More helpful hint 2"]
+    }
+  ]
+}
+
+Make sure questions are practical and test real understanding, not memorization.
+Return ONLY valid JSON, no additional text.`;
+
+    console.log("Calling Lovable AI to generate diagnostic questions...");
+
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error("AI API error:", aiResponse.status, errorText);
+      return new Response(
+        JSON.stringify({ error: "Failed to generate questions" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const aiData = await aiResponse.json();
+    const aiContent = aiData.choices?.[0]?.message?.content || "";
+
+    console.log("AI response received, parsing...");
+
+    // Parse AI response
+    let parsedQuestions;
+    try {
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedQuestions = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error("No JSON found in response");
+      }
+    } catch (parseError) {
+      console.error("Parse error:", parseError, "Content:", aiContent);
+      return new Response(
+        JSON.stringify({ error: "Failed to parse AI response" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Prepare questions for insertion
+    const questionsToInsert: DiagnosticQuestion[] = parsedQuestions.questions.map(
+      (q: any, index: number) => ({
+        diagnostic_test_id: diagnosticTest.id,
+        subtopic_id: q.subtopic_id,
+        question: q.question,
+        correct_answer: q.correct_answer,
+        difficulty: q.difficulty || "medium",
+        hints: q.hints || [],
+        order_index: index,
+      })
+    );
+
+    // Insert questions
+    const { data: insertedQuestions, error: insertError } = await supabase
+      .from("diagnostic_questions")
+      .insert(questionsToInsert)
+      .select();
+
+    if (insertError) {
+      console.error("Insert questions error:", insertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to save questions" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Update test total_questions count
+    await supabase
+      .from("diagnostic_tests")
+      .update({ total_questions: insertedQuestions.length })
+      .eq("id", diagnosticTest.id);
+
+    console.log(`Successfully created ${insertedQuestions.length} diagnostic questions`);
+
+    return new Response(
+      JSON.stringify({
+        test: { ...diagnosticTest, total_questions: insertedQuestions.length },
+        questions: insertedQuestions,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    console.error("Diagnostic generation error:", error);
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
