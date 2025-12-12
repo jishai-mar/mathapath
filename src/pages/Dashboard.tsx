@@ -46,6 +46,11 @@ interface SubtopicProgress {
   hints_used: number;
 }
 
+interface DiagnosticStatus {
+  topic_id: string;
+  status: 'not_started' | 'in_progress' | 'completed';
+}
+
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -54,6 +59,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [progress, setProgress] = useState<TopicProgress[]>([]);
   const [subtopicProgress, setSubtopicProgress] = useState<SubtopicProgress[]>([]);
+  const [diagnosticStatuses, setDiagnosticStatuses] = useState<DiagnosticStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -127,6 +133,14 @@ export default function Dashboard() {
       }));
       
       setSubtopicProgress(enrichedSubtopicProgress);
+
+      // Load diagnostic test statuses
+      const { data: diagnosticData } = await supabase
+        .from('diagnostic_tests')
+        .select('topic_id, status')
+        .eq('user_id', user!.id);
+      
+      setDiagnosticStatuses((diagnosticData || []) as DiagnosticStatus[]);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Failed to load your data. Please refresh the page.');
@@ -149,7 +163,16 @@ export default function Dashboard() {
   };
 
   const handleTopicClick = (topicId: string) => {
-    navigate(`/practice/${topicId}`);
+    // Check if diagnostic test is completed for this topic
+    const diagnosticStatus = diagnosticStatuses.find(d => d.topic_id === topicId);
+    
+    if (!diagnosticStatus || diagnosticStatus.status !== 'completed') {
+      // Go to diagnostic test first
+      navigate(`/diagnostic/${topicId}`);
+    } else {
+      // Diagnostic complete, go to practice
+      navigate(`/practice/${topicId}`);
+    }
   };
 
   // Calculate overall mastery
