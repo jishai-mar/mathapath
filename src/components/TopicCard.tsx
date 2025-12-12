@@ -1,4 +1,5 @@
 import { Progress } from '@/components/ui/progress';
+import LevelBadge, { getLevel } from './LevelBadge';
 import { 
   Calculator, 
   Divide, 
@@ -49,20 +50,7 @@ export function TopicCard({
   onClick 
 }: TopicCardProps) {
   const Icon = iconMap[icon] || Calculator;
-  
-  const getMasteryColor = (percentage: number) => {
-    if (percentage >= 80) return 'text-primary';
-    if (percentage >= 50) return 'text-warning';
-    if (percentage > 0) return 'text-info';
-    return 'text-muted-foreground';
-  };
-
-  const getMasteryLabel = (percentage: number) => {
-    if (percentage >= 80) return 'Mastered';
-    if (percentage >= 50) return 'Intermediate';
-    if (percentage > 0) return 'Beginner';
-    return 'Not started';
-  };
+  const level = getLevel(masteryPercentage);
 
   return (
     <button
@@ -75,16 +63,19 @@ export function TopicCard({
         </div>
         
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-foreground truncate">{name}</h3>
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <h3 className="font-semibold text-foreground truncate">{name}</h3>
+            {exercisesCompleted > 0 && (
+              <LevelBadge level={level} className="flex-shrink-0" />
+            )}
+          </div>
           {description && (
             <p className="text-sm text-muted-foreground mt-0.5 line-clamp-2">{description}</p>
           )}
           
           <div className="mt-3 space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span className={getMasteryColor(masteryPercentage)}>
-                {getMasteryLabel(masteryPercentage)}
-              </span>
+              <span className="text-muted-foreground">Mastery</span>
               <span className="text-muted-foreground">{masteryPercentage}%</span>
             </div>
             <Progress value={masteryPercentage} className="h-2" />

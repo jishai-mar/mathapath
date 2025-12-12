@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.generate-exercise]
 verify_jwt = true
+
+[functions.ask-tutor]
+verify_jwt = true
