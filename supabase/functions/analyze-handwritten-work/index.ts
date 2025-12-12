@@ -72,6 +72,11 @@ serve(async (req) => {
     // Build adaptive system prompt based on attempt count
     let adaptiveInstructions = '';
     
+    // Determine if student is struggling (needs a head start)
+    const isStruggling = attemptCount >= 2;
+    const needsHeadStart = attemptCount >= 2 && attemptCount <= 3;
+    const severelyStruggling = attemptCount >= 4;
+    
     if (attemptCount === 1) {
       adaptiveInstructions = `
 This is the student's FIRST attempt.
@@ -81,24 +86,55 @@ This is the student's FIRST attempt.
 - Do NOT give the answer`;
     } else if (attemptCount === 2) {
       adaptiveInstructions = `
-This is the student's SECOND attempt. The previous guidance didn't help.
-YOU MUST CHANGE YOUR TEACHING APPROACH:
-- Break the problem into smaller sub-steps
-- Include a MINI-EXERCISE: a simpler stepping-stone problem
-- Use a different analogy or explanation method
-- Ask a diagnostic question to find the root confusion
-- Previous guidance that didn't work: ${JSON.stringify(previousFeedback.slice(-1))}`;
+This is the student's SECOND attempt. They are STRUGGLING.
+
+PROVIDE A "HEAD START" - like a human tutor would:
+1. First, briefly explain WHAT the goal of this exercise is (what we're trying to find/prove)
+2. Explain the GENERAL STRATEGY to approach this type of problem (without solving it)
+3. Give ONLY the FIRST STEP of the solution, clearly explaining WHY this step is taken
+4. Then STOP and let the student continue from there
+
+Example head start:
+"In this problem, we need to find x. For equations like this, our strategy is to isolate x on one side. 
+Let's start with the first step: We should move all x terms to the left side. So, subtract 2x from both sides.
+What do you get? Try continuing from here."
+
+DO NOT continue solving after the first step!
+The purpose is to lower the barrier, build confidence, and help them re-engage.
+
+Previous guidance that didn't work: ${JSON.stringify(previousFeedback.slice(-1))}`;
+    } else if (attemptCount === 3) {
+      adaptiveInstructions = `
+This is attempt #3. The student is clearly STRUGGLING despite head start guidance.
+
+NOW provide a MORE SUPPORTIVE head start:
+1. Acknowledge their effort: "I can see you're working hard on this"
+2. Re-explain the GOAL in simpler terms
+3. Give the FIRST TWO STEPS with clear reasoning for each
+4. Include a MINI-EXERCISE: an even simpler problem targeting their specific confusion
+5. Offer an ALTERNATIVE_APPROACH - a completely different method to think about the problem
+
+STILL do not solve the entire problem. After giving two steps, ask them to continue.
+The goal is to get them moving forward, not to carry them to the answer.
+
+Previous failed guidance: ${JSON.stringify(previousFeedback.slice(-2))}`;
     } else {
       adaptiveInstructions = `
-This is attempt #${attemptCount}. Previous guidance has NOT helped.
-NOW you may be more direct, but still TEACH rather than just solve:
-- Explain the concept step-by-step with a clear example
-- Show WHY each step is taken
-- Include a MINI-EXERCISE as a stepping stone
-- Offer an ALTERNATIVE_APPROACH with a completely different method
-- Previous failed guidance: ${JSON.stringify(previousFeedback.slice(-2))}
+This is attempt #${attemptCount}. Student has struggled significantly.
 
-Even now, walk through the reasoning - don't just give the answer without explanation.`;
+NOW you may provide EXTENSIVE scaffolding:
+- Walk through the problem step-by-step with clear explanations
+- Show WHY each step is taken using simple language
+- Include a MINI-EXERCISE as a stepping stone
+- Offer an ALTERNATIVE_APPROACH
+- You may now show more of the solution process, BUT still:
+  * Pause before the FINAL answer and ask them to complete it
+  * Explain the reasoning, don't just show the math
+  * Ask them to verify the answer after they find it
+
+Previous failed guidance: ${JSON.stringify(previousFeedback.slice(-2))}
+
+Even now, the student should do the final step themselves.`;
     }
 
     const systemPrompt = `You are an expert math tutor analyzing a student's handwritten work for the Reichman Mechina math curriculum.
