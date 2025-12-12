@@ -19,9 +19,11 @@ export type Database = {
           ai_feedback: string | null
           created_at: string
           exercise_id: string
+          explanation_variant: number | null
           hints_used: number | null
           id: string
           is_correct: boolean
+          misconception_tag: string | null
           time_spent_seconds: number | null
           user_answer: string | null
           user_id: string
@@ -30,9 +32,11 @@ export type Database = {
           ai_feedback?: string | null
           created_at?: string
           exercise_id: string
+          explanation_variant?: number | null
           hints_used?: number | null
           id?: string
           is_correct: boolean
+          misconception_tag?: string | null
           time_spent_seconds?: number | null
           user_answer?: string | null
           user_id: string
@@ -41,9 +45,11 @@ export type Database = {
           ai_feedback?: string | null
           created_at?: string
           exercise_id?: string
+          explanation_variant?: number | null
           hints_used?: number | null
           id?: string
           is_correct?: boolean
+          misconception_tag?: string | null
           time_spent_seconds?: number | null
           user_answer?: string | null
           user_id?: string

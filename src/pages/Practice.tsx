@@ -40,12 +40,21 @@ interface Exercise {
   explanation: string | null;
 }
 
+interface MiniExercise {
+  question: string;
+  hint: string;
+}
+
 interface AIFeedback {
   what_went_well: string;
   where_it_breaks: string;
   what_to_focus_on_next: string;
   is_correct: boolean;
   suggested_difficulty: 'easy' | 'medium' | 'hard';
+  misconception_tag?: string;
+  explanation_variant?: number;
+  mini_exercise?: MiniExercise;
+  alternative_approach?: string;
 }
 
 type PracticeMode = 'browsing' | 'learning' | 'practicing';
@@ -293,6 +302,14 @@ export default function Practice() {
     setIsSubmitting(true);
     
     try {
+      // Fetch previous attempts for this subtopic to enable adaptive feedback
+      const { data: previousAttempts } = await supabase
+        .from('exercise_attempts')
+        .select('misconception_tag, explanation_variant, ai_feedback')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
       // Convert image to base64
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -305,13 +322,15 @@ export default function Practice() {
       const fileName = `${user.id}/${currentExercise.id}_${Date.now()}.jpg`;
       await supabase.storage.from('handwritten-work').upload(fileName, file);
       
-      // Send to AI for analysis
+      // Send to AI for analysis with previous attempts for adaptive feedback
       const { data, error } = await supabase.functions.invoke('analyze-handwritten-work', {
         body: {
           imageBase64: base64,
           question: currentExercise.question,
           correctAnswer: currentExercise.correct_answer,
           difficulty: currentExercise.difficulty,
+          previousAttempts: previousAttempts || [],
+          subtopicName: selectedSubtopic.name,
         }
       });
       
@@ -319,7 +338,7 @@ export default function Practice() {
       
       const feedback = data as AIFeedback;
       
-      // Save attempt with AI feedback and hints_used
+      // Save attempt with AI feedback, hints_used, and misconception tracking
       await supabase.from('exercise_attempts').insert({
         user_id: user.id,
         exercise_id: currentExercise.id,
@@ -327,6 +346,8 @@ export default function Practice() {
         is_correct: feedback.is_correct,
         ai_feedback: JSON.stringify(feedback),
         hints_used: hintsUsedThisExercise,
+        misconception_tag: feedback.misconception_tag || null,
+        explanation_variant: feedback.explanation_variant || 1,
       });
       
       // Update tracking

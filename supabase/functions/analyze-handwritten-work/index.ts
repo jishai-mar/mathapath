@@ -5,13 +5,35 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface PreviousAttempt {
+  misconception_tag: string | null;
+  explanation_variant: number;
+  ai_feedback: string | null;
+}
+
+interface RequestBody {
+  imageBase64: string;
+  question: string;
+  correctAnswer: string;
+  difficulty: string;
+  previousAttempts?: PreviousAttempt[];
+  subtopicName?: string;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { imageBase64, question, correctAnswer, difficulty } = await req.json();
+    const { 
+      imageBase64, 
+      question, 
+      correctAnswer, 
+      difficulty,
+      previousAttempts = [],
+      subtopicName = ''
+    } = await req.json() as RequestBody;
 
     if (!imageBase64 || !question) {
       return new Response(
@@ -25,16 +47,75 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    const systemPrompt = `You are an expert math tutor analyzing a student's handwritten work for the Reichman Mechina math curriculum. Your role is to:
+    // Determine explanation variant based on previous attempts
+    const incorrectAttempts = previousAttempts.filter(a => {
+      if (!a.ai_feedback) return false;
+      try {
+        const parsed = JSON.parse(a.ai_feedback);
+        return !parsed.is_correct;
+      } catch {
+        return false;
+      }
+    });
+    
+    const attemptCount = incorrectAttempts.length + 1;
+    const previousFeedback = incorrectAttempts.length > 0 
+      ? incorrectAttempts.map(a => {
+          try {
+            return JSON.parse(a.ai_feedback || '{}');
+          } catch {
+            return {};
+          }
+        })
+      : [];
 
+    // Build adaptive system prompt based on attempt count
+    let adaptiveInstructions = '';
+    
+    if (attemptCount === 1) {
+      adaptiveInstructions = `
+This is the student's FIRST attempt. Provide:
+- Direct explanation of the exact error
+- Clear, concise feedback
+- Identify the specific misconception`;
+    } else if (attemptCount === 2) {
+      adaptiveInstructions = `
+This is the student's SECOND attempt at a similar problem. The previous explanation did NOT work.
+YOU MUST USE A DIFFERENT TEACHING APPROACH:
+- Simplify the explanation further
+- Include a MINI-EXERCISE: a very small, simpler practice step
+- Use a different analogy or method than before
+- Previous feedback that didn't work: ${JSON.stringify(previousFeedback.slice(-1))}`;
+    } else {
+      adaptiveInstructions = `
+This is attempt #${attemptCount}. Previous explanations have NOT helped.
+YOU MUST COMPLETELY CHANGE YOUR APPROACH:
+- Use an entirely different method (e.g., visual approach, or step-by-step algebraic manipulation, or balancing method)
+- Include a diagnostic question to identify the root misconception
+- Provide a simpler MINI-EXERCISE as a stepping stone
+- Offer an ALTERNATIVE_APPROACH field with a completely different way to think about the problem
+- Previous failed feedback: ${JSON.stringify(previousFeedback.slice(-2))}
+
+CRITICAL: Do NOT repeat any explanation that was given before. The student needs a fresh perspective.`;
+    }
+
+    const systemPrompt = `You are an expert math tutor analyzing a student's handwritten work for the Reichman Mechina math curriculum.
+${subtopicName ? `Current topic: ${subtopicName}` : ''}
+Current exercise difficulty: ${difficulty || 'medium'}
+
+${adaptiveInstructions}
+
+Your role:
 1. Carefully examine the student's handwritten solution
 2. Identify which steps are correct and where their reasoning is sound
 3. Pinpoint exactly where the solution goes wrong (if at all)
 4. Understand the underlying conceptual gap or misconception
 5. Provide encouraging, constructive feedback
+6. Classify the type of mistake with a misconception_tag
 
 Be specific but concise. Focus on the math concepts, not handwriting quality.
-Current exercise difficulty: ${difficulty || 'medium'}
+Do NOT use dollar signs ($) in your response - just write the math expressions directly.
+For example, write "x = 5" not "$x = 5$".
 
 You MUST respond with valid JSON in exactly this format:
 {
@@ -42,7 +123,14 @@ You MUST respond with valid JSON in exactly this format:
   "where_it_breaks": "Exact point where the solution goes wrong, or empty string if correct",
   "what_to_focus_on_next": "Specific concept or technique to practice",
   "is_correct": true/false,
-  "suggested_difficulty": "easy" | "medium" | "hard"
+  "suggested_difficulty": "easy" | "medium" | "hard",
+  "misconception_tag": "category of the error (e.g., 'sign_error', 'distribution_error', 'fraction_error', 'order_of_operations', 'algebraic_manipulation', 'none' if correct)",
+  "explanation_variant": ${attemptCount}${attemptCount >= 2 ? `,
+  "mini_exercise": {
+    "question": "A simpler practice problem targeting the specific misconception",
+    "hint": "A helpful hint for the mini exercise"
+  }` : ''}${attemptCount >= 3 ? `,
+  "alternative_approach": "A completely different way to think about and solve this type of problem"` : ''}
 }
 
 If the work is correct, set is_correct to true and suggest moving to a harder difficulty.
@@ -55,7 +143,7 @@ Correct Answer: ${correctAnswer}
 
 Look at the image and evaluate their solution process.`;
 
-    console.log('Sending request to Lovable AI for handwritten analysis...');
+    console.log(`Analyzing handwritten work (attempt #${attemptCount})...`);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -129,8 +217,13 @@ Look at the image and evaluate their solution process.`;
         what_to_focus_on_next: "Make sure your work is clearly visible and well-lit.",
         is_correct: false,
         suggested_difficulty: difficulty || 'medium',
+        misconception_tag: 'analysis_failed',
+        explanation_variant: attemptCount,
       };
     }
+
+    // Ensure explanation_variant is set
+    feedback.explanation_variant = attemptCount;
 
     return new Response(
       JSON.stringify(feedback),
@@ -142,12 +235,13 @@ Look at the image and evaluate their solution process.`;
     return new Response(
       JSON.stringify({ 
         error: error instanceof Error ? error.message : 'Unknown error',
-        // Provide fallback so UI doesn't break
         what_went_well: "Unable to analyze at this time.",
         where_it_breaks: "Please try again or use text input instead.",
         what_to_focus_on_next: "Keep practicing!",
         is_correct: false,
         suggested_difficulty: 'medium',
+        misconception_tag: 'error',
+        explanation_variant: 1,
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
