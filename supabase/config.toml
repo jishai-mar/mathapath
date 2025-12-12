@@ -1,1 +1,7 @@
 project_id = "cwuajnotyshwtgzxzbcp"
+
+[functions.analyze-handwritten-work]
+verify_jwt = true
+
+[functions.generate-exercise]
+verify_jwt = true
