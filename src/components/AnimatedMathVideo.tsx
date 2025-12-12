@@ -321,6 +321,7 @@ export default function AnimatedMathVideo({
 }
 
 // Helper function to generate animation steps from theory content
+// Creates a structured, pedagogical video explanation like a classroom lesson
 export function generateAnimationSteps(
   subtopicName: string,
   theoryExplanation: string,
@@ -328,48 +329,107 @@ export function generateAnimationSteps(
 ): AnimationStep[] {
   const animationSteps: AnimationStep[] = [];
 
-  // Title
+  // ===== PART 1: Introduction =====
   animationSteps.push({
     type: 'title',
     content: subtopicName,
-    duration: 2000,
-    voiceover: `Let's learn about ${subtopicName}`
+    duration: 2500,
+    voiceover: `Welcome! Today we're going to learn about ${subtopicName}. Let's take it step by step.`
   });
 
-  // Parse theory explanation into meaningful chunks
+  // ===== PART 2: What We'll Learn (Learning Objectives) =====
+  animationSteps.push({
+    type: 'text',
+    content: `In this lesson, you'll understand the key ideas behind ${subtopicName} and learn how to apply them.`,
+    duration: 3500,
+    voiceover: `By the end of this lesson, you'll understand the key ideas and be ready to practice.`
+  });
+
+  // ===== PART 3: Theory Explanation (The "Why") =====
   if (theoryExplanation) {
+    animationSteps.push({
+      type: 'transition',
+      content: '',
+      duration: 1000
+    });
+
+    animationSteps.push({
+      type: 'title',
+      content: 'Understanding the Concept',
+      duration: 2000,
+      voiceover: `Let's start by understanding what ${subtopicName} means and why it matters.`
+    });
+
+    // Parse theory into meaningful chunks with better structure
     const paragraphs = theoryExplanation.split('\n\n').filter(p => p.trim());
     
     paragraphs.forEach((paragraph, idx) => {
-      // Check if paragraph contains a definition or key concept
-      if (paragraph.includes('**') || paragraph.toLowerCase().includes('definition')) {
+      const cleanParagraph = paragraph.replace(/\*\*/g, '');
+      
+      // Detect key definitions and concepts
+      if (paragraph.includes('**') || 
+          paragraph.toLowerCase().includes('definition') ||
+          paragraph.toLowerCase().includes('key idea') ||
+          paragraph.toLowerCase().includes('important')) {
         animationSteps.push({
           type: 'highlight',
-          content: paragraph.replace(/\*\*/g, ''),
-          duration: 4000,
-          voiceover: `Key concept: ${paragraph.replace(/\*\*/g, '')}`
+          content: cleanParagraph,
+          duration: 5000,
+          voiceover: `This is important: ${cleanParagraph}`
         });
-      } else if (paragraph.match(/\$.*\$/) || paragraph.match(/[=<>]/)) {
-        // This looks like a formula/equation
+      } 
+      // Detect formulas and equations
+      else if (paragraph.match(/[=<>≤≥±×÷]/) || paragraph.includes('\\frac') || paragraph.includes('\\sqrt')) {
         animationSteps.push({
           type: 'equation',
-          content: paragraph,
-          duration: 3500,
+          content: cleanParagraph,
+          duration: 4500,
           highlight: 'true',
-          voiceover: `Here is the formula: ${paragraph}`
+          voiceover: `Here is the formula we'll use: ${cleanParagraph}`
         });
-      } else {
+      }
+      // Detect numbered steps or rules
+      else if (paragraph.match(/^\d\.|^Step \d|^Rule \d/i)) {
         animationSteps.push({
           type: 'text',
-          content: paragraph,
-          duration: 3000 + (paragraph.length * 20), // Longer text = more time
-          voiceover: paragraph
+          content: cleanParagraph,
+          duration: 4000,
+          voiceover: cleanParagraph
+        });
+      }
+      // Regular explanatory text
+      else {
+        // Calculate reading time based on word count (slower pace for learning)
+        const wordCount = cleanParagraph.split(/\s+/).length;
+        const baseDuration = 3000;
+        const perWordDuration = 80; // ~80ms per word for comfortable reading
+        const duration = Math.min(baseDuration + (wordCount * perWordDuration), 8000);
+        
+        animationSteps.push({
+          type: 'text',
+          content: cleanParagraph,
+          duration,
+          voiceover: cleanParagraph
         });
       }
     });
   }
 
-  // Add worked example if provided
+  // ===== PART 4: Intuition Check =====
+  animationSteps.push({
+    type: 'transition',
+    content: '',
+    duration: 1500
+  });
+
+  animationSteps.push({
+    type: 'highlight',
+    content: `💡 The key insight: ${subtopicName} helps us solve problems by breaking them down into manageable steps.`,
+    duration: 4000,
+    voiceover: `Remember: the key is to take it one step at a time. Let's see how this works in practice.`
+  });
+
+  // ===== PART 5: Worked Example (The "How") =====
   if (workedExample) {
     animationSteps.push({
       type: 'transition',
@@ -380,33 +440,95 @@ export function generateAnimationSteps(
     animationSteps.push({
       type: 'title',
       content: 'Worked Example',
+      duration: 2500,
+      voiceover: `Now let's work through an example together. Watch each step carefully.`
+    });
+
+    // Show the problem
+    animationSteps.push({
+      type: 'text',
+      content: 'Here is our problem:',
       duration: 2000,
-      voiceover: 'Now let\'s work through an example together'
+      voiceover: `Here is the problem we need to solve.`
     });
 
     animationSteps.push({
       type: 'equation',
       content: workedExample.problem,
-      duration: 3000,
-      voiceover: `Our problem is: ${workedExample.problem}`
+      duration: 4000,
+      highlight: 'true',
+      voiceover: `Our problem is: ${workedExample.problem}. Take a moment to understand what we're asked to find.`
+    });
+
+    // Walk through each step with explanation
+    animationSteps.push({
+      type: 'text',
+      content: 'Let\'s solve it step by step:',
+      duration: 2000,
+      voiceover: `Now, let's solve this step by step. Notice why we do each step.`
     });
 
     workedExample.steps.forEach((step, idx) => {
+      // Add a brief pause before each step
+      if (idx > 0) {
+        animationSteps.push({
+          type: 'transition',
+          content: '',
+          duration: 800
+        });
+      }
+
       animationSteps.push({
         type: 'text',
         content: `Step ${idx + 1}: ${step}`,
-        duration: 3500,
-        voiceover: step
+        duration: 4500,
+        voiceover: `Step ${idx + 1}: ${step}. Make sure you understand why we did this before moving on.`
       });
+    });
+
+    // Show the final answer with emphasis
+    animationSteps.push({
+      type: 'transition',
+      content: '',
+      duration: 1000
     });
 
     animationSteps.push({
       type: 'highlight',
-      content: `Answer: ${workedExample.answer}`,
-      duration: 3000,
-      voiceover: `And our final answer is: ${workedExample.answer}`
+      content: `✓ Answer: ${workedExample.answer}`,
+      duration: 4000,
+      voiceover: `And our final answer is: ${workedExample.answer}. This is what we were looking for!`
+    });
+
+    // Reflection on the process
+    animationSteps.push({
+      type: 'text',
+      content: 'Notice how we followed a logical sequence: identify what we need to find, apply the right operations, and verify our answer.',
+      duration: 5000,
+      voiceover: `Notice the pattern: we identified what we needed, applied the right steps in order, and arrived at the answer. This approach works for all similar problems.`
     });
   }
+
+  // ===== PART 6: Summary & Next Steps =====
+  animationSteps.push({
+    type: 'transition',
+    content: '',
+    duration: 1500
+  });
+
+  animationSteps.push({
+    type: 'title',
+    content: 'Ready to Practice!',
+    duration: 2500,
+    voiceover: `Great job! You now understand the basics of ${subtopicName}.`
+  });
+
+  animationSteps.push({
+    type: 'highlight',
+    content: `📝 Now it's your turn! Start with easier problems and work your way up. Remember: making mistakes is part of learning.`,
+    duration: 4500,
+    voiceover: `Now it's your turn to practice. Start with easier problems, and don't worry about mistakes - that's how we learn!`
+  });
 
   return animationSteps;
 }
