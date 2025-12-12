@@ -1,16 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import MathRenderer from './MathRenderer';
 import TutorChat from './TutorChat';
+import AnimatedMathVideo, { generateAnimationSteps } from './AnimatedMathVideo';
 import { 
   BookOpen, 
   ChevronDown, 
   PlayCircle, 
   MessageCircle,
   CheckCircle2,
-  Lightbulb
+  Lightbulb,
+  Video
 } from 'lucide-react';
 
 interface WorkedExample {
@@ -34,12 +36,49 @@ export default function LearnView({
 }: LearnViewProps) {
   const [expandedExample, setExpandedExample] = useState<number | null>(0);
   const [showTutor, setShowTutor] = useState(false);
+  const [showVideo, setShowVideo] = useState(true);
 
   const hasTheory = theoryExplanation && theoryExplanation.trim().length > 0;
   const hasExamples = workedExamples && workedExamples.length > 0;
 
+  // Generate animation steps from theory content
+  const animationSteps = useMemo(() => {
+    if (!hasTheory) return [];
+    return generateAnimationSteps(
+      subtopicName,
+      theoryExplanation || '',
+      hasExamples ? workedExamples[0] : undefined
+    );
+  }, [subtopicName, theoryExplanation, workedExamples, hasTheory, hasExamples]);
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {/* Animated Video Section */}
+      {animationSteps.length > 0 && (
+        <Collapsible open={showVideo} onOpenChange={setShowVideo}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-between border-primary/30 bg-primary/5 hover:bg-primary/10"
+            >
+              <span className="flex items-center gap-2">
+                <Video className="w-4 h-4 text-primary" />
+                <span className="font-medium">Watch: {subtopicName}</span>
+              </span>
+              <ChevronDown 
+                className={`w-4 h-4 transition-transform ${showVideo ? 'rotate-180' : ''}`} 
+              />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3">
+            <AnimatedMathVideo
+              title={subtopicName}
+              steps={animationSteps}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
       {/* Theory Section */}
       <Card className="border-border/50 bg-card/50">
         <CardHeader className="pb-3">
@@ -53,8 +92,18 @@ export default function LearnView({
             <div className="prose prose-invert prose-sm max-w-none">
               <div className="text-foreground/90 leading-relaxed space-y-3">
                 {theoryExplanation.split('\n\n').map((paragraph, idx) => (
-                  <div key={idx}>
-                    <MathRenderer latex={paragraph} />
+                  <div key={idx} className="theory-paragraph">
+                    {paragraph.startsWith('**') ? (
+                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                        <MathRenderer latex={paragraph.replace(/\*\*/g, '')} />
+                      </div>
+                    ) : paragraph.match(/^\d\./) ? (
+                      <div className="pl-4 border-l-2 border-primary/30">
+                        <MathRenderer latex={paragraph} />
+                      </div>
+                    ) : (
+                      <MathRenderer latex={paragraph} />
+                    )}
                   </div>
                 ))}
               </div>
@@ -77,6 +126,9 @@ export default function LearnView({
               <CheckCircle2 className="w-5 h-5 text-primary" />
               Worked Examples
             </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Step-by-step solutions with explanations
+            </p>
           </CardHeader>
           <CardContent className="space-y-3">
             {workedExamples.map((example, idx) => (
@@ -107,17 +159,20 @@ export default function LearnView({
                     {example.steps.map((step, stepIdx) => (
                       <div 
                         key={stepIdx}
-                        className="flex items-start gap-2 text-sm text-muted-foreground p-2 rounded bg-secondary/20"
+                        className="flex items-start gap-3 text-sm p-3 rounded-lg bg-secondary/20 border-l-2 border-primary/30"
+                        style={{ animationDelay: `${stepIdx * 100}ms` }}
                       >
-                        <span className="text-primary font-mono text-xs mt-0.5">
-                          {stepIdx + 1}.
+                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-mono text-xs flex items-center justify-center flex-shrink-0">
+                          {stepIdx + 1}
                         </span>
-                        <MathRenderer latex={step} />
+                        <div className="text-foreground/80">
+                          <MathRenderer latex={step} />
+                        </div>
                       </div>
                     ))}
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/10 border border-primary/20">
-                      <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                      <span className="font-medium text-primary">
+                    <div className="flex items-center gap-2 p-4 rounded-lg bg-primary/10 border border-primary/20">
+                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
+                      <span className="font-medium text-primary text-lg">
                         <MathRenderer latex={example.answer} />
                       </span>
                     </div>
