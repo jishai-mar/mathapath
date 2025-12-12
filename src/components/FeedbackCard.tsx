@@ -1,5 +1,11 @@
-import { CheckCircle2, XCircle, Lightbulb, Target } from 'lucide-react';
+import { CheckCircle2, XCircle, Lightbulb, Target, BookOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import MathRenderer from './MathRenderer';
+
+interface MiniExercise {
+  question: string;
+  hint: string;
+}
 
 interface AIFeedback {
   what_went_well: string;
@@ -7,6 +13,10 @@ interface AIFeedback {
   what_to_focus_on_next: string;
   is_correct: boolean;
   suggested_difficulty: 'easy' | 'medium' | 'hard';
+  misconception_tag?: string;
+  explanation_variant?: number;
+  mini_exercise?: MiniExercise;
+  alternative_approach?: string;
 }
 
 interface FeedbackCardProps {
@@ -40,7 +50,9 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
               <div>
                 <h4 className="font-medium text-primary mb-1">What went well</h4>
-                <p className="text-sm text-muted-foreground">{feedback.what_went_well}</p>
+                <div className="text-sm text-muted-foreground">
+                  <MathRenderer latex={feedback.what_went_well} />
+                </div>
               </div>
             </div>
           </CardContent>
@@ -55,7 +67,46 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <XCircle className="w-5 h-5 text-destructive mt-0.5 flex-shrink-0" />
               <div>
                 <h4 className="font-medium text-destructive mb-1">Where it went wrong</h4>
-                <p className="text-sm text-muted-foreground">{feedback.where_it_breaks}</p>
+                <div className="text-sm text-muted-foreground">
+                  <MathRenderer latex={feedback.where_it_breaks} />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Alternative approach (shown on repeated mistakes) */}
+      {feedback.alternative_approach && !feedback.is_correct && (
+        <Card className="border-accent/30 bg-accent/5">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <BookOpen className="w-5 h-5 text-accent mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="font-medium text-accent mb-1">Try this approach</h4>
+                <div className="text-sm text-muted-foreground">
+                  <MathRenderer latex={feedback.alternative_approach} />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mini exercise (shown on repeated mistakes) */}
+      {feedback.mini_exercise && !feedback.is_correct && (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="py-4">
+            <div className="flex items-start gap-3">
+              <Lightbulb className="w-5 h-5 text-[hsl(var(--warning))] mt-0.5 flex-shrink-0" />
+              <div className="space-y-2">
+                <h4 className="font-medium text-[hsl(var(--warning))]">Quick practice step</h4>
+                <div className="text-sm text-foreground">
+                  <MathRenderer latex={feedback.mini_exercise.question} />
+                </div>
+                <p className="text-xs text-muted-foreground italic">
+                  Hint: {feedback.mini_exercise.hint}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -70,7 +121,9 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <Target className="w-5 h-5 text-[hsl(var(--info))] mt-0.5 flex-shrink-0" />
               <div>
                 <h4 className="font-medium text-[hsl(var(--info))] mb-1">Focus on next</h4>
-                <p className="text-sm text-muted-foreground">{feedback.what_to_focus_on_next}</p>
+                <div className="text-sm text-muted-foreground">
+                  <MathRenderer latex={feedback.what_to_focus_on_next} />
+                </div>
               </div>
             </div>
           </CardContent>
