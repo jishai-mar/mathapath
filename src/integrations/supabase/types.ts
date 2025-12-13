@@ -323,40 +323,82 @@ export type Database = {
       }
       profiles: {
         Row: {
+          about_me: string | null
+          academic_interest: string | null
+          avatar_url: string | null
           comprehensive_diagnostic_completed: boolean
           comprehensive_diagnostic_completed_at: string | null
           created_at: string
           current_streak: number
           display_name: string | null
+          first_name: string | null
           id: string
+          last_name: string | null
           last_practice_date: string | null
           longest_streak: number
+          notify_achievements: boolean | null
+          notify_community_mentions: boolean | null
+          notify_daily_reminder: boolean | null
+          notify_new_courses: boolean | null
+          notify_weekly_progress: boolean | null
+          privacy_marketing_emails: boolean | null
+          privacy_public_profile: boolean | null
+          privacy_usage_analytics: boolean | null
           total_xp: number
           updated_at: string
+          username: string | null
         }
         Insert: {
+          about_me?: string | null
+          academic_interest?: string | null
+          avatar_url?: string | null
           comprehensive_diagnostic_completed?: boolean
           comprehensive_diagnostic_completed_at?: string | null
           created_at?: string
           current_streak?: number
           display_name?: string | null
+          first_name?: string | null
           id: string
+          last_name?: string | null
           last_practice_date?: string | null
           longest_streak?: number
+          notify_achievements?: boolean | null
+          notify_community_mentions?: boolean | null
+          notify_daily_reminder?: boolean | null
+          notify_new_courses?: boolean | null
+          notify_weekly_progress?: boolean | null
+          privacy_marketing_emails?: boolean | null
+          privacy_public_profile?: boolean | null
+          privacy_usage_analytics?: boolean | null
           total_xp?: number
           updated_at?: string
+          username?: string | null
         }
         Update: {
+          about_me?: string | null
+          academic_interest?: string | null
+          avatar_url?: string | null
           comprehensive_diagnostic_completed?: boolean
           comprehensive_diagnostic_completed_at?: string | null
           created_at?: string
           current_streak?: number
           display_name?: string | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           last_practice_date?: string | null
           longest_streak?: number
+          notify_achievements?: boolean | null
+          notify_community_mentions?: boolean | null
+          notify_daily_reminder?: boolean | null
+          notify_new_courses?: boolean | null
+          notify_weekly_progress?: boolean | null
+          privacy_marketing_emails?: boolean | null
+          privacy_public_profile?: boolean | null
+          privacy_usage_analytics?: boolean | null
           total_xp?: number
           updated_at?: string
+          username?: string | null
         }
         Relationships: []
       }
