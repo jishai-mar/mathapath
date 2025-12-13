@@ -57,10 +57,18 @@ const textToLatexMap: [RegExp, string][] = [
 ];
 
 /**
- * Detects if a string contains LaTeX math content
+ * Detects if a string is primarily math content (not mixed text with some variables)
  */
 function containsMathContent(text: string): boolean {
-  // Check for common LaTeX patterns
+  // If the text is mostly words (has multiple consecutive letters forming words), it's text
+  const wordPattern = /[a-zA-Z]{4,}/g;
+  const words = text.match(wordPattern);
+  if (words && words.length > 2) {
+    // More than 2 words of 4+ letters = likely prose text, not math
+    return false;
+  }
+
+  // Check for common LaTeX patterns that indicate actual math
   const mathPatterns = [
     /\\frac\{/,
     /\\sqrt/,
@@ -69,10 +77,11 @@ function containsMathContent(text: string): boolean {
     /\\div/,
     /\^[\d{]/,
     /_[\d{]/,
-    /\\[a-zA-Z]+/,
-    /[=<>].*[xyz]/i,
-    /\d+[xyz]/i,
-    /[xyz]\s*[+\-*/^=]/i,
+    /\\[a-zA-Z]+\{/,   // LaTeX commands with braces
+    /^\s*[xyz]\s*[=<>]/i,  // Equations starting with variable
+    /[=<>]\s*[xyz]\s*$/i,  // Equations ending with variable
+    /\d+\s*[+\-*/]\s*\d+/, // Numeric operations
+    /^\s*[\d\-+*/^()xyz\s=<>]+\s*$/i, // Pure math expression (only math chars)
   ];
   return mathPatterns.some(pattern => pattern.test(text));
 }
