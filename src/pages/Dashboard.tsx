@@ -7,7 +7,7 @@ import { StatsBar } from '@/components/StatsBar';
 import PerformanceCard from '@/components/PerformanceCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Calculator, LogOut, BookOpen } from 'lucide-react';
+import { Calculator, LogOut, BookOpen, User } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Topic {
@@ -233,15 +233,26 @@ export default function Dashboard() {
             <span className="text-xl font-bold gradient-text">MathPath</span>
           </div>
           
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={handleSignOut}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/profile')}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Profile
+            </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
       </header>
 

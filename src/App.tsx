@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Practice from "./pages/Practice";
 import DiagnosticTest from "./pages/DiagnosticTest";
 import ComprehensiveDiagnostic from "./pages/ComprehensiveDiagnostic";
+import LearningProfile from "./pages/LearningProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/diagnostic" element={<ComprehensiveDiagnostic />} />
             <Route path="/diagnostic/:topicId" element={<DiagnosticTest />} />
             <Route path="/practice/:topicId" element={<Practice />} />
+            <Route path="/profile" element={<LearningProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
