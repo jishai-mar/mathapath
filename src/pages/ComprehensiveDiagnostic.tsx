@@ -15,10 +15,10 @@ interface DiagnosticQuestion {
   id: string;
   subtopic_id: string;
   question: string;
-  correct_answer: string;
   difficulty: 'easy' | 'medium' | 'hard';
   hints: string[];
   order_index: number;
+  // Note: correct_answer is NOT included for security - answers are checked server-side
 }
 
 interface DiagnosticTest {
@@ -130,23 +130,22 @@ export default function ComprehensiveDiagnostic() {
   };
 
   const handleAnswerSubmit = async () => {
-    if (!currentAnswer.trim() || !test) return;
+    if (!test) return;
 
     setIsSubmitting(true);
     const question = questions[currentIndex];
 
     try {
-      // Normalize answers for comparison
-      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
-      const isCorrect = normalize(currentAnswer) === normalize(question.correct_answer);
-
-      // Save response
-      await supabase.from('diagnostic_responses').insert({
-        diagnostic_question_id: question.id,
-        user_id: user!.id,
-        user_answer: currentAnswer,
-        is_correct: isCorrect,
+      // Use server-side answer checking - never expose correct answers to client
+      const { data, error } = await supabase.functions.invoke('check-diagnostic-answer', {
+        body: {
+          questionId: question.id,
+          userAnswer: currentAnswer.trim() || null,
+          userId: user!.id,
+        },
       });
+
+      if (error) throw error;
 
       // Update test progress
       await supabase
@@ -197,7 +196,22 @@ export default function ComprehensiveDiagnostic() {
     }
   };
 
-  const handleSkip = () => {
+  const handleSkip = async () => {
+    const question = questions[currentIndex];
+    
+    // Record skipped question via server-side function
+    try {
+      await supabase.functions.invoke('check-diagnostic-answer', {
+        body: {
+          questionId: question.id,
+          userAnswer: null, // null indicates skipped
+          userId: user!.id,
+        },
+      });
+    } catch (error) {
+      console.error('Error recording skip:', error);
+    }
+
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setCurrentAnswer('');
