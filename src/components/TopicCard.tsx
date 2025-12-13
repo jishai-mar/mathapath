@@ -1,4 +1,3 @@
-import { Progress } from '@/components/ui/progress';
 import LevelBadge, { getLevel } from './LevelBadge';
 import { 
   Calculator, 
@@ -55,10 +54,10 @@ export function TopicCard({
   return (
     <button
       onClick={onClick}
-      className="topic-card w-full text-left p-5 rounded-xl bg-card border border-border/50 hover:border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/50"
+      className="premium-card w-full text-left p-5 rounded-2xl bg-card/50 border border-border/50 hover:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all duration-300"
     >
       <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+        <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors">
           <Icon className="w-6 h-6 text-primary" />
         </div>
         
@@ -78,7 +77,12 @@ export function TopicCard({
               <span className="text-muted-foreground">Mastery</span>
               <span className="text-muted-foreground">{masteryPercentage}%</span>
             </div>
-            <Progress value={masteryPercentage} className="h-2" />
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${masteryPercentage}%` }}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
               {exercisesCompleted} exercises completed
             </p>
