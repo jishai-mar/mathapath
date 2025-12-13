@@ -161,21 +161,25 @@ serve(async (req) => {
       : 0;
 
     // Use AI to generate personalized insights
-    const systemPrompt = `You are a supportive math tutor analyzing a comprehensive diagnostic assessment.
-This assessment covers the ENTIRE math curriculum to create a complete understanding of the student.
+    const systemPrompt = `You are a patient, experienced math tutor analyzing a comprehensive diagnostic assessment.
+You just met a new student and gave them an initial assessment to understand how they think about math.
 
-Your goal is to create a personalized learning profile that:
-1. Identifies overall starting level
-2. Determines level per topic and subtopic
-3. Identifies strengths (topics/subtopics the student knows well)
-4. Identifies weaknesses (topics/subtopics needing attention)
-5. Detects patterns in mistakes
-6. Recommends where to start learning
+YOUR GOAL is not to grade them, but to UNDERSTAND them:
+- What concepts have they mastered?
+- Where are the gaps in understanding?
+- Are there patterns in how they approach problems?
+- What misconceptions might they have?
+- Where should we start learning together?
 
-Be encouraging and supportive - this test exists to help teach better, not to judge.
-Focus on actionable insights.`;
+Be warm, supportive, and encouraging. This student is about to embark on a learning journey with you.
+Focus on building confidence while being honest about areas for growth.
+Frame weaknesses as "opportunities" or "areas we'll work on together", not failures.`;
 
-    const userPrompt = `Analyze this comprehensive diagnostic assessment covering the entire math curriculum:
+    const userPrompt = `Analyze this comprehensive diagnostic assessment and create a personalized learning profile:
+
+OVERALL STATISTICS:
+- Topics covered: ${topicArray.length}
+- Overall performance: ${overallLevel}%
 
 TOPIC-BY-TOPIC RESULTS:
 ${topicArray
@@ -185,40 +189,47 @@ ${topicArray
    Subtopics: ${t.subtopics.map(s => `${s.subtopic_name}: ${s.is_correct ? "✓" : "✗"}`).join(", ")}`
   ).join("\n\n")}
 
-DETAILED RESPONSES:
-${responseData.slice(0, 20).map(r => `[${r.topic_name} / ${r.subtopic_name}]
+SAMPLE OF DETAILED RESPONSES (showing how the student thinks):
+${responseData.slice(0, 15).map(r => `[${r.topic_name} / ${r.subtopic_name}]
 Q: ${r.question}
-Correct: ${r.correct_answer}
-Student: ${r.user_answer}
+Correct Answer: ${r.correct_answer}
+Student's Answer: ${r.user_answer}
 Result: ${r.is_correct ? "✓ Correct" : "✗ Incorrect"}`).join("\n\n")}
 
-Create a comprehensive personalized learning profile with this JSON structure:
+Create a comprehensive, personalized learning profile. Write as if you're summarizing your observations to plan this student's learning journey.
+
+Return JSON with this structure:
 {
-  "overall_assessment": "Brief, encouraging summary of where the student is across all topics",
-  "overall_level": 0-100,
+  "overall_assessment": "A warm, personalized 2-3 sentence summary addressed to the student. Start with something positive, acknowledge their current level honestly but encouragingly, and express enthusiasm about working together.",
+  "overall_level": ${overallLevel},
   "topic_levels": {
-    "topic_id_here": {
+    "${topicArray[0]?.topic_id || 'topic_id'}": {
       "topic_name": "Topic Name",
       "level": 0-100,
       "status": "strong" | "developing" | "needs_attention"
     }
   },
   "strengths": [
-    {"topic_id": "id", "topic_name": "name", "reason": "Why this is a strength"}
+    {"topic_id": "id", "topic_name": "name", "reason": "Specific observation about what they did well"}
   ],
   "weaknesses": [
-    {"topic_id": "id", "topic_name": "name", "reason": "What specifically needs work"}
+    {"topic_id": "id", "topic_name": "name", "reason": "What specifically we'll work on together"}
   ],
   "misconception_patterns": [
-    {"pattern": "Description of thinking pattern", "how_to_address": "Suggested approach"}
+    {"pattern": "Specific thinking pattern observed (e.g., 'Tends to forget to distribute the negative sign')", "how_to_address": "How we'll address this in learning"}
   ],
-  "recommended_starting_topic_id": "The best topic to start with (usually a foundational weakness)",
+  "recommended_starting_topic_id": "The most strategic topic to start with",
   "recommended_starting_topic_name": "Name of that topic",
-  "learning_path_suggestion": "Brief suggestion for learning order based on dependencies",
-  "learning_style_notes": "Observations about how this student approaches problems"
+  "learning_path_suggestion": "A brief, encouraging description of the suggested learning journey (2-3 sentences)",
+  "learning_style_notes": "Any observations about how this student approaches problems (e.g., 'Shows careful work on algebra but may rush through basic arithmetic')"
 }
 
-Return ONLY valid JSON.`;
+IMPORTANT:
+- Use the actual topic_ids provided above
+- Be specific in your observations, not generic
+- The overall_assessment should feel personal and encouraging
+- Weaknesses should be framed constructively
+- Return ONLY valid JSON, no markdown`;
 
     console.log("Calling Lovable AI to analyze comprehensive diagnostic results...");
 

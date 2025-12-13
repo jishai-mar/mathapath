@@ -244,42 +244,44 @@ export default function ComprehensiveDiagnostic() {
                 Welcome to MathPath
               </CardTitle>
               <CardDescription className="text-base mt-2">
-                Let's understand where you are in your math journey
+                Let me understand how you think about math
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <p className="text-muted-foreground text-center">
-                Before we begin, we'll take a quick assessment covering the entire curriculum.
-                This helps us create a personalized learning path just for you.
-              </p>
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
+                <p className="text-muted-foreground text-center leading-relaxed">
+                  Think of me as your personal math tutor. Before we start learning together, 
+                  I'd like to understand where you are — not to grade you, but to help you better.
+                </p>
+              </div>
 
               <div className="grid gap-4">
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
                   <Target className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                   <div>
-                    <p className="font-medium text-sm">Understand your current level</p>
-                    <p className="text-sm text-muted-foreground">We'll identify what you already know across all topics</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
-                  <TrendingUp className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Find your strengths and gaps</p>
-                    <p className="text-sm text-muted-foreground">Discover which topics need attention and which you've mastered</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
-                  <Sparkles className="w-5 h-5 text-primary mt-0.5 shrink-0" />
-                  <div>
-                    <p className="font-medium text-sm">Get a personalized learning path</p>
-                    <p className="text-sm text-muted-foreground">We'll recommend where to start and adapt to your needs</p>
+                    <p className="font-medium text-sm">Understanding, not testing</p>
+                    <p className="text-sm text-muted-foreground">I want to see how you approach problems — there are no wrong ways to think</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
                   <Lightbulb className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                   <div>
-                    <p className="font-medium text-sm">This isn't an exam</p>
-                    <p className="text-sm text-muted-foreground">Take your time, use hints if needed, skip if unsure. No pressure.</p>
+                    <p className="font-medium text-sm">No pressure, no time limit</p>
+                    <p className="text-sm text-muted-foreground">Take your time. Use hints. Skip questions you don't know yet — that's valuable information too</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
+                  <TrendingUp className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Finding your starting point</p>
+                    <p className="text-sm text-muted-foreground">I'll identify what you already know and where we should focus our learning together</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-secondary/50">
+                  <Sparkles className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-sm">Your personalized path</p>
+                    <p className="text-sm text-muted-foreground">Based on your results, I'll create a learning journey designed specifically for you</p>
                   </div>
                 </div>
               </div>
@@ -297,7 +299,7 @@ export default function ComprehensiveDiagnostic() {
                   </>
                 ) : (
                   <>
-                    Begin Assessment
+                    Let's Begin
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}
@@ -308,6 +310,17 @@ export default function ComprehensiveDiagnostic() {
       </div>
     );
   }
+
+  // Get encouraging message based on progress
+  const getEncouragement = (index: number, total: number) => {
+    const progress = index / total;
+    if (index === 0) return "Let's start with something straightforward.";
+    if (progress < 0.25) return "You're doing great. Keep going at your own pace.";
+    if (progress < 0.5) return "Nice progress! Remember, skipping is perfectly fine.";
+    if (progress < 0.75) return "More than halfway there. Take your time.";
+    if (progress < 0.9) return "Almost done! You're doing wonderfully.";
+    return "Just a few more to go. You've got this.";
+  };
 
   // Test phase
   if (phase === 'test' && questions.length > 0) {
@@ -328,21 +341,13 @@ export default function ComprehensiveDiagnostic() {
               </span>
             </div>
             <Progress value={progress} className="h-2" />
+            <p className="text-xs text-muted-foreground mt-2 text-center italic">
+              {getEncouragement(currentIndex, questions.length)}
+            </p>
           </div>
 
           <Card className="border-border/50 bg-card/50">
             <CardHeader>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                <span className={`px-2 py-0.5 rounded-full ${
-                  currentQuestion.difficulty === 'easy' 
-                    ? 'bg-green-500/20 text-green-400' 
-                    : currentQuestion.difficulty === 'medium'
-                    ? 'bg-yellow-500/20 text-yellow-400'
-                    : 'bg-red-500/20 text-red-400'
-                }`}>
-                  {currentQuestion.difficulty}
-                </span>
-              </div>
               <CardTitle className="text-lg leading-relaxed">
                 <MathRenderer latex={currentQuestion.question} />
               </CardTitle>
@@ -355,6 +360,7 @@ export default function ComprehensiveDiagnostic() {
                 onKeyDown={(e) => e.key === 'Enter' && handleAnswerSubmit()}
                 disabled={isSubmitting}
                 className="text-lg"
+                autoFocus
               />
 
               {/* Hint section */}
@@ -368,7 +374,7 @@ export default function ComprehensiveDiagnostic() {
                       className="text-muted-foreground"
                     >
                       <Lightbulb className="w-4 h-4 mr-2" />
-                      Need a hint?
+                      Need a hint? (No penalty)
                     </Button>
                   ) : (
                     <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
@@ -388,7 +394,7 @@ export default function ComprehensiveDiagnostic() {
                   disabled={isSubmitting}
                   className="flex-1"
                 >
-                  Skip
+                  I don't know yet
                 </Button>
                 <Button
                   onClick={handleAnswerSubmit}
@@ -401,12 +407,16 @@ export default function ComprehensiveDiagnostic() {
                     'Finish'
                   ) : (
                     <>
-                      Next
+                      Submit
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </>
                   )}
                 </Button>
               </div>
+
+              <p className="text-xs text-center text-muted-foreground">
+                Don't worry about getting it right — I'm learning how you think
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -423,9 +433,10 @@ export default function ComprehensiveDiagnostic() {
             <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center mx-auto">
               <Brain className="w-8 h-8 text-primary animate-pulse" />
             </div>
-            <h2 className="text-xl font-semibold">Analyzing Your Results</h2>
+            <h2 className="text-xl font-semibold">Understanding Your Math Profile</h2>
             <p className="text-muted-foreground">
-              We're building your personalized learning profile across all topics...
+              I'm reviewing your responses to understand your strengths, 
+              identify areas where we can grow together, and create your personalized learning path...
             </p>
             <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
               <div className="h-full bg-primary animate-pulse" style={{ width: '60%' }} />
