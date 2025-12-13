@@ -1,24 +1,19 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
 import { 
   CreditCard, 
   Check, 
   Download,
   Plus,
-  Pencil,
-  HardDrive
+  Pencil
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 export default function SubscriptionTab() {
-  const [currentPlan] = useState('pro');
+  const [currentPlan] = useState('starter');
   
-  const invoices = [
-    { id: '#0024', date: 'Sep 24, 2023', amount: '$29.00' },
-    { id: '#0023', date: 'Aug 24, 2023', amount: '$29.00' },
-    { id: '#0022', date: 'Jul 24, 2023', amount: '$29.00' },
-  ];
+  const invoices: { id: string; date: string; amount: string }[] = [];
 
   const plans = [
     {
@@ -26,30 +21,41 @@ export default function SubscriptionTab() {
       name: 'Starter',
       price: 'Free',
       period: '',
-      features: ['Basic Algebra', '5 Practice Problems/day'],
-      buttonText: 'Downgrade',
-      buttonVariant: 'outline' as const,
+      features: ['All Math Topics', 'Unlimited Practice', 'AI Feedback'],
+      buttonText: 'Current Plan',
+      buttonVariant: 'default' as const,
+      current: true,
     },
     {
       id: 'pro',
       name: 'Pro',
       price: '$29',
       period: '/mo',
-      features: ['Everything in Starter', 'Calculus I & II', 'Unlimited Practice'],
-      buttonText: 'Current Plan',
-      buttonVariant: 'default' as const,
-      current: true,
+      features: ['Everything in Starter', 'Priority AI Responses', 'Advanced Analytics'],
+      buttonText: 'Coming Soon',
+      buttonVariant: 'outline' as const,
+      disabled: true,
     },
     {
       id: 'scholar',
       name: 'Scholar',
       price: '$49',
       period: '/mo',
-      features: ['Everything in Pro', '1-on-1 Tutoring (2hrs/mo)', 'Advanced Linear Algebra'],
-      buttonText: 'Upgrade',
+      features: ['Everything in Pro', '1-on-1 Tutoring (2hrs/mo)', 'Custom Learning Paths'],
+      buttonText: 'Coming Soon',
       buttonVariant: 'outline' as const,
+      disabled: true,
     },
   ];
+
+  const handlePlanAction = (planId: string) => {
+    if (planId === 'starter') return;
+    toast.info('Premium plans coming soon!');
+  };
+
+  const handleAddPaymentMethod = () => {
+    toast.info('Payment methods will be available when premium plans launch');
+  };
 
   return (
     <motion.div
@@ -71,20 +77,20 @@ export default function SubscriptionTab() {
         <div className="relative flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-xl font-bold text-foreground">Pro Plan</h3>
+              <h3 className="text-xl font-bold text-foreground">Free Plan</h3>
               <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-full font-medium">Active</span>
             </div>
             <p className="text-muted-foreground max-w-md">
-              You have full access to all calculus, linear algebra, and discrete math modules. Your next billing date is <strong className="text-foreground">October 24, 2023</strong>.
+              You have full access to all math topics and unlimited practice with AI-powered feedback. Upgrade to Pro for advanced features.
             </p>
             <div className="flex gap-3 mt-4">
-              <Button>Change Plan</Button>
-              <Button variant="outline">Cancel Subscription</Button>
+              <Button onClick={() => toast.info('Premium plans coming soon!')}>
+                Upgrade Plan
+              </Button>
             </div>
           </div>
           <div className="text-right">
-            <span className="text-4xl font-bold text-foreground">$29</span>
-            <span className="text-muted-foreground">/mo</span>
+            <span className="text-4xl font-bold text-foreground">Free</span>
           </div>
         </div>
       </div>
@@ -95,58 +101,55 @@ export default function SubscriptionTab() {
         <div className="bg-card rounded-2xl border border-border p-6">
           <h3 className="font-semibold text-foreground mb-4">Payment Method</h3>
           
-          <div className="flex items-center justify-between p-4 rounded-lg border border-border mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-8 bg-gradient-to-r from-red-500 to-orange-500 rounded flex items-center justify-center">
-                <div className="flex">
-                  <div className="w-4 h-4 rounded-full bg-red-600 -mr-1" />
-                  <div className="w-4 h-4 rounded-full bg-yellow-500" />
-                </div>
-              </div>
-              <div>
-                <p className="font-medium text-foreground">Mastercard ending in 4242</p>
-                <p className="text-sm text-muted-foreground">Expiry 12/24</p>
-              </div>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+              <CreditCard className="w-8 h-8 text-muted-foreground" />
             </div>
-            <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-              <Pencil className="w-4 h-4 text-muted-foreground" />
-            </button>
+            <p className="text-muted-foreground mb-4">No payment method on file</p>
+            <Button variant="outline" onClick={handleAddPaymentMethod}>
+              <Plus className="w-4 h-4 mr-2" />
+              Add Payment Method
+            </Button>
           </div>
-
-          <Button variant="ghost" className="text-primary hover:text-primary">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Payment Method
-          </Button>
         </div>
 
         {/* Billing History */}
         <div className="bg-card rounded-2xl border border-border p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-foreground">Billing History</h3>
-            <Button variant="link" className="text-primary p-0">View All</Button>
           </div>
           
-          <div className="space-y-3">
-            {invoices.map((invoice) => (
-              <div key={invoice.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
-                    <CreditCard className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">Invoice {invoice.id}</p>
-                    <p className="text-sm text-muted-foreground">{invoice.date}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-medium text-foreground">{invoice.amount}</span>
-                  <button className="p-2 hover:bg-muted rounded-lg transition-colors">
-                    <Download className="w-4 h-4 text-muted-foreground" />
-                  </button>
-                </div>
+          {invoices.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Download className="w-8 h-8 text-muted-foreground" />
               </div>
-            ))}
-          </div>
+              <p className="text-muted-foreground">No billing history yet</p>
+              <p className="text-sm text-muted-foreground">Invoices will appear here when you upgrade</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {invoices.map((invoice) => (
+                <div key={invoice.id} className="flex items-center justify-between py-3 border-b border-border last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                      <CreditCard className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">Invoice {invoice.id}</p>
+                      <p className="text-sm text-muted-foreground">{invoice.date}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="font-medium text-foreground">{invoice.amount}</span>
+                    <button className="p-2 hover:bg-muted rounded-lg transition-colors">
+                      <Download className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -192,7 +195,8 @@ export default function SubscriptionTab() {
               <Button 
                 variant={plan.buttonVariant}
                 className={`w-full ${plan.current ? '' : plan.id === 'scholar' ? 'border-primary text-primary hover:bg-primary hover:text-primary-foreground' : ''}`}
-                disabled={plan.current}
+                disabled={plan.current || plan.disabled}
+                onClick={() => handlePlanAction(plan.id)}
               >
                 {plan.buttonText}
               </Button>

@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Progress } from '@/components/ui/progress';
 import { 
   Lock, 
   Shield, 
@@ -12,21 +11,57 @@ import {
   Monitor, 
   Check,
   Circle,
-  AlertTriangle
+  Loader2
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function SecurityPrivacyTab() {
+  const { user } = useAuth();
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [publicProfile, setPublicProfile] = useState(true);
   const [usageAnalytics, setUsageAnalytics] = useState(true);
   const [marketingEmails, setMarketingEmails] = useState(false);
+  const [isSavingPrivacy, setIsSavingPrivacy] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load privacy settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!user) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('privacy_public_profile, privacy_usage_analytics, privacy_marketing_emails')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+
+        if (data) {
+          setPublicProfile(data.privacy_public_profile ?? true);
+          setUsageAnalytics(data.privacy_usage_analytics ?? true);
+          setMarketingEmails(data.privacy_marketing_emails ?? false);
+        }
+      } catch (error) {
+        console.error('Error loading privacy settings:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, [user]);
 
   // Password strength calculation
   const getPasswordStrength = () => {
@@ -42,10 +77,77 @@ export default function SecurityPrivacyTab() {
   const strengthLabel = passwordStrength >= 100 ? 'Strong' : passwordStrength >= 66 ? 'Medium' : passwordStrength >= 33 ? 'Weak' : '';
   const strengthColor = passwordStrength >= 100 ? 'text-primary' : passwordStrength >= 66 ? 'text-yellow-500' : 'text-destructive';
 
+  const handleUpdatePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast.error('New passwords do not match');
+      return;
+    }
+    
+    if (passwordStrength < 66) {
+      toast.error('Please use a stronger password');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast.success('Password updated successfully');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      console.error('Error updating password:', error);
+      toast.error(error.message || 'Failed to update password');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
+
+  const handlePrivacyChange = async (field: 'privacy_public_profile' | 'privacy_usage_analytics' | 'privacy_marketing_emails', value: boolean) => {
+    if (!user) return;
+
+    // Update local state immediately
+    if (field === 'privacy_public_profile') setPublicProfile(value);
+    if (field === 'privacy_usage_analytics') setUsageAnalytics(value);
+    if (field === 'privacy_marketing_emails') setMarketingEmails(value);
+
+    setIsSavingPrivacy(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ [field]: value })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      toast.success('Privacy settings updated');
+    } catch (error) {
+      console.error('Error updating privacy setting:', error);
+      toast.error('Failed to update setting');
+      // Revert on error
+      if (field === 'privacy_public_profile') setPublicProfile(!value);
+      if (field === 'privacy_usage_analytics') setUsageAnalytics(!value);
+      if (field === 'privacy_marketing_emails') setMarketingEmails(!value);
+    } finally {
+      setIsSavingPrivacy(false);
+    }
+  };
+
   const sessions = [
-    { device: 'MacBook Pro', location: 'San Francisco, US', browser: 'Chrome', time: '2 minutes ago', current: true },
-    { device: 'iPhone 13', location: 'San Francisco, US', browser: 'App', time: '3 days ago', current: false },
+    { device: 'Current Browser', location: 'Your Location', browser: 'Chrome', time: 'Now', current: true },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <motion.div
@@ -66,9 +168,6 @@ export default function SecurityPrivacyTab() {
             <Lock className="w-5 h-5 text-muted-foreground" />
             <h3 className="font-semibold text-foreground">Password Management</h3>
           </div>
-          <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">
-            Last updated: 3 months ago
-          </span>
         </div>
         <p className="text-sm text-muted-foreground mb-6">Update your password to keep your account secure.</p>
 
@@ -84,6 +183,7 @@ export default function SecurityPrivacyTab() {
                 placeholder="••••••••"
               />
               <button 
+                type="button"
                 onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
@@ -104,6 +204,7 @@ export default function SecurityPrivacyTab() {
                   placeholder="••••••••"
                 />
                 <button 
+                  type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
@@ -169,7 +270,14 @@ export default function SecurityPrivacyTab() {
             </div>
           )}
 
-          <Button className="mt-2">Update Password</Button>
+          <Button 
+            className="mt-2" 
+            onClick={handleUpdatePassword}
+            disabled={!newPassword || !confirmPassword || isUpdatingPassword}
+          >
+            {isUpdatingPassword && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Update Password
+          </Button>
         </div>
       </div>
 
@@ -180,7 +288,7 @@ export default function SecurityPrivacyTab() {
             <Shield className="w-5 h-5 text-muted-foreground" />
             <h3 className="font-semibold text-foreground">Two-Factor Authentication</h3>
           </div>
-          <Switch checked={twoFactorEnabled} onCheckedChange={setTwoFactorEnabled} />
+          <Switch checked={twoFactorEnabled} onCheckedChange={setTwoFactorEnabled} disabled />
         </div>
         <p className="text-sm text-muted-foreground mb-4">Add an extra layer of security to your account.</p>
 
@@ -191,24 +299,11 @@ export default function SecurityPrivacyTab() {
                 <Smartphone className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="font-medium text-foreground">Authenticator App (Recommended)</p>
-                <p className="text-sm text-muted-foreground">Use an authenticator app like Google Authenticator or Authy to generate verification codes.</p>
+                <p className="font-medium text-foreground">Authenticator App (Coming Soon)</p>
+                <p className="text-sm text-muted-foreground">Use an authenticator app like Google Authenticator or Authy.</p>
               </div>
             </div>
-            <Button variant="link" className="text-primary">Configure →</Button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 rounded-lg border border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                <Smartphone className="w-5 h-5 text-muted-foreground" />
-              </div>
-              <div>
-                <p className="font-medium text-foreground">SMS Authentication</p>
-                <p className="text-sm text-muted-foreground">Receive codes via text message to +1 ••• ••• 4492</p>
-              </div>
-            </div>
-            <span className="text-xs text-muted-foreground">Inactive</span>
+            <span className="text-xs text-muted-foreground">Not Available</span>
           </div>
         </div>
       </div>
@@ -227,21 +322,33 @@ export default function SecurityPrivacyTab() {
               <p className="font-medium text-foreground">Public Profile</p>
               <p className="text-sm text-muted-foreground">Allow other learners to see your progress achievements.</p>
             </div>
-            <Switch checked={publicProfile} onCheckedChange={setPublicProfile} />
+            <Switch 
+              checked={publicProfile} 
+              onCheckedChange={(v) => handlePrivacyChange('privacy_public_profile', v)}
+              disabled={isSavingPrivacy}
+            />
           </div>
           <div className="flex items-center justify-between py-3">
             <div>
               <p className="font-medium text-foreground">Usage Analytics</p>
               <p className="text-sm text-muted-foreground">Share anonymous usage data to help us improve the platform.</p>
             </div>
-            <Switch checked={usageAnalytics} onCheckedChange={setUsageAnalytics} />
+            <Switch 
+              checked={usageAnalytics} 
+              onCheckedChange={(v) => handlePrivacyChange('privacy_usage_analytics', v)}
+              disabled={isSavingPrivacy}
+            />
           </div>
           <div className="flex items-center justify-between py-3">
             <div>
               <p className="font-medium text-foreground">Marketing Emails</p>
               <p className="text-sm text-muted-foreground">Receive tips, trends, and promotional offers.</p>
             </div>
-            <Switch checked={marketingEmails} onCheckedChange={setMarketingEmails} />
+            <Switch 
+              checked={marketingEmails} 
+              onCheckedChange={(v) => handlePrivacyChange('privacy_marketing_emails', v)}
+              disabled={isSavingPrivacy}
+            />
           </div>
         </div>
       </div>
@@ -276,10 +383,6 @@ export default function SecurityPrivacyTab() {
             </div>
           ))}
         </div>
-
-        <Button variant="link" className="text-destructive hover:text-destructive mt-4 p-0">
-          Log out all other sessions
-        </Button>
       </div>
 
       {/* Danger Zone */}
@@ -291,7 +394,11 @@ export default function SecurityPrivacyTab() {
               <p className="font-medium text-foreground">Delete Account</p>
               <p className="text-sm text-muted-foreground">Permanently remove your account and all associated data.</p>
             </div>
-            <Button variant="ghost" className="text-destructive hover:text-destructive hover:bg-destructive/10">
+            <Button 
+              variant="ghost" 
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              onClick={() => toast.error('Please contact support to delete your account')}
+            >
               Delete Account
             </Button>
           </div>
