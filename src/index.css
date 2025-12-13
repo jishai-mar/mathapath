@@ -40,8 +40,9 @@
     --radius: 1rem;
 
     /* Semantic colors matching brand */
-    --success: 152 76% 45%;
+    --success: 152 69% 48%;
     --warning: 38 92% 50%;
+    --success-foreground: 0 0% 100%;
     --info: 210 100% 60%;
     
     /* Difficulty colors */
