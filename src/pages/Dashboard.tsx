@@ -1,14 +1,24 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { TopicCard } from '@/components/TopicCard';
-import { StatsBar } from '@/components/StatsBar';
-import PerformanceCard from '@/components/PerformanceCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Sigma, LogOut, BookOpen, User, Sparkles } from 'lucide-react';
+import { 
+  Sparkles, 
+  Star, 
+  Flame, 
+  Target, 
+  TrendingUp, 
+  AlertTriangle, 
+  ArrowRight,
+  ChevronRight,
+  Play,
+  Calculator,
+  Sigma,
+  Pentagon
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Topic {
@@ -17,12 +27,6 @@ interface Topic {
   description: string | null;
   icon: string;
   order_index: number;
-}
-
-interface Subtopic {
-  id: string;
-  name: string;
-  topic_id: string;
 }
 
 interface Profile {
@@ -42,9 +46,7 @@ interface SubtopicProgress {
   subtopic_id: string;
   subtopic_name: string;
   mastery_percentage: number;
-  exercises_completed: number;
-  exercises_correct: number;
-  hints_used: number;
+  topic_name?: string;
 }
 
 interface DiagnosticStatus {
@@ -96,55 +98,49 @@ export default function Dashboard() {
 
   const loadData = async () => {
     try {
-      const { data: topicsData, error: topicsError } = await supabase
+      const { data: topicsData } = await supabase
         .from('topics')
         .select('*')
         .order('order_index');
       
-      if (topicsError) throw topicsError;
       setTopics(topicsData || []);
 
-      const { data: subtopicsData, error: subtopicsError } = await supabase
+      const { data: subtopicsData } = await supabase
         .from('subtopics')
         .select('id, name, topic_id');
       
-      if (subtopicsError) throw subtopicsError;
-      const subtopicMap = new Map((subtopicsData || []).map(s => [s.id, s.name]));
+      const subtopicMap = new Map((subtopicsData || []).map(s => [s.id, { name: s.name, topic_id: s.topic_id }]));
+      const topicMap = new Map((topicsData || []).map(t => [t.id, t.name]));
 
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user!.id)
         .single();
       
-      if (profileError && profileError.code !== 'PGRST116') {
-        throw profileError;
-      }
       setProfile(profileData);
 
-      const { data: progressData, error: progressError } = await supabase
+      const { data: progressData } = await supabase
         .from('user_topic_progress')
         .select('*')
         .eq('user_id', user!.id);
       
-      if (progressError) throw progressError;
       setProgress(progressData || []);
 
-      const { data: subtopicProgressData, error: subtopicProgressError } = await supabase
+      const { data: subtopicProgressData } = await supabase
         .from('user_subtopic_progress')
         .select('*')
         .eq('user_id', user!.id);
       
-      if (subtopicProgressError) throw subtopicProgressError;
-      
-      const enrichedSubtopicProgress = (subtopicProgressData || []).map(sp => ({
-        subtopic_id: sp.subtopic_id,
-        subtopic_name: subtopicMap.get(sp.subtopic_id) || 'Unknown',
-        mastery_percentage: sp.mastery_percentage,
-        exercises_completed: sp.exercises_completed,
-        exercises_correct: sp.exercises_correct,
-        hints_used: sp.hints_used,
-      }));
+      const enrichedSubtopicProgress = (subtopicProgressData || []).map(sp => {
+        const subtopicInfo = subtopicMap.get(sp.subtopic_id);
+        return {
+          subtopic_id: sp.subtopic_id,
+          subtopic_name: subtopicInfo?.name || 'Unknown',
+          mastery_percentage: sp.mastery_percentage,
+          topic_name: subtopicInfo?.topic_id ? topicMap.get(subtopicInfo.topic_id) : undefined,
+        };
+      });
       
       setSubtopicProgress(enrichedSubtopicProgress);
 
@@ -160,11 +156,6 @@ export default function Dashboard() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
   };
 
   const getTopicProgress = (topicId: string) => {
@@ -185,23 +176,34 @@ export default function Dashboard() {
     }
   };
 
-  const overallMastery = progress.length > 0
-    ? Math.round(progress.reduce((sum, p) => sum + p.mastery_percentage, 0) / progress.length)
-    : 0;
+  // Find best topic (highest mastery)
+  const bestTopic = progress.length > 0 
+    ? progress.reduce((best, current) => current.mastery_percentage > best.mastery_percentage ? current : best)
+    : null;
+  const bestTopicName = bestTopic ? topics.find(t => t.id === bestTopic.topic_id)?.name : null;
+
+  // Find weakest subtopics for "Needs Attention"
+  const weakSubtopics = subtopicProgress
+    .filter(sp => sp.mastery_percentage < 60 && sp.mastery_percentage > 0)
+    .sort((a, b) => a.mastery_percentage - b.mastery_percentage)
+    .slice(0, 2);
+
+  // Get current topic (first incomplete or in-progress)
+  const currentTopic = topics.find(t => {
+    const diagnostic = diagnosticStatuses.find(d => d.topic_id === t.id);
+    const prog = getTopicProgress(t.id);
+    return (!diagnostic || diagnostic.status !== 'completed') || prog.masteryPercentage < 80;
+  });
 
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-          <div className="flex items-center justify-between">
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-10 w-32" />
-          </div>
-          <Skeleton className="h-28 w-full rounded-2xl" />
+        <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
+          <Skeleton className="h-16 w-full rounded-xl" />
           <Skeleton className="h-40 w-full rounded-2xl" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <Skeleton key={i} className="h-44 rounded-2xl" />
+          <div className="grid grid-cols-3 gap-6">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-32 rounded-2xl" />
             ))}
           </div>
         </div>
@@ -211,133 +213,375 @@ export default function Dashboard() {
 
   const displayName = profile?.display_name || user?.email?.split('@')[0] || 'Student';
 
+  // XP chart data (mock for visual)
+  const xpBars = [40, 60, 50, 75, 55, 90, 100];
+
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background effects */}
+      {/* Background gradient effects */}
       <div 
         className="fixed inset-0 pointer-events-none"
         style={{
-          background: 'radial-gradient(ellipse at 50% 0%, hsla(145, 76%, 30%, 0.08) 0%, transparent 50%)',
+          background: 'radial-gradient(circle at 15% 50%, hsla(239, 84%, 67%, 0.08) 0%, transparent 25%), radial-gradient(circle at 85% 30%, hsla(160, 84%, 39%, 0.05) 0%, transparent 25%)',
         }}
       />
-      <div className="fixed top-40 -left-20 w-80 h-80 rounded-full bg-primary/5 blur-3xl animate-float pointer-events-none" />
-      <div className="fixed bottom-40 -right-20 w-96 h-96 rounded-full bg-primary/3 blur-3xl animate-float-slow pointer-events-none" />
 
-      <div className="relative z-10">
-        {/* Header */}
-        <header className="sticky top-0 z-50 glass border-b border-border/30">
-          <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
-                <Sigma className="w-5 h-5 text-primary" />
-              </div>
-              <span className="text-xl font-bold gradient-text hidden sm:block">MathPath</span>
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 lg:px-10 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary ring-1 ring-white/5">
+              <Pentagon className="w-6 h-6" />
             </div>
-            
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => navigate('/profile')}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <User className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Profile</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={handleSignOut}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <LogOut className="w-4 h-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </Button>
+            <h2 className="text-lg font-serif font-medium tracking-tight text-foreground">MathMastery</h2>
+          </div>
+          
+          <nav className="hidden md:flex items-center gap-1 bg-surface-highlight/50 p-1 rounded-full border border-white/5">
+            <Link to="/dashboard" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Dashboard
+            </Link>
+            <span className="px-4 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary ring-1 ring-primary/20">
+              Learning
+            </span>
+            <Link to="/practice" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Practice
+            </Link>
+          </nav>
+
+          <div className="flex items-center gap-6">
+            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-card border border-border">
+              <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Online
+              </span>
+            </div>
+            <div className="h-8 w-px bg-border" />
+            <Link to="/profile" className="flex items-center gap-3 cursor-pointer group">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-medium text-foreground group-hover:text-primary transition-colors">{displayName}</p>
+                <p className="text-xs text-muted-foreground">Student</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-secondary/30 ring-2 ring-surface-highlight group-hover:ring-primary/50 transition-all flex items-center justify-center text-foreground font-medium">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            </Link>
+          </div>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="max-w-7xl mx-auto px-6 lg:px-10 py-8 lg:py-10 space-y-10">
+        {/* Welcome section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6"
+        >
+          <div>
+            <div className="flex items-center gap-2 text-primary mb-2">
+              <Sparkles className="w-4 h-4" />
+              <span className="text-sm font-medium uppercase tracking-wider">Welcome back</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-serif text-foreground leading-tight">
+              Ready to continue<br />your journey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-primary">{displayName}</span>?
+            </h1>
+          </div>
+          <div className="flex gap-3">
+            <Button variant="outline" className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight">
+              View History
+            </Button>
+            <Button className="px-6 py-3 h-auto rounded-xl bg-foreground text-background hover:bg-foreground/90 font-bold shadow-lg shadow-white/5">
+              Resume {currentTopic?.name || 'Learning'}
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Stats Cards */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.6 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6"
+        >
+          {/* Total XP Card */}
+          <div className="glass rounded-2xl p-6 relative overflow-hidden group hover:bg-surface-highlight/40 transition-all duration-300">
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl group-hover:bg-yellow-500/20 transition-all" />
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Total XP</span>
+                <span className="text-3xl font-serif text-foreground mt-1">{(profile?.total_xp || 0).toLocaleString()}</span>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-500 border border-yellow-500/20">
+                <Star className="w-5 h-5" />
+              </div>
+            </div>
+            <div className="h-10 flex items-end gap-1 mt-2 opacity-60">
+              {xpBars.map((height, i) => (
+                <div 
+                  key={i} 
+                  className={`w-full rounded-t-sm transition-all ${i === xpBars.length - 1 ? 'bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]' : 'bg-yellow-500/20'}`}
+                  style={{ height: `${height}%` }}
+                />
+              ))}
             </div>
           </div>
-        </header>
 
-        {/* Main content */}
-        <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-          {/* Welcome section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-5 h-5 text-primary" />
-              <span className="text-sm text-primary font-medium">Welcome back</span>
+          {/* Daily Streak Card */}
+          <div className="glass rounded-2xl p-6 relative overflow-hidden group hover:bg-surface-highlight/40 transition-all duration-300">
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-orange-500/10 rounded-full blur-2xl group-hover:bg-orange-500/20 transition-all" />
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Daily Streak</span>
+                <span className="text-3xl font-serif text-foreground mt-1">
+                  {profile?.current_streak || 0} <span className="text-sm font-sans text-muted-foreground">days</span>
+                </span>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
+                <Flame className="w-5 h-5" />
+              </div>
             </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-foreground mb-2">
-              {displayName}
-            </h1>
-            <p className="text-muted-foreground">
-              Continue your math journey. Pick a topic to practice.
-            </p>
-          </motion.div>
-
-          {/* Stats */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-          >
-            <StatsBar 
-              totalXp={profile?.total_xp || 0}
-              currentStreak={profile?.current_streak || 0}
-              longestStreak={profile?.longest_streak || 0}
-            />
-          </motion.div>
-
-          {/* Performance Insights */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-          >
-            <PerformanceCard 
-              subtopicProgress={subtopicProgress}
-              overallMastery={overallMastery}
-            />
-          </motion.div>
-
-          {/* Topics grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-          >
-            <div className="flex items-center gap-2 mb-6">
-              <BookOpen className="w-5 h-5 text-primary" />
-              <h2 className="text-xl font-semibold text-foreground">Topics</h2>
+            <div className="flex items-center gap-2 mt-4">
+              <div className="flex-1 h-1.5 bg-card rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-orange-400 to-red-500 rounded-full relative"
+                  style={{ width: `${Math.min((profile?.current_streak || 0) / 14 * 100, 100)}%` }}
+                >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                </div>
+              </div>
+              <span className="text-xs text-orange-400 font-medium">Keep it up!</span>
             </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {topics.map((topic, index) => {
-                const { masteryPercentage, exercisesCompleted } = getTopicProgress(topic.id);
-                return (
-                  <motion.div 
-                    key={topic.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 + index * 0.05, duration: 0.4 }}
-                  >
-                    <TopicCard
-                      name={topic.name}
-                      description={topic.description}
-                      icon={topic.icon}
-                      masteryPercentage={masteryPercentage}
-                      exercisesCompleted={exercisesCompleted}
-                      onClick={() => handleTopicClick(topic.id)}
+          </div>
+
+          {/* Best Topic Card */}
+          <div className="glass rounded-2xl p-6 relative overflow-hidden group hover:bg-surface-highlight/40 transition-all duration-300">
+            <div className="absolute -right-6 -top-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex flex-col">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Best Topic</span>
+                <span className="text-xl font-medium text-foreground mt-1 truncate max-w-[140px]">
+                  {bestTopicName || 'Start Learning'}
+                </span>
+              </div>
+              <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 border border-emerald-500/20">
+                <Target className="w-5 h-5" />
+              </div>
+            </div>
+            {bestTopic && (
+              <div className="flex items-center gap-3 mt-3">
+                <div className="relative w-10 h-10">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                    <path
+                      className="text-card"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
                     />
-                  </motion.div>
+                    <path
+                      className="text-emerald-500 drop-shadow-[0_0_2px_rgba(16,185,129,0.8)]"
+                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeDasharray={`${bestTopic.mastery_percentage}, 100`}
+                      strokeWidth="3"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-foreground">
+                    {bestTopic.mastery_percentage}%
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground leading-tight">You're in the top 5% of learners in this topic.</p>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Performance Trend & Needs Attention */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="grid grid-cols-1 lg:grid-cols-3 gap-6"
+        >
+          {/* Performance Trend */}
+          <div className="lg:col-span-2 glass rounded-2xl p-8 border border-border flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h3 className="text-xl font-medium text-foreground flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Performance Trend
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">Your understanding over the last 30 days</p>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-card border border-border text-xs font-medium text-muted-foreground">
+                Advanced
+              </span>
+            </div>
+            <div className="h-48 w-full relative flex items-end justify-between gap-2 px-2">
+              {[30, 45, 35, 60, 55, 75, 85, 90].map((height, i) => (
+                <div 
+                  key={i} 
+                  className={`w-full rounded-t-sm transition-all duration-300 hover:opacity-80 ${
+                    i === 7 ? 'bg-surface-highlight border-t border-dashed border-muted-foreground/40 opacity-50' :
+                    i >= 5 ? 'bg-primary/40 hover:bg-primary/60' :
+                    i >= 3 ? 'bg-primary/20 hover:bg-primary/40' :
+                    'bg-primary/10 hover:bg-primary/30'
+                  }`}
+                  style={{ height: `${height}%` }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Needs Attention */}
+          <div className="glass rounded-2xl p-8 border border-amber-900/20 relative overflow-hidden">
+            <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-amber-600/5 rounded-full blur-3xl" />
+            <h3 className="text-lg font-medium text-foreground mb-6 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Needs Attention
+            </h3>
+            <div className="flex flex-col gap-4 relative z-10">
+              {weakSubtopics.length > 0 ? weakSubtopics.map((sp, i) => (
+                <div 
+                  key={sp.subtopic_id}
+                  onClick={() => navigate(`/practice`)}
+                  className="p-4 rounded-xl bg-card/50 border border-amber-500/10 hover:border-amber-500/30 transition-colors group cursor-pointer"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-amber-500 text-xs font-bold uppercase tracking-wider">{sp.topic_name || 'Math'}</span>
+                    <ArrowRight className="w-4 h-4 text-amber-500/50 group-hover:text-amber-500 transition-colors" />
+                  </div>
+                  <h4 className="text-muted-foreground font-medium text-sm">{sp.subtopic_name}</h4>
+                  <div className="mt-3 h-1 w-full bg-card rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-amber-600/80 rounded-full"
+                      style={{ width: `${sp.mastery_percentage}%` }}
+                    />
+                  </div>
+                </div>
+              )) : (
+                <>
+                  <div className="p-4 rounded-xl bg-card/50 border border-amber-500/10 hover:border-amber-500/30 transition-colors group cursor-pointer">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-amber-500 text-xs font-bold uppercase tracking-wider">Algebra</span>
+                      <ArrowRight className="w-4 h-4 text-amber-500/50 group-hover:text-amber-500 transition-colors" />
+                    </div>
+                    <h4 className="text-muted-foreground font-medium text-sm">Exponential Properties</h4>
+                    <div className="mt-3 h-1 w-full bg-card rounded-full overflow-hidden">
+                      <div className="h-full w-[45%] bg-amber-600/80 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-card/50 border border-amber-500/10 hover:border-amber-500/30 transition-colors group cursor-pointer">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-amber-500 text-xs font-bold uppercase tracking-wider">Calculus</span>
+                      <ArrowRight className="w-4 h-4 text-amber-500/50 group-hover:text-amber-500 transition-colors" />
+                    </div>
+                    <h4 className="text-muted-foreground font-medium text-sm">Limits & Continuity</h4>
+                    <div className="mt-3 h-1 w-full bg-card rounded-full overflow-hidden">
+                      <div className="h-full w-[60%] bg-amber-600/80 rounded-full" />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Your Learning Path */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+        >
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-serif text-foreground">Your Learning Path</h2>
+            <a href="#" className="text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
+              View Full Map <ArrowRight className="w-4 h-4" />
+            </a>
+          </div>
+          
+          <div className="relative">
+            <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2 z-0" />
+            <div className="flex gap-6 overflow-x-auto pb-8 pt-4 px-2 snap-x no-scrollbar">
+              {topics.slice(0, 4).map((topic, index) => {
+                const { masteryPercentage } = getTopicProgress(topic.id);
+                const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
+                const isCompleted = diagnostic?.status === 'completed';
+                const isCurrent = index === 1; // Second topic as current for demo
+                const isLocked = index > 1 && !isCompleted;
+
+                return (
+                  <div 
+                    key={topic.id}
+                    className={`snap-center shrink-0 relative z-10 ${isCurrent ? 'w-[320px] transform scale-105 origin-center' : 'w-[300px]'} ${isLocked ? 'opacity-70 hover:opacity-100' : ''} transition-opacity`}
+                  >
+                    <div 
+                      onClick={() => !isLocked && handleTopicClick(topic.id)}
+                      className={`glass p-6 rounded-2xl h-full flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-1 ${
+                        isCurrent 
+                          ? 'bg-surface-highlight/60 border border-primary shadow-glow relative overflow-hidden' 
+                          : isLocked 
+                            ? 'border border-border hover:border-muted-foreground/50' 
+                            : 'border border-primary/20 hover:border-primary/50 hover:shadow-glow'
+                      }`}
+                    >
+                      {isCurrent && <div className="absolute top-0 left-0 w-full h-1 bg-primary" />}
+                      <div>
+                        <div className="flex justify-between items-start mb-4">
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
+                            isCurrent 
+                              ? 'bg-primary/20 text-primary border-primary/30' 
+                              : isLocked 
+                                ? 'bg-card text-muted-foreground border-border' 
+                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                          }`}>
+                            {topic.icon === 'sigma' ? <Sigma className="w-5 h-5" /> : <Calculator className="w-5 h-5" />}
+                          </div>
+                          <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${
+                            isCurrent 
+                              ? 'bg-primary/20 text-primary border-primary/30 animate-pulse' 
+                              : isLocked 
+                                ? 'bg-card text-muted-foreground border-border' 
+                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                          }`}>
+                            {isCurrent ? 'Current' : isLocked ? 'Locked' : 'Developing'}
+                          </span>
+                        </div>
+                        <h3 className={`text-lg font-medium mb-1 ${isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
+                          {topic.name}
+                        </h3>
+                        <p className={`text-sm mb-4 line-clamp-2 ${isLocked ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}>
+                          {topic.description || 'Master this topic to unlock the next level.'}
+                        </p>
+                      </div>
+                      {isCurrent ? (
+                        <Button className="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+                          Continue Lesson <Play className="w-4 h-4" />
+                        </Button>
+                      ) : (
+                        <div>
+                          <div className="flex justify-between text-xs text-muted-foreground mb-2">
+                            <span>Mastery</span>
+                            <span className={isLocked ? '' : 'text-foreground'}>{masteryPercentage}%</span>
+                          </div>
+                          <div className="h-1 bg-card rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full ${isLocked ? 'bg-muted-foreground/30' : 'bg-blue-500'}`}
+                              style={{ width: `${masteryPercentage}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
-          </motion.div>
-        </main>
-      </div>
+          </div>
+        </motion.div>
+      </main>
     </div>
   );
 }
