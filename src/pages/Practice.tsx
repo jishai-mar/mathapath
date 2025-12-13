@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, BookOpen, Sparkles, Trophy, ChevronRight } from 'lucide-react';
+import { ArrowLeft, BookOpen, Sparkles, Trophy, ChevronRight, Moon, Sun, Clock, TrendingUp, CheckCircle2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import ExerciseView from '@/components/ExerciseView';
 import LearnView from '@/components/LearnView';
@@ -55,7 +55,14 @@ interface AIFeedback {
   alternative_approach?: string;
 }
 
-type PracticeMode = 'browsing' | 'learning' | 'practicing';
+interface SessionStats {
+  correctAnswers: number;
+  totalQuestions: number;
+  timeSpent: number;
+  xpGained: number;
+}
+
+type PracticeMode = 'browsing' | 'learning' | 'practicing' | 'completed';
 
 const XP_REWARDS = { easy: 5, medium: 10, hard: 20 };
 
@@ -79,6 +86,8 @@ export default function Practice() {
   const [exercisesCorrect, setExercisesCorrect] = useState(0);
   const [attemptedExerciseIds, setAttemptedExerciseIds] = useState<Set<string>>(new Set());
   const [hintsUsedThisExercise, setHintsUsedThisExercise] = useState(0);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -210,6 +219,7 @@ export default function Practice() {
     setCurrentDifficulty('easy');
     setAttemptedExerciseIds(new Set());
     setHintsUsedThisExercise(0);
+    setSessionStartTime(new Date());
     await loadExercise(selectedSubtopic.id, 'easy');
   };
 
@@ -397,6 +407,22 @@ export default function Practice() {
     await loadExercise(selectedSubtopic.id, nextDifficulty);
   };
 
+  const finishPractice = () => {
+    const timeSpent = sessionStartTime 
+      ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000)
+      : 0;
+    
+    const xpGained = exercisesCorrect * XP_REWARDS[currentDifficulty];
+    
+    setSessionStats({
+      correctAnswers: exercisesCorrect,
+      totalQuestions: exercisesAttempted,
+      timeSpent,
+      xpGained,
+    });
+    setMode('completed');
+  };
+
   const updateStreak = async () => {
     if (!user) return;
     
@@ -501,19 +527,38 @@ export default function Practice() {
 
   const exitPractice = () => {
     if (mode === 'practicing') {
+      if (exercisesAttempted > 0) {
+        finishPractice();
+      } else {
+        setMode('learning');
+        setCurrentExercise(null);
+        setHintsUsedThisExercise(0);
+      }
+    } else if (mode === 'completed') {
       setMode('learning');
-      setCurrentExercise(null);
-      setHintsUsedThisExercise(0);
+      setSessionStats(null);
     } else {
       setMode('browsing');
       setSelectedSubtopic(null);
     }
   };
 
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}m ${secs}s`;
+  };
+
+  const getNextSubtopic = () => {
+    if (!selectedSubtopic) return null;
+    const currentIndex = subtopics.findIndex(s => s.id === selectedSubtopic.id);
+    return subtopics[currentIndex + 1] || null;
+  };
+
   if (authLoading || isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
+        <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
           <Skeleton className="h-10 w-32" />
           <Skeleton className="h-24 w-full rounded-2xl" />
           <div className="space-y-4">
@@ -528,20 +573,22 @@ export default function Practice() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background effects */}
-      <div 
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(ellipse at 50% 0%, hsla(145, 76%, 30%, 0.08) 0%, transparent 50%)',
-        }}
-      />
-      <div className="fixed top-60 -left-20 w-72 h-72 rounded-full bg-primary/5 blur-3xl animate-float pointer-events-none" />
-      <div className="fixed bottom-20 -right-20 w-80 h-80 rounded-full bg-primary/3 blur-3xl animate-float-slow pointer-events-none" />
+      {/* Background gradient effects */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div 
+          className="absolute inset-0"
+          style={{
+            background: 'radial-gradient(ellipse at 50% 0%, hsla(239, 84%, 67%, 0.06) 0%, transparent 50%)',
+          }}
+        />
+        <div className="absolute top-1/3 -left-32 w-96 h-96 rounded-full bg-primary/3 blur-[100px] animate-float" />
+        <div className="absolute bottom-1/4 -right-32 w-80 h-80 rounded-full bg-secondary/3 blur-[100px] animate-float-slow" />
+      </div>
 
       <div className="relative z-10">
         {/* Header */}
         <header className="sticky top-0 z-50 glass border-b border-border/30">
-          <div className="max-w-3xl mx-auto px-6 py-4">
+          <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
             <Button 
               variant="ghost" 
               size="sm" 
@@ -549,15 +596,30 @@ export default function Practice() {
               className="text-muted-foreground hover:text-foreground -ml-2"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
-              {mode === 'browsing' ? 'Back to Topics' : mode === 'learning' ? 'Back to Subtopics' : 'Exit Practice'}
+              {mode === 'browsing' ? 'Back to Topics' : mode === 'learning' ? 'Back to Subtopics' : mode === 'completed' ? 'Back to Learn' : 'Exit Practice'}
             </Button>
+            
+            {mode === 'practicing' && (
+              <div className="flex items-center gap-4">
+                <span className="text-sm text-muted-foreground">{topic?.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Progress</span>
+                  <span className="font-semibold text-foreground">{exercisesCorrect}/{exercisesAttempted > 0 ? exercisesAttempted : '?'}</span>
+                  <Progress 
+                    value={exercisesAttempted > 0 ? (exercisesCorrect / exercisesAttempted) * 100 : 0} 
+                    className="w-24 h-2"
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </header>
 
         {/* Main content */}
-        <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+        <main className="max-w-4xl mx-auto px-6 py-8">
           <AnimatePresence mode="wait">
-            {mode === 'browsing' ? (
+            {/* Browsing Mode - Topic Overview */}
+            {mode === 'browsing' && (
               <motion.div
                 key="browsing"
                 initial={{ opacity: 0, y: 20 }}
@@ -565,29 +627,37 @@ export default function Practice() {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-8"
               >
-                {/* Topic header */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-5 h-5 text-primary" />
+                {/* Topic Header */}
+                <div className="space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                    <Sparkles className="w-4 h-4 text-primary" />
                     <span className="text-sm text-primary font-medium">Topic</span>
                   </div>
-                  <h1 className="text-3xl font-bold text-foreground mb-2">
-                    {topic?.name}
+                  
+                  <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight">
+                    {topic?.name?.split(' ').map((word, i) => (
+                      <span key={i}>
+                        {i === 0 ? word : <><br /><span className="text-primary/80">&</span> {word}</>}
+                      </span>
+                    ))}
                   </h1>
+                  
                   {topic?.description && (
-                    <p className="text-muted-foreground">{topic.description}</p>
+                    <p className="text-lg text-muted-foreground max-w-xl">
+                      {topic.description}
+                    </p>
                   )}
                 </div>
 
                 {/* Subtopics */}
-                <div>
-                  <div className="flex items-center gap-2 mb-4">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
                     <BookOpen className="w-5 h-5 text-primary" />
                     <h2 className="text-lg font-semibold text-foreground">Subtopics</h2>
                   </div>
                   
                   {subtopics.length === 0 ? (
-                    <div className="p-8 rounded-2xl bg-card/50 border border-border/30 text-center">
+                    <div className="p-12 rounded-2xl bg-card border border-border/50 text-center">
                       <Sparkles className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-40" />
                       <p className="text-muted-foreground">
                         Exercises coming soon! We're preparing content for this topic.
@@ -604,26 +674,40 @@ export default function Practice() {
                           whileHover={{ scale: 1.01 }}
                           whileTap={{ scale: 0.99 }}
                           onClick={() => handleSubtopicClick(subtopic)}
-                          className="w-full p-4 rounded-2xl bg-card/50 border border-border/30 hover:border-primary/40 hover:bg-card/80 transition-colors text-left group"
+                          className="w-full p-5 rounded-2xl bg-card border border-border/50 hover:border-primary/40 hover:bg-card/80 transition-all text-left group shadow-lg shadow-black/5"
                         >
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-sm font-semibold text-primary">
+                            <div className="flex items-center gap-4">
+                              <span className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                                 {index + 1}
                               </span>
-                              <span className="font-medium text-foreground group-hover:text-primary transition-colors">
+                              <span className="font-medium text-foreground text-lg group-hover:text-primary transition-colors">
                                 {subtopic.name}
                               </span>
                             </div>
-                            <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                            <div className="w-10 h-10 rounded-full border border-border flex items-center justify-center group-hover:border-primary/40 transition-colors">
+                              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+                            </div>
                           </div>
                         </motion.button>
                       ))}
                     </div>
                   )}
                 </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between pt-8 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                    <span>Learning active</span>
+                  </div>
+                  <span className="italic opacity-60">Understanding, not memorization.</span>
+                </div>
               </motion.div>
-            ) : mode === 'learning' ? (
+            )}
+
+            {/* Learning Mode */}
+            {mode === 'learning' && (
               <motion.div
                 key="learning"
                 initial={{ opacity: 0, y: 20 }}
@@ -633,7 +717,7 @@ export default function Practice() {
               >
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">{topic?.name}</p>
-                  <h2 className="text-2xl font-bold text-foreground">{selectedSubtopic?.name}</h2>
+                  <h2 className="text-3xl font-bold text-foreground">{selectedSubtopic?.name}</h2>
                 </div>
                 
                 <LearnView
@@ -644,60 +728,179 @@ export default function Practice() {
                   onStartPractice={startPractice}
                 />
               </motion.div>
-            ) : (
+            )}
+
+            {/* Practicing Mode */}
+            {mode === 'practicing' && (
               <motion.div
                 key="practicing"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-6"
+                className="space-y-8"
               >
-                {/* Practice header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-1">{topic?.name}</p>
-                    <h2 className="text-xl font-bold text-foreground">{selectedSubtopic?.name}</h2>
-                  </div>
-                  <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary/10 border border-primary/20">
-                    <Trophy className="w-5 h-5 text-primary" />
-                    <span className="font-semibold text-primary">{exercisesCorrect}/{exercisesAttempted}</span>
-                  </div>
+                {/* Subtopic header */}
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-primary" />
+                  <span className="text-sm text-primary font-medium uppercase tracking-wide">{selectedSubtopic?.name}</span>
                 </div>
-                
-                {/* Progress bar */}
-                {exercisesAttempted > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Session accuracy</span>
-                      <span className="text-primary font-medium">
-                        {exercisesAttempted > 0 ? Math.round((exercisesCorrect / exercisesAttempted) * 100) : 0}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={exercisesAttempted > 0 ? (exercisesCorrect / exercisesAttempted) * 100 : 0} 
-                      className="h-2"
-                    />
-                  </div>
-                )}
                 
                 {/* Exercise */}
                 {currentExercise ? (
                   <ExerciseView
                     exercise={currentExercise}
+                    subtopicName={selectedSubtopic?.name || ''}
                     onSubmitAnswer={handleSubmitAnswer}
                     onSubmitImage={handleSubmitImage}
                     onNextExercise={handleNextExercise}
                     onHintReveal={handleHintReveal}
+                    onFinishPractice={finishPractice}
                     isSubmitting={isSubmitting}
+                    exercisesAttempted={exercisesAttempted}
                   />
                 ) : (
-                  <div className="p-12 rounded-2xl bg-card/50 border border-border/30 text-center">
+                  <div className="p-16 rounded-2xl bg-card border border-border/50 text-center">
                     <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
                       <Sparkles className="w-8 h-8 text-primary animate-pulse" />
                     </div>
                     <p className="text-muted-foreground">Loading exercise...</p>
                   </div>
                 )}
+              </motion.div>
+            )}
+
+            {/* Completed Mode - Results */}
+            {mode === 'completed' && sessionStats && (
+              <motion.div
+                key="completed"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                {/* Header */}
+                <div className="text-center space-y-4">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    <span className="text-sm text-primary font-medium">Practice Complete</span>
+                  </div>
+                  
+                  <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+                    Excellent Progress
+                  </h1>
+                  
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    You've demonstrated a strong understanding of {selectedSubtopic?.name}. Keep maintaining this momentum.
+                  </p>
+                </div>
+
+                {/* Stats Card */}
+                <div className="p-8 rounded-2xl bg-card border border-border/50">
+                  <div className="flex flex-col md:flex-row items-center gap-8">
+                    {/* Accuracy Circle */}
+                    <div className="relative w-48 h-48 flex-shrink-0">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="hsl(var(--border))"
+                          strokeWidth="6"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="45"
+                          fill="none"
+                          stroke="hsl(var(--primary))"
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          strokeDasharray={`${(sessionStats.correctAnswers / sessionStats.totalQuestions) * 283} 283`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-4xl font-bold text-foreground">
+                          {sessionStats.totalQuestions > 0 
+                            ? Math.round((sessionStats.correctAnswers / sessionStats.totalQuestions) * 100)
+                            : 0}%
+                        </span>
+                        <span className="text-sm text-muted-foreground uppercase tracking-wide">Accuracy</span>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="flex-1 space-y-4">
+                      <div className="p-4 rounded-xl bg-muted/30 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                          <CheckCircle2 className="w-5 h-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Correct Answers</p>
+                          <p className="text-xl font-bold text-foreground">{sessionStats.correctAnswers} of {sessionStats.totalQuestions}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 rounded-xl bg-muted/30 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center">
+                          <Clock className="w-5 h-5 text-secondary" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">Time Spent</p>
+                          <p className="text-xl font-bold text-foreground">{formatTime(sessionStats.timeSpent)}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 rounded-xl bg-muted/30 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-accent" />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">XP Gained</p>
+                          <p className="text-xl font-bold text-foreground">+{sessionStats.xpGained} XP</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => {
+                      setMode('practicing');
+                      setSessionStats(null);
+                      setExercisesAttempted(0);
+                      setExercisesCorrect(0);
+                      setSessionStartTime(new Date());
+                      loadExercise(selectedSubtopic!.id, 'easy');
+                    }}
+                    className="gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Retry Practice
+                  </Button>
+                  
+                  {getNextSubtopic() && (
+                    <Button
+                      size="lg"
+                      onClick={() => {
+                        const nextSubtopic = getNextSubtopic();
+                        if (nextSubtopic) {
+                          setSelectedSubtopic(nextSubtopic);
+                          setMode('learning');
+                          setSessionStats(null);
+                        }
+                      }}
+                      className="gap-2"
+                    >
+                      Next Lesson: {getNextSubtopic()?.name}
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

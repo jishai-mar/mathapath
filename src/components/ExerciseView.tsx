@@ -1,20 +1,19 @@
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import MathRenderer from './MathRenderer';
 import ImageUploader from './ImageUploader';
 import FeedbackCard from './FeedbackCard';
 import { 
   Lightbulb, 
-  Send, 
   ArrowRight, 
   RotateCcw, 
   CheckCircle2, 
   XCircle,
-  ChevronDown,
-  Camera
+  Camera,
+  Sparkles,
+  HelpCircle
 } from 'lucide-react';
 
 interface Exercise {
@@ -22,7 +21,6 @@ interface Exercise {
   question: string;
   difficulty: 'easy' | 'medium' | 'hard';
   hints: string[] | null;
-  // Note: correct_answer is NOT included - answers are checked server-side
 }
 
 interface AIFeedback {
@@ -35,29 +33,38 @@ interface AIFeedback {
 
 interface ExerciseViewProps {
   exercise: Exercise;
+  subtopicName: string;
   onSubmitAnswer: (answer: string) => Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string }>;
   onSubmitImage: (file: File) => Promise<AIFeedback>;
   onNextExercise: (suggestedDifficulty?: 'easy' | 'medium' | 'hard') => void;
   onHintReveal?: () => void;
+  onFinishPractice: () => void;
   isSubmitting: boolean;
+  exercisesAttempted: number;
 }
 
-const difficultyColors = {
-  easy: 'bg-primary/20 text-primary border-primary/30',
-  medium: 'bg-warning/20 text-[hsl(var(--warning))] border-warning/30',
-  hard: 'bg-destructive/20 text-destructive border-destructive/30',
-};
+// Math symbol buttons for quick input
+const mathSymbols = [
+  { label: 'x²', value: '^2' },
+  { label: '√', value: '√' },
+  { label: '÷', value: '÷' },
+  { label: 'π', value: 'π' },
+  { label: '(', value: '(' },
+  { label: ')', value: ')' },
+];
 
 export default function ExerciseView({
   exercise,
+  subtopicName,
   onSubmitAnswer,
   onSubmitImage,
   onNextExercise,
   onHintReveal,
+  onFinishPractice,
   isSubmitting,
+  exercisesAttempted,
 }: ExerciseViewProps) {
   const [answer, setAnswer] = useState('');
-  const [showHints, setShowHints] = useState(false);
   const [revealedHints, setRevealedHints] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
   const [feedback, setFeedback] = useState<{
@@ -95,7 +102,6 @@ export default function ExerciseView({
     onNextExercise(suggestedDifficulty);
     setAnswer('');
     setFeedback(null);
-    setShowHints(false);
     setRevealedHints(0);
     setShowUpload(false);
   };
@@ -105,189 +111,257 @@ export default function ExerciseView({
     setFeedback(null);
   };
 
-  const revealNextHint = () => {
+  const handleShowSolution = () => {
+    // Reveal all hints first, then show solution on next click
     if (exercise.hints && revealedHints < exercise.hints.length) {
-      setRevealedHints(prev => prev + 1);
-      // Notify parent about hint reveal for tracking
+      setRevealedHints(exercise.hints.length);
       onHintReveal?.();
     }
   };
 
-  return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Question Card */}
-      <Card className="border-border/50 bg-card/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <Badge 
-              variant="outline" 
-              className={`capitalize ${difficultyColors[exercise.difficulty]}`}
-            >
-              {exercise.difficulty}
-            </Badge>
-            {exercise.hints && exercise.hints.length > 0 && !feedback && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowHints(!showHints)}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Lightbulb className="w-4 h-4 mr-1" />
-                Hints ({revealedHints}/{exercise.hints.length})
-                <ChevronDown className={`w-4 h-4 ml-1 transition-transform ${showHints ? 'rotate-180' : ''}`} />
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Question */}
-          <div className="text-lg sm:text-xl leading-relaxed py-4">
-            <MathRenderer latex={exercise.question} displayMode />
-          </div>
+  const insertSymbol = (symbol: string) => {
+    setAnswer(prev => prev + symbol);
+  };
 
-          {/* Hints */}
-          {showHints && exercise.hints && (
-            <div className="space-y-2 pt-2 border-t border-border/50">
-              {exercise.hints.slice(0, revealedHints).map((hint, index) => (
-                <div 
-                  key={index}
-                  className="flex items-start gap-2 text-sm text-muted-foreground bg-secondary/30 rounded-lg p-3 animate-fade-in"
-                >
-                  <Lightbulb className="w-4 h-4 mt-0.5 text-[hsl(var(--warning))] flex-shrink-0" />
-                  <MathRenderer latex={hint} />
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Left: Question */}
+      <div className="space-y-6">
+        {/* Question title */}
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+          Simplify the algebraic fraction
+        </h2>
+
+        {/* Question Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-8 md:p-12 rounded-2xl bg-card border border-border/50 shadow-lg"
+        >
+          <div className="text-center">
+            <div className="text-2xl md:text-4xl leading-relaxed">
+              <MathRenderer latex={exercise.question} displayMode />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Hint Card */}
+        {exercise.hints && exercise.hints.length > 0 && (
+          <AnimatePresence>
+            {revealedHints > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="p-4 rounded-xl bg-muted/30 border border-border/30"
+              >
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Lightbulb className="w-4 h-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground mb-1">Concept Hint</p>
+                    <div className="text-sm text-muted-foreground">
+                      {exercise.hints.slice(0, revealedHints).map((hint, i) => (
+                        <p key={i} className="mb-1">
+                          <MathRenderer latex={hint} />
+                        </p>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              ))}
-              {revealedHints < exercise.hints.length && (
+              </motion.div>
+            )}
+          </AnimatePresence>
+        )}
+      </div>
+
+      {/* Right: Answer Section */}
+      <div className="space-y-6">
+        {!feedback ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-6 rounded-2xl bg-card border border-border/50 shadow-lg space-y-6"
+          >
+            <h3 className="font-medium text-foreground">Your Solution</h3>
+
+            {!showUpload ? (
+              <form onSubmit={handleTextSubmit} className="space-y-4">
+                {/* Input with prefix */}
+                <div className="relative">
+                  <div className="flex items-center gap-2 p-4 rounded-xl border-2 border-primary/30 bg-muted/20 focus-within:border-primary transition-colors">
+                    <span className="text-muted-foreground font-mono">f(x) =</span>
+                    <Input
+                      value={answer}
+                      onChange={(e) => setAnswer(e.target.value)}
+                      placeholder="Enter simplified expression"
+                      className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-lg font-mono"
+                      disabled={isSubmitting}
+                    />
+                    <span className="text-xs text-muted-foreground px-2 py-1 bg-muted rounded">Enter</span>
+                  </div>
+                </div>
+
+                {/* Math symbols */}
+                <div className="flex flex-wrap gap-2">
+                  {mathSymbols.map((symbol) => (
+                    <button
+                      key={symbol.label}
+                      type="button"
+                      onClick={() => insertSymbol(symbol.value)}
+                      className="w-10 h-10 rounded-lg border border-border bg-muted/30 hover:bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors font-mono"
+                    >
+                      {symbol.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="border-t border-border/50 pt-4">
+                  <Button 
+                    type="submit" 
+                    disabled={!answer.trim() || isSubmitting}
+                    className="w-full h-12 text-base gap-2"
+                  >
+                    Check Answer
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleShowSolution}
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  I'm stuck, show solution
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <ImageUploader
+                  onImageSelected={handleImageSubmit}
+                  isUploading={isSubmitting}
+                />
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={revealNextHint}
-                  className="text-muted-foreground"
+                  className="w-full text-muted-foreground"
+                  onClick={() => setShowUpload(false)}
                 >
-                  Show next hint
+                  Back to text answer
                 </Button>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            )}
 
-      {/* Answer Section */}
-      {!feedback && (
-        <div className="space-y-4">
-          {/* Text Answer */}
-          {!showUpload && (
-            <form onSubmit={handleTextSubmit} className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                  placeholder="Enter your answer..."
-                  className="flex-1 bg-secondary/30 border-border/50 focus:border-primary/50"
-                  disabled={isSubmitting}
-                />
-                <Button type="submit" disabled={!answer.trim() || isSubmitting}>
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              <div className="flex items-center gap-2">
+            {!showUpload && (
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <div className="h-px flex-1 bg-border/50" />
-                <span className="text-xs text-muted-foreground">or</span>
+                <span>or</span>
                 <div className="h-px flex-1 bg-border/50" />
               </div>
-              
+            )}
+
+            {!showUpload && (
               <Button
                 type="button"
                 variant="outline"
-                className="w-full"
+                className="w-full gap-2"
                 onClick={() => setShowUpload(true)}
               >
-                <Camera className="w-4 h-4 mr-2" />
+                <Camera className="w-4 h-4" />
                 Upload handwritten work
               </Button>
-            </form>
-          )}
-
-          {/* Image Upload */}
-          {showUpload && (
-            <div className="space-y-3">
-              <ImageUploader
-                onImageSelected={handleImageSubmit}
-                isUploading={isSubmitting}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-muted-foreground"
-                onClick={() => setShowUpload(false)}
-              >
-                Back to text answer
-              </Button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Feedback Section */}
-      {feedback && (
-        <div className="space-y-4">
-          {feedback.type === 'ai' && feedback.aiFeedback ? (
-            <FeedbackCard feedback={feedback.aiFeedback} />
-          ) : (
-            <Card className={`border-2 ${feedback.isCorrect ? 'border-primary/50 bg-primary/5' : 'border-destructive/50 bg-destructive/5'}`}>
-              <CardContent className="py-4 space-y-3">
-                <div className="flex items-center gap-3">
+            )}
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="space-y-4"
+          >
+            {feedback.type === 'ai' && feedback.aiFeedback ? (
+              <FeedbackCard feedback={feedback.aiFeedback} />
+            ) : (
+              <div className={`p-6 rounded-2xl border-2 ${
+                feedback.isCorrect 
+                  ? 'border-primary/50 bg-primary/5' 
+                  : 'border-destructive/50 bg-destructive/5'
+              }`}>
+                <div className="flex items-center gap-3 mb-4">
                   {feedback.isCorrect ? (
                     <>
-                      <CheckCircle2 className="w-6 h-6 text-primary" />
-                      <span className="font-semibold text-lg">Correct! 🎉</span>
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <CheckCircle2 className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="font-semibold text-xl text-foreground">Correct!</span>
                     </>
                   ) : (
                     <>
-                      <XCircle className="w-6 h-6 text-destructive" />
-                      <span className="font-semibold text-lg">Not quite right</span>
+                      <div className="w-10 h-10 rounded-full bg-destructive/20 flex items-center justify-center">
+                        <XCircle className="w-5 h-5 text-destructive" />
+                      </div>
+                      <span className="font-semibold text-xl text-foreground">Not quite right</span>
                     </>
                   )}
                 </div>
                 
                 {feedback.explanation && (
-                  <div className="text-sm text-muted-foreground pt-2 border-t border-border/50">
+                  <div className="text-sm text-muted-foreground pt-4 border-t border-border/50">
                     <MathRenderer latex={feedback.explanation} />
                   </div>
                 )}
 
                 {!feedback.isCorrect && feedback.correctAnswer && (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground mt-3">
                     The correct answer is: <span className="font-mono text-foreground">{feedback.correctAnswer}</span>
                   </p>
                 )}
-              </CardContent>
-            </Card>
-          )}
+              </div>
+            )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            {!feedback.isCorrect && (
+            {/* Action Buttons */}
+            <div className="flex gap-3">
+              {!feedback.isCorrect && (
+                <Button
+                  variant="outline"
+                  onClick={handleRetry}
+                  className="flex-1 gap-2"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Try Again
+                </Button>
+              )}
               <Button
-                variant="outline"
-                onClick={handleRetry}
-                className="flex-1"
+                onClick={handleNext}
+                className={`gap-2 ${feedback.isCorrect ? 'flex-1' : ''}`}
               >
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Try Again
+                Next Exercise
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {exercisesAttempted >= 3 && (
+              <Button
+                variant="ghost"
+                onClick={onFinishPractice}
+                className="w-full text-muted-foreground"
+              >
+                Finish Practice
               </Button>
             )}
-            <Button
-              onClick={handleNext}
-              className={feedback.isCorrect ? 'w-full' : 'flex-1'}
-            >
-              Next Exercise
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </div>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="lg:col-span-2 flex items-center justify-between pt-8 text-sm text-muted-foreground border-t border-border/30">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <span>Connected</span>
+          <span className="text-muted-foreground/60">Session ID: #{Math.random().toString(36).substr(2, 5).toUpperCase()}</span>
         </div>
-      )}
+        <span className="text-xs opacity-60">Cmd + Enter to Submit</span>
+      </div>
     </div>
   );
 }
