@@ -779,27 +779,47 @@ export default function Practice() {
                 if (accuracy >= 90) {
                   return {
                     title: "Excellent Progress",
-                    message: `You've demonstrated a strong understanding of ${selectedSubtopic?.name}. Keep maintaining this momentum.`
+                    message: `You've demonstrated a strong understanding of ${selectedSubtopic?.name}. Keep maintaining this momentum.`,
+                    color: "hsl(142, 76%, 36%)", // green
+                    colorClass: "text-green-500",
+                    bgClass: "bg-green-500/10",
+                    borderClass: "border-green-500/20"
                   };
                 } else if (accuracy >= 70) {
                   return {
                     title: "Great Work",
-                    message: `You're making solid progress in ${selectedSubtopic?.name}. A bit more practice and you'll master it.`
+                    message: `You're making solid progress in ${selectedSubtopic?.name}. A bit more practice and you'll master it.`,
+                    color: "hsl(142, 76%, 36%)", // green
+                    colorClass: "text-green-500",
+                    bgClass: "bg-green-500/10",
+                    borderClass: "border-green-500/20"
                   };
                 } else if (accuracy >= 50) {
                   return {
                     title: "Keep Practicing",
-                    message: `You're getting there with ${selectedSubtopic?.name}. Focus on the concepts you found challenging.`
+                    message: `You're getting there with ${selectedSubtopic?.name}. Focus on the concepts you found challenging.`,
+                    color: "hsl(45, 93%, 47%)", // yellow/amber
+                    colorClass: "text-yellow-500",
+                    bgClass: "bg-yellow-500/10",
+                    borderClass: "border-yellow-500/20"
                   };
                 } else if (accuracy >= 25) {
                   return {
                     title: "Room to Grow",
-                    message: `${selectedSubtopic?.name} needs more attention. Review the theory and try again with a fresh perspective.`
+                    message: `${selectedSubtopic?.name} needs more attention. Review the theory and try again with a fresh perspective.`,
+                    color: "hsl(25, 95%, 53%)", // orange
+                    colorClass: "text-orange-500",
+                    bgClass: "bg-orange-500/10",
+                    borderClass: "border-orange-500/20"
                   };
                 } else {
                   return {
                     title: "Focus Needed",
-                    message: `${selectedSubtopic?.name} requires more practice. Consider reviewing the theory section before trying again.`
+                    message: `${selectedSubtopic?.name} requires more practice. Consider reviewing the theory section before trying again.`,
+                    color: "hsl(0, 84%, 60%)", // red
+                    colorClass: "text-red-500",
+                    bgClass: "bg-red-500/10",
+                    borderClass: "border-red-500/20"
                   };
                 }
               };
@@ -816,12 +836,12 @@ export default function Practice() {
               >
                 {/* Header */}
                 <div className="text-center space-y-4">
-                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    <span className="text-sm text-primary font-medium">Practice Complete</span>
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full ${feedback.bgClass} border ${feedback.borderClass}`}>
+                    <Sparkles className={`w-4 h-4 ${feedback.colorClass}`} />
+                    <span className={`text-sm ${feedback.colorClass} font-medium`}>Practice Complete</span>
                   </div>
                   
-                  <h1 className="text-4xl md:text-5xl font-bold text-foreground">
+                  <h1 className={`text-4xl md:text-5xl font-bold ${feedback.colorClass}`}>
                     {feedback.title}
                   </h1>
                   
@@ -849,17 +869,15 @@ export default function Practice() {
                           cy="50"
                           r="45"
                           fill="none"
-                          stroke="hsl(var(--primary))"
+                          stroke={feedback.color}
                           strokeWidth="6"
                           strokeLinecap="round"
                           strokeDasharray={`${(sessionStats.correctAnswers / sessionStats.totalQuestions) * 283} 283`}
                         />
                       </svg>
                       <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="text-4xl font-bold text-foreground">
-                          {sessionStats.totalQuestions > 0 
-                            ? Math.round((sessionStats.correctAnswers / sessionStats.totalQuestions) * 100)
-                            : 0}%
+                        <span className={`text-4xl font-bold ${feedback.colorClass}`}>
+                          {accuracy}%
                         </span>
                         <span className="text-sm text-muted-foreground uppercase tracking-wide">Accuracy</span>
                       </div>
