@@ -210,21 +210,61 @@ Return ONLY valid JSON, no additional text.`;
 
     console.log("AI response received, parsing...");
 
-    // Parse AI response
+    // Parse AI response - handle LaTeX escaping issues
     let parsedQuestions;
     try {
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        parsedQuestions = JSON.parse(jsonMatch[0]);
-      } else {
+      // Remove markdown code blocks if present
+      let cleanContent = aiContent.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+      
+      // Extract the JSON object
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
         throw new Error("No JSON found in response");
       }
+      
+      let jsonStr = jsonMatch[0];
+      
+      // Fix common LaTeX escaping issues in JSON
+      // The AI often uses \( and \) for inline math which breaks JSON
+      // Replace problematic escape sequences
+      jsonStr = jsonStr
+        .replace(/\\+\(/g, "(")  // \( or \\( -> (
+        .replace(/\\+\)/g, ")")  // \) or \\) -> )
+        .replace(/\\\\/g, "\\"); // \\\\ -> \\ (normalize double escapes)
+      
+      parsedQuestions = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error("Parse error:", parseError, "Content:", aiContent);
-      return new Response(
-        JSON.stringify({ error: "Failed to parse AI response" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      
+      // Fallback: try to extract and rebuild manually
+      try {
+        const questionsArray: any[] = [];
+        const questionRegex = /"subtopic_id"\s*:\s*"([^"]+)"[\s\S]*?"question"\s*:\s*"([^"]*(?:\\.[^"]*)*)"[\s\S]*?"correct_answer"\s*:\s*"([^"]*(?:\\.[^"]*)*)"[\s\S]*?"difficulty"\s*:\s*"([^"]+)"/g;
+        
+        let match;
+        while ((match = questionRegex.exec(aiContent)) !== null) {
+          questionsArray.push({
+            subtopic_id: match[1],
+            question: match[2].replace(/\\\\/g, "\\"),
+            correct_answer: match[3],
+            difficulty: match[4],
+            hints: []
+          });
+        }
+        
+        if (questionsArray.length > 0) {
+          parsedQuestions = { questions: questionsArray };
+          console.log("Used fallback parsing, extracted", questionsArray.length, "questions");
+        } else {
+          throw new Error("Fallback parsing failed");
+        }
+      } catch (fallbackError) {
+        console.error("Fallback parse error:", fallbackError);
+        return new Response(
+          JSON.stringify({ error: "Failed to parse AI response" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Prepare questions for insertion
