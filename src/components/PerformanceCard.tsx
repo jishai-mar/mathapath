@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { motion } from 'framer-motion';
 import LevelBadge, { getLevel } from './LevelBadge';
-import { TrendingUp, TrendingDown, Trophy } from 'lucide-react';
+import { TrendingUp, TrendingDown, Trophy, Sparkles } from 'lucide-react';
 
 interface SubtopicProgress {
   subtopic_id: string;
@@ -39,35 +39,43 @@ export default function PerformanceCard({ subtopicProgress, overallMastery }: Pe
   }
 
   return (
-    <Card className="border-border/50 bg-card/50">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2 text-base">
-            <Trophy className="w-5 h-5 text-[hsl(var(--xp-gold))]" />
-            Your Performance
-          </span>
-          <LevelBadge level={level} showGlow />
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="p-6 rounded-2xl bg-card/50 border border-border/30 backdrop-blur-sm"
+    >
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-xp/10 flex items-center justify-center border border-xp/20">
+            <Trophy className="w-5 h-5 text-xp" />
+          </div>
+          <span className="font-semibold text-foreground">Your Performance</span>
+        </div>
+        <LevelBadge level={level} showGlow />
+      </div>
+
+      <div className="space-y-5">
         {/* Strengths */}
         {strengths.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-primary">
-              <TrendingUp className="w-4 h-4" />
-              Your Strengths
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">Your Strengths</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {strengths.slice(0, 4).map((s) => (
-                <span
+              {strengths.slice(0, 4).map((s, idx) => (
+                <motion.span
                   key={s.subtopic_id}
-                  className="px-2.5 py-1 rounded-full text-xs bg-primary/10 text-primary border border-primary/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary border border-primary/20"
                 >
                   {s.subtopic_name}
-                </span>
+                </motion.span>
               ))}
               {strengths.length > 4 && (
-                <span className="px-2.5 py-1 rounded-full text-xs bg-secondary text-muted-foreground">
+                <span className="px-3 py-1.5 rounded-full text-xs bg-border/30 text-muted-foreground">
                   +{strengths.length - 4} more
                 </span>
               )}
@@ -77,22 +85,25 @@ export default function PerformanceCard({ subtopicProgress, overallMastery }: Pe
 
         {/* Weaknesses */}
         {weaknesses.length > 0 && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm font-medium text-[hsl(var(--warning))]">
-              <TrendingDown className="w-4 h-4" />
-              Needs Work
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <TrendingDown className="w-4 h-4 text-warning" />
+              <span className="text-sm font-medium text-warning">Needs Work</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {weaknesses.slice(0, 4).map((s) => (
-                <span
+              {weaknesses.slice(0, 4).map((s, idx) => (
+                <motion.span
                   key={s.subtopic_id}
-                  className="px-2.5 py-1 rounded-full text-xs bg-warning/10 text-[hsl(var(--warning))] border border-warning/20"
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.05 }}
+                  className="px-3 py-1.5 rounded-full text-xs font-medium bg-warning/10 text-warning border border-warning/20"
                 >
                   {s.subtopic_name}
-                </span>
+                </motion.span>
               ))}
               {weaknesses.length > 4 && (
-                <span className="px-2.5 py-1 rounded-full text-xs bg-secondary text-muted-foreground">
+                <span className="px-3 py-1.5 rounded-full text-xs bg-border/30 text-muted-foreground">
                   +{weaknesses.length - 4} more
                 </span>
               )}
@@ -102,11 +113,14 @@ export default function PerformanceCard({ subtopicProgress, overallMastery }: Pe
 
         {/* No data yet */}
         {strengths.length === 0 && weaknesses.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-2">
-            Complete more exercises to see your strengths and areas for improvement.
-          </p>
+          <div className="text-center py-4">
+            <Sparkles className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Complete more exercises to see your strengths and areas for improvement.
+            </p>
+          </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </motion.div>
   );
 }
