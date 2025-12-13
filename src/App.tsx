@@ -15,6 +15,7 @@ import Practice from "./pages/Practice";
 import DiagnosticTest from "./pages/DiagnosticTest";
 import ComprehensiveDiagnostic from "./pages/ComprehensiveDiagnostic";
 import LearningProfile from "./pages/LearningProfile";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -79,7 +80,8 @@ function AppRoutes() {
       <Route path="/diagnostic" element={<ComprehensiveDiagnostic />} />
       <Route path="/diagnostic/:topicId" element={<DiagnosticTest />} />
       <Route path="/practice/:topicId" element={<Practice />} />
-      <Route path="/profile" element={<LearningProfile />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/learning-profile" element={<LearningProfile />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
