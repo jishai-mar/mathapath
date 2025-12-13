@@ -57,55 +57,94 @@ EXERCISE DESIGN PHILOSOPHY:
 Exercises must reinforce deep understanding, not just test mechanics.
 Each exercise should require the student to apply concepts from the theory, not just follow procedures.
 
-QUESTION FORMATTING - TEXTBOOK STYLE:
-- Write questions exactly as they would appear in a high-quality mathematics textbook
-- Use formal, neutral language: "Solve for x:", "Find all solutions:", "Simplify:", "Determine:", "Calculate:"
-- NO motivational phrases, commentary, or casual language (never "Let's", "Try this", "Can you", etc.)
-- NO styling cues, colors, or emphasis markers
-- Questions must be direct, professional, and unambiguous
+QUESTION FORMATTING - STRICT TEXTBOOK STYLE:
+- Write questions EXACTLY as they would appear in a professional mathematics textbook
+- Use ONLY formal, neutral command language:
+  • "Solve for x:"
+  • "Find all real solutions:"
+  • "Simplify:"
+  • "Determine the value of:"
+  • "Calculate:"
+  • "Factor completely:"
+  • "Evaluate:"
+- ABSOLUTELY NO motivational phrases: never use "Let's", "Try", "Can you", "Here's", "Now", "Great", etc.
+- ABSOLUTELY NO commentary or context: just state the mathematical task directly
+- ABSOLUTELY NO styling cues, colors, emphasis markers, or UI hints
+- Questions must be concise, direct, and unambiguous
 
-MATHEMATICAL NOTATION - UNICODE SYMBOLS:
-- Use actual math symbols, NOT LaTeX syntax in visible text
-- Use √ for square root (not \\sqrt)
-- Use ² ³ for exponents (e.g., x² not x^2)
-- Use ÷ for division, × for multiplication when needed
-- Use ± for plus-minus
-- Use fractions as a/b format
-- Remove unnecessary parentheses around single variables
+MATHEMATICAL NOTATION - CLEAN UNICODE (CRITICAL):
+- Use ONLY clean Unicode symbols, NEVER LaTeX syntax
+- Square root: √ (not \\sqrt, not sqrt, not ^(1/2))
+- Exponents: ² ³ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ (e.g., x² not x^2, not x**2)
+- Plus-minus: ± (not +/-, not +-) 
+- Multiplication: × or · when explicit (not *, not x as multiply)
+- Division in expressions: use fraction form a/b
+- Inequality: ≤ ≥ ≠ < > (proper symbols)
+- REMOVE all dollar signs ($), backslashes (\\), LaTeX commands
+- REMOVE unnecessary parentheses around single variables: write x not (x)
+- REMOVE extra spaces and formatting artifacts
+
+FORBIDDEN PATTERNS (never include these):
+- "Let's solve...", "Try to...", "Can you find..."
+- "Here is a problem...", "Consider the following..."
+- Any emoji or decorative characters
+- $...$ or $$...$$ delimiters
+- \\frac, \\sqrt, \\pm, or any LaTeX command
+- Explanatory text before the actual question
+- Multiple questions in one exercise
+
+CORRECT EXAMPLES:
+✓ "Solve for x: 3x² − 12 = 0"
+✓ "Find all real solutions: √(x + 5) = 3"
+✓ "Simplify: (2x³ + 6x²) ÷ 2x"
+✓ "Factor completely: x² − 9"
+
+INCORRECT EXAMPLES (never do this):
+✗ "Let's solve this equation: $3x^2 - 12 = 0$"
+✗ "Try to find x in: \\sqrt{x+5} = 3"
+✗ "Here's a challenge! Can you simplify (2x^3 + 6x^2) / 2x?"
 
 DIFFICULTY LEVELS:
 - easy: single concept, direct application, 1-2 steps
 - medium: multiple concepts combined, 3-4 steps, requires planning
 - hard: complex reasoning, multiple approaches possible, requires insight
 
-EXPLANATION - TEACH, DON'T JUST SOLVE:
-The explanation must be written like a patient tutor explaining to a student:
+EXPLANATION - TEACH THE REASONING:
 - Start by identifying what the problem is asking
 - Explain WHY each step is taken, not just what to do
 - Connect steps to underlying mathematical concepts
-- Anticipate common mistakes and address them
 - Use phrases like "Notice that...", "This works because...", "The key insight is..."
 
-HINTS - GUIDE, DON'T REVEAL:
-Hints should guide thinking, not give away the answer:
+HINTS - GUIDE WITHOUT REVEALING:
 - First hint: Identify what type of problem this is or what concept applies
 - Second hint: Suggest a starting strategy without showing steps
 - Hints should make the student think, not just follow instructions
+
+CORRECT ANSWER FORMAT:
+- Use clean Unicode: "±3" not "+/-3" or "\\pm 3"
+- Use proper fractions: "3/4" not "0.75" (unless decimals are appropriate)
+- Multiple solutions: "2, −5" not "x = 2 or x = -5"
 
 You MUST respond with valid JSON in exactly this format:
 {
   "question": "Solve for x: 2x + 5 = 13",
   "correct_answer": "4",
-  "explanation": "Step-by-step solution that teaches the reasoning, not just the mechanics",
-  "hints": ["What operation 'undoes' addition?", "After isolating the term with x, what operation isolates x itself?"]
+  "explanation": "Step-by-step solution that teaches the reasoning",
+  "hints": ["What operation undoes addition?", "After isolating the term with x, what operation isolates x itself?"]
 }`;
 
     const userPrompt = `Generate a NEW ${difficulty} exercise for ${subtopicName}.
 
 ${examplesText}
 
-Create a similar but different exercise appropriate for ${difficulty} difficulty.
-Use Unicode math symbols (√, ², ³, ±) not LaTeX commands. No motivational phrases.`;
+Create a similar but DIFFERENT exercise appropriate for ${difficulty} difficulty.
+
+CRITICAL REQUIREMENTS:
+1. Question must use ONLY Unicode math symbols (√, ², ³, ±, ≤, ≥)
+2. NO LaTeX syntax ($, \\, \\frac, \\sqrt, ^)
+3. NO motivational phrases - just the mathematical task
+4. Formal textbook language only (e.g., "Solve for x:", "Find all solutions:")
+5. Clean, unambiguous mathematical notation`;
 
     console.log('Generating new exercise with AI...');
 
