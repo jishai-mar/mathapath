@@ -211,6 +211,13 @@ export type Database = {
             referencedRelation: "exercises"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "exercise_attempts_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       exercises: {
@@ -540,6 +547,41 @@ export type Database = {
           },
           {
             foreignKeyName: "diagnostic_questions_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      exercises_public: {
+        Row: {
+          created_at: string | null
+          difficulty: Database["public"]["Enums"]["difficulty_level"] | null
+          hints: string[] | null
+          id: string | null
+          question: string | null
+          subtopic_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          hints?: string[] | null
+          id?: string | null
+          question?: string | null
+          subtopic_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          hints?: string[] | null
+          id?: string | null
+          question?: string | null
+          subtopic_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercises_subtopic_id_fkey"
             columns: ["subtopic_id"]
             isOneToOne: false
             referencedRelation: "subtopics"

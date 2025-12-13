@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,8 +14,8 @@ interface PreviousAttempt {
 
 interface RequestBody {
   imageBase64: string;
+  exerciseId: string;
   question: string;
-  correctAnswer: string;
   difficulty: string;
   previousAttempts?: PreviousAttempt[];
   subtopicName?: string;
@@ -28,16 +29,16 @@ serve(async (req) => {
   try {
     const { 
       imageBase64, 
+      exerciseId,
       question, 
-      correctAnswer, 
       difficulty,
       previousAttempts = [],
       subtopicName = ''
     } = await req.json() as RequestBody;
 
-    if (!imageBase64 || !question) {
+    if (!imageBase64 || !exerciseId || !question) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: imageBase64, question' }),
+        JSON.stringify({ error: 'Missing required fields: imageBase64, exerciseId, question' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -46,6 +47,27 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
+
+    // Fetch correct answer securely from database (server-side only)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: exercise, error: exerciseError } = await supabase
+      .from("exercises")
+      .select("correct_answer")
+      .eq("id", exerciseId)
+      .single();
+
+    if (exerciseError || !exercise) {
+      console.error("Exercise fetch error:", exerciseError);
+      return new Response(
+        JSON.stringify({ error: "Exercise not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const correctAnswer = exercise.correct_answer;
 
     // Determine explanation variant based on previous attempts
     const incorrectAttempts = previousAttempts.filter(a => {

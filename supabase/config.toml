@@ -26,3 +26,6 @@ verify_jwt = true
 
 [functions.check-diagnostic-answer]
 verify_jwt = true
+
+[functions.check-exercise-answer]
+verify_jwt = true

@@ -34,10 +34,10 @@ interface WorkedExample {
 interface Exercise {
   id: string;
   question: string;
-  correct_answer: string;
   difficulty: 'easy' | 'medium' | 'hard';
   hints: string[] | null;
-  explanation: string | null;
+  // Note: correct_answer and explanation are NOT included for security
+  // Answers are checked server-side via check-exercise-answer function
 }
 
 interface MiniExercise {
@@ -132,9 +132,9 @@ export default function Practice() {
 
   const loadExercise = useCallback(async (subtopicId: string, difficulty: 'easy' | 'medium' | 'hard') => {
     try {
-      // First try to find an exercise at the requested difficulty
+      // Use the secure view that doesn't include correct_answer
       let query = supabase
-        .from('exercises')
+        .from('exercises_public')
         .select('*')
         .eq('subtopic_id', subtopicId)
         .eq('difficulty', difficulty);
@@ -158,7 +158,7 @@ export default function Practice() {
         
         for (const fallbackDiff of fallbackDifficulties) {
           const { data: fallbackExercises } = await supabase
-            .from('exercises')
+            .from('exercises_public')
             .select('*')
             .eq('subtopic_id', subtopicId)
             .eq('difficulty', fallbackDiff as 'easy' | 'medium' | 'hard')
@@ -182,7 +182,13 @@ export default function Practice() {
         
         if (genError) throw genError;
         if (data && !data.error) {
-          setCurrentExercise(data);
+          // The generated exercise should also not include correct_answer on client
+          setCurrentExercise({
+            id: data.id,
+            question: data.question,
+            difficulty: data.difficulty,
+            hints: data.hints,
+          });
           return;
         }
         
@@ -192,7 +198,7 @@ export default function Practice() {
       
       // Pick a random exercise from available ones
       const randomIndex = Math.floor(Math.random() * exercises.length);
-      setCurrentExercise(exercises[randomIndex]);
+      setCurrentExercise(exercises[randomIndex] as Exercise);
     } catch (error) {
       console.error('Error loading exercise:', error);
       toast.error('Failed to load exercise. Please try again.');
@@ -221,7 +227,7 @@ export default function Practice() {
     setHintsUsedThisExercise(prev => prev + 1);
   };
 
-  const handleSubmitAnswer = async (answer: string): Promise<{ isCorrect: boolean; explanation: string | null }> => {
+  const handleSubmitAnswer = async (answer: string): Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string }> => {
     if (!currentExercise || !user || !selectedSubtopic) {
       return { isCorrect: false, explanation: null };
     }
@@ -229,18 +235,19 @@ export default function Practice() {
     setIsSubmitting(true);
     
     try {
-      // Normalize answers for comparison
-      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
-      const isCorrect = normalize(answer) === normalize(currentExercise.correct_answer);
-      
-      // Save attempt with hints_used
-      await supabase.from('exercise_attempts').insert({
-        user_id: user.id,
-        exercise_id: currentExercise.id,
-        user_answer: answer,
-        is_correct: isCorrect,
-        hints_used: hintsUsedThisExercise,
+      // Use server-side answer checking - never expose correct answers to client
+      const { data, error } = await supabase.functions.invoke('check-exercise-answer', {
+        body: {
+          exerciseId: currentExercise.id,
+          userAnswer: answer,
+          userId: user.id,
+          hintsUsed: hintsUsedThisExercise,
+        },
       });
+
+      if (error) throw error;
+
+      const { isCorrect, explanation, correctAnswer } = data;
       
       // Update local tracking
       setAttemptedExerciseIds(prev => new Set(prev).add(currentExercise.id));
@@ -279,7 +286,7 @@ export default function Practice() {
       await updateTopicProgress(isCorrect);
       await updateSubtopicProgress(selectedSubtopic.id, isCorrect, hintsUsedThisExercise);
       
-      return { isCorrect, explanation: currentExercise.explanation };
+      return { isCorrect, explanation, correctAnswer };
     } catch (error) {
       console.error('Error submitting answer:', error);
       return { isCorrect: false, explanation: null };
@@ -322,12 +329,12 @@ export default function Practice() {
       const fileName = `${user.id}/${currentExercise.id}_${Date.now()}.jpg`;
       await supabase.storage.from('handwritten-work').upload(fileName, file);
       
-      // Send to AI for analysis with previous attempts for adaptive feedback
+      // Send to AI for analysis - exercise ID is sent so edge function can fetch correct answer securely
       const { data, error } = await supabase.functions.invoke('analyze-handwritten-work', {
         body: {
           imageBase64: base64,
+          exerciseId: currentExercise.id,
           question: currentExercise.question,
-          correctAnswer: currentExercise.correct_answer,
           difficulty: currentExercise.difficulty,
           previousAttempts: previousAttempts || [],
           subtopicName: selectedSubtopic.name,
