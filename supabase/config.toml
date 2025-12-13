@@ -23,3 +23,6 @@ verify_jwt = true
 
 [functions.generate-theory-content]
 verify_jwt = true
+
+[functions.check-diagnostic-answer]
+verify_jwt = true

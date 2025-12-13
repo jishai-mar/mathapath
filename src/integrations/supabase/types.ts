@@ -107,6 +107,13 @@ export type Database = {
             referencedRelation: "diagnostic_questions"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "diagnostic_responses_diagnostic_question_id_fkey"
+            columns: ["diagnostic_question_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_questions_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       diagnostic_tests: {
@@ -492,7 +499,54 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      diagnostic_questions_public: {
+        Row: {
+          created_at: string | null
+          diagnostic_test_id: string | null
+          difficulty: Database["public"]["Enums"]["difficulty_level"] | null
+          hints: Json | null
+          id: string | null
+          order_index: number | null
+          question: string | null
+          subtopic_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          diagnostic_test_id?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          hints?: Json | null
+          id?: string | null
+          order_index?: number | null
+          question?: string | null
+          subtopic_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          diagnostic_test_id?: string | null
+          difficulty?: Database["public"]["Enums"]["difficulty_level"] | null
+          hints?: Json | null
+          id?: string | null
+          order_index?: number | null
+          question?: string | null
+          subtopic_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostic_questions_diagnostic_test_id_fkey"
+            columns: ["diagnostic_test_id"]
+            isOneToOne: false
+            referencedRelation: "diagnostic_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diagnostic_questions_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       [_ in never]: never

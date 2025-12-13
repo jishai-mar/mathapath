@@ -340,10 +340,22 @@ STRICT REQUIREMENTS:
 
     console.log(`Successfully created ${insertedQuestions.length} comprehensive diagnostic questions`);
 
+    // Strip correct_answer from response - answers should only be checked server-side
+    const safeQuestions = insertedQuestions.map((q: any) => ({
+      id: q.id,
+      diagnostic_test_id: q.diagnostic_test_id,
+      subtopic_id: q.subtopic_id,
+      question: q.question,
+      difficulty: q.difficulty,
+      hints: q.hints,
+      order_index: q.order_index,
+      created_at: q.created_at,
+    }));
+
     return new Response(
       JSON.stringify({
         test: { ...diagnosticTest, total_questions: insertedQuestions.length },
-        questions: insertedQuestions,
+        questions: safeQuestions,
         topics: topics,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
