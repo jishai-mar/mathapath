@@ -144,24 +144,34 @@ serve(async (req) => {
     }
 
     // Generate questions using AI
-    const systemPrompt = `You are a mathematics educator creating a diagnostic assessment in the style of a high-quality textbook.
+    const systemPrompt = `You are a mathematics educator creating a diagnostic assessment in the style of a high-quality printed textbook.
 
-FORMATTING REQUIREMENTS:
-- Use formal, neutral mathematical language throughout
-- State tasks directly and unambiguously (e.g., "Solve for x", "Find all real solutions", "Simplify the expression")
-- Avoid casual phrases, emojis, exclamations, or conversational tone
-- Questions should be concise but complete, containing exactly the information needed
+CRITICAL FORMATTING RULES:
+- Write questions exactly as they would appear in a printed mathematics textbook
+- Use formal, neutral language with imperative statements: "Solve for x:", "Find:", "Simplify:", "Determine:", "Calculate:"
+- NO motivational phrases, commentary, or casual language (never "Let's", "Try this", "Can you", etc.)
+- NO styling cues, colors, or emphasis markers in the text
+- Questions must be direct and professional
 
-MATHEMATICAL NOTATION:
-- Use clean, standard LaTeX notation: \\frac{a}{b} for fractions, x^2 for exponents, \\sqrt{x} for roots
-- Do NOT use \\( \\) or $ delimiters - just write the LaTeX directly in the text
-- Ensure all expressions are mathematically correct and properly formatted
-- Avoid stray characters, redundant symbols, or mixed formatting
+MATHEMATICAL NOTATION - USE UNICODE SYMBOLS:
+- Use actual math symbols, NOT LaTeX syntax in visible text
+- Use √ for square root (not \\sqrt)
+- Use ² ³ for exponents (e.g., x² not x^2)
+- Use ÷ for division, × for multiplication when needed
+- Use ± for plus-minus
+- Use fractions as a/b format or proper notation
+- Remove unnecessary parentheses around single variables
+- All expressions must be clean and readable
+
+EXAMPLES OF CORRECT FORMAT:
+- "Solve for x: √x = 5"
+- "Find all real solutions: x² − 9 = 0"
+- "Simplify: (3x + 2)(x − 4)"
 
 HINTS:
-- Write hints as clear, instructional guidance
-- Focus on the mathematical concept or technique needed
-- Avoid overly casual or enthusiastic language`;
+- Write as clear, instructional guidance
+- Use the same Unicode math symbols
+- No casual or enthusiastic language`;
 
     const userPrompt = `Create a diagnostic assessment for the topic "${topic.name}" (${topic.description || ""}).
 
@@ -177,16 +187,18 @@ Return a JSON object with this exact structure:
       "question": "Solve for x: 2x + 5 = 13",
       "correct_answer": "4",
       "difficulty": "easy",
-      "hints": ["Isolate the variable by subtracting 5 from both sides.", "Then divide both sides by the coefficient of x."]
+      "hints": ["Subtract 5 from both sides.", "Divide both sides by the coefficient of x."]
     }
   ]
 }
 
-Requirements:
-- Each question must read as if from a professional mathematics textbook
-- Use imperative statements: "Solve", "Find", "Simplify", "Determine", "Calculate"
-- Correct answers should be in simplified form
-- Return ONLY valid JSON, no markdown code blocks or additional text`;
+STRICT REQUIREMENTS:
+- Each question must read exactly like a printed textbook question
+- Use Unicode math symbols (√, ², ³, ±, ×, ÷) not LaTeX commands
+- NO LaTeX delimiters (\\(, \\), $, $$) anywhere
+- NO motivational or conversational phrases
+- Answers in simplified form
+- Return ONLY valid JSON, no markdown code blocks`;
 
     console.log("Calling Lovable AI to generate diagnostic questions...");
 

@@ -47,33 +47,47 @@ serve(async (req) => {
         ).join('\n\n')
       : 'No examples available - create a typical exercise for this topic.';
 
-    const systemPrompt = `You are a math curriculum expert creating exercises for the Reichman Mechina program. 
-Generate exercises that match the style and difficulty of the examples provided.
+    const systemPrompt = `You are a mathematics educator creating exercises in the style of a high-quality printed textbook.
 
 Topic: ${topicName}
 Subtopic: ${subtopicName}
 Difficulty: ${difficulty}
 
-Rules:
-- Use LaTeX notation for all mathematical expressions (wrapped in $ or $$)
-- Questions should be clear and unambiguous
-- Answers should be numeric or simple algebraic expressions
-- Difficulty levels: easy (basic application), medium (multi-step), hard (complex reasoning)
-- Stay strictly within the curriculum scope
+CRITICAL FORMATTING RULES:
+- Write questions exactly as they would appear in a printed mathematics textbook
+- Use formal, neutral language with imperative statements: "Solve for x:", "Find:", "Simplify:", "Determine:", "Calculate:"
+- NO motivational phrases, commentary, or casual language (never "Let's", "Try this", "Can you", etc.)
+- NO styling cues, colors, or emphasis markers in the text
+- Questions must be direct and professional
+
+MATHEMATICAL NOTATION - USE UNICODE SYMBOLS:
+- Use actual math symbols, NOT LaTeX syntax in visible text
+- Use √ for square root (not \\sqrt)
+- Use ² ³ for exponents (e.g., x² not x^2)
+- Use ÷ for division, × for multiplication when needed
+- Use ± for plus-minus
+- Use fractions as a/b format
+- Remove unnecessary parentheses around single variables
+
+DIFFICULTY LEVELS:
+- easy: basic single-step application
+- medium: multi-step problems
+- hard: complex reasoning required
 
 You MUST respond with valid JSON in exactly this format:
 {
-  "question": "The exercise question in LaTeX",
-  "correct_answer": "The answer (numeric or simple expression)",
-  "explanation": "Step-by-step solution explanation",
-  "hints": ["First hint", "Second hint"]
+  "question": "Solve for x: 2x + 5 = 13",
+  "correct_answer": "4",
+  "explanation": "Step-by-step solution using Unicode math symbols",
+  "hints": ["Instructional hint 1", "Instructional hint 2"]
 }`;
 
     const userPrompt = `Generate a NEW ${difficulty} exercise for ${subtopicName}.
 
 ${examplesText}
 
-Create a similar but different exercise. Make sure it's appropriate for the ${difficulty} difficulty level.`;
+Create a similar but different exercise appropriate for ${difficulty} difficulty.
+Use Unicode math symbols (√, ², ³, ±) not LaTeX commands. No motivational phrases.`;
 
     console.log('Generating new exercise with AI...');
 
