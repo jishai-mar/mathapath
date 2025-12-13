@@ -70,9 +70,31 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      loadData();
+      checkComprehensiveDiagnostic();
     }
   }, [user]);
+
+  const checkComprehensiveDiagnostic = async () => {
+    try {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('comprehensive_diagnostic_completed')
+        .eq('id', user!.id)
+        .single();
+
+      if (!profileData?.comprehensive_diagnostic_completed) {
+        // Redirect to comprehensive diagnostic
+        navigate('/diagnostic');
+        return;
+      }
+
+      // Load dashboard data only if diagnostic is completed
+      loadData();
+    } catch (error) {
+      // Profile might not exist yet, redirect to diagnostic
+      navigate('/diagnostic');
+    }
+  };
 
   const loadData = async () => {
     try {

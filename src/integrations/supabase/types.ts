@@ -309,6 +309,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          comprehensive_diagnostic_completed: boolean
+          comprehensive_diagnostic_completed_at: string | null
           created_at: string
           current_streak: number
           display_name: string | null
@@ -319,6 +321,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          comprehensive_diagnostic_completed?: boolean
+          comprehensive_diagnostic_completed_at?: string | null
           created_at?: string
           current_streak?: number
           display_name?: string | null
@@ -329,6 +333,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          comprehensive_diagnostic_completed?: boolean
+          comprehensive_diagnostic_completed_at?: string | null
           created_at?: string
           current_streak?: number
           display_name?: string | null
