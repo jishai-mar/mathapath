@@ -144,39 +144,49 @@ serve(async (req) => {
     }
 
     // Generate questions using AI
-    const systemPrompt = `You are a patient, supportive math tutor creating a diagnostic assessment.
-Your goal is to understand where the student currently is in their learning - NOT to grade them.
+    const systemPrompt = `You are a mathematics educator creating a diagnostic assessment in the style of a high-quality textbook.
 
-IMPORTANT GUIDELINES:
-- Create questions that feel conversational and low-pressure, like a tutor getting to know a student
-- Vary difficulty to get a complete picture (one easier, one moderate per subtopic)
-- Questions should be clear and not tricky - we want to see what they know, not confuse them
-- Include helpful hints that gently guide without giving away the answer
-- Use LaTeX for mathematical notation (e.g., \\frac{a}{b}, x^2, \\sqrt{x})
+FORMATTING REQUIREMENTS:
+- Use formal, neutral mathematical language throughout
+- State tasks directly and unambiguously (e.g., "Solve for x", "Find all real solutions", "Simplify the expression")
+- Avoid casual phrases, emojis, exclamations, or conversational tone
+- Questions should be concise but complete, containing exactly the information needed
 
-The tone should be supportive: "Let's see how you approach this..." not "Solve this problem."`;
+MATHEMATICAL NOTATION:
+- Use clean, standard LaTeX notation: \\frac{a}{b} for fractions, x^2 for exponents, \\sqrt{x} for roots
+- Do NOT use \\( \\) or $ delimiters - just write the LaTeX directly in the text
+- Ensure all expressions are mathematically correct and properly formatted
+- Avoid stray characters, redundant symbols, or mixed formatting
+
+HINTS:
+- Write hints as clear, instructional guidance
+- Focus on the mathematical concept or technique needed
+- Avoid overly casual or enthusiastic language`;
 
     const userPrompt = `Create a diagnostic assessment for the topic "${topic.name}" (${topic.description || ""}).
 
 For each of these subtopics, generate exactly 2 questions (one easy, one medium difficulty):
 ${subtopics.map((s: Subtopic, i: number) => `${i + 1}. ${s.name} (ID: ${s.id})`).join("\n")}
 
-Return a JSON array of questions with this exact structure:
+Return a JSON object with this exact structure:
 {
   "questions": [
     {
       "subtopic_id": "uuid-here",
       "subtopic_name": "Name for reference",
-      "question": "Clear, supportive question text with LaTeX for math",
-      "correct_answer": "The correct answer",
-      "difficulty": "easy" or "medium",
-      "hints": ["Gentle hint 1", "More helpful hint 2"]
+      "question": "Solve for x: 2x + 5 = 13",
+      "correct_answer": "4",
+      "difficulty": "easy",
+      "hints": ["Isolate the variable by subtracting 5 from both sides.", "Then divide both sides by the coefficient of x."]
     }
   ]
 }
 
-Make sure questions are practical and test real understanding, not memorization.
-Return ONLY valid JSON, no additional text.`;
+Requirements:
+- Each question must read as if from a professional mathematics textbook
+- Use imperative statements: "Solve", "Find", "Simplify", "Determine", "Calculate"
+- Correct answers should be in simplified form
+- Return ONLY valid JSON, no markdown code blocks or additional text`;
 
     console.log("Calling Lovable AI to generate diagnostic questions...");
 
