@@ -55,7 +55,7 @@ export default function Landing() {
           <div className="flex w-full max-w-6xl items-center justify-between rounded-full glass px-6 py-3 shadow-lg">
             <div className="flex items-center gap-3">
               <div className="size-8 text-primary">
-                <Function className="w-full h-full" />
+                <Sigma className="w-full h-full" />
               </div>
               <h2 className="text-foreground text-lg font-bold tracking-tight hidden sm:block font-sans">
                 MathPath
@@ -419,7 +419,7 @@ export default function Landing() {
           <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="size-6 text-muted-foreground">
-                <Function className="w-full h-full" />
+                <Sigma className="w-full h-full" />
               </div>
               <span className="text-muted-foreground font-medium font-sans">MathPath © 2024</span>
             </div>
