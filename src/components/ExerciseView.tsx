@@ -20,10 +20,9 @@ import {
 interface Exercise {
   id: string;
   question: string;
-  correct_answer: string;
   difficulty: 'easy' | 'medium' | 'hard';
   hints: string[] | null;
-  explanation: string | null;
+  // Note: correct_answer is NOT included - answers are checked server-side
 }
 
 interface AIFeedback {
@@ -36,7 +35,7 @@ interface AIFeedback {
 
 interface ExerciseViewProps {
   exercise: Exercise;
-  onSubmitAnswer: (answer: string) => Promise<{ isCorrect: boolean; explanation: string | null }>;
+  onSubmitAnswer: (answer: string) => Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string }>;
   onSubmitImage: (file: File) => Promise<AIFeedback>;
   onNextExercise: (suggestedDifficulty?: 'easy' | 'medium' | 'hard') => void;
   onHintReveal?: () => void;
@@ -65,6 +64,7 @@ export default function ExerciseView({
     type: 'text' | 'ai';
     isCorrect: boolean;
     explanation?: string | null;
+    correctAnswer?: string;
     aiFeedback?: AIFeedback;
   } | null>(null);
 
@@ -77,6 +77,7 @@ export default function ExerciseView({
       type: 'text',
       isCorrect: result.isCorrect,
       explanation: result.explanation,
+      correctAnswer: result.correctAnswer,
     });
   };
 
@@ -256,9 +257,9 @@ export default function ExerciseView({
                   </div>
                 )}
 
-                {!feedback.isCorrect && (
+                {!feedback.isCorrect && feedback.correctAnswer && (
                   <p className="text-sm text-muted-foreground">
-                    The correct answer is: <span className="font-mono text-foreground">{exercise.correct_answer}</span>
+                    The correct answer is: <span className="font-mono text-foreground">{feedback.correctAnswer}</span>
                   </p>
                 )}
               </CardContent>
