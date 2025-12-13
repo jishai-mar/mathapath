@@ -51,12 +51,29 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if user already has comprehensive diagnostic in progress
+    // Check if user already has any diagnostic test (comprehensive uses first topic as placeholder)
+    // First get topics to know the first topic id
+    const { data: allTopics, error: allTopicsError } = await supabase
+      .from("topics")
+      .select("id, name, description, order_index")
+      .order("order_index");
+
+    if (allTopicsError || !allTopics || allTopics.length === 0) {
+      console.error("Topics error:", allTopicsError);
+      return new Response(
+        JSON.stringify({ error: "No topics found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const firstTopicId = allTopics[0].id;
+
+    // Check for existing comprehensive diagnostic test (uses first topic as placeholder)
     const { data: existingTest } = await supabase
       .from("diagnostic_tests")
       .select("*, diagnostic_questions(*)")
       .eq("user_id", userId)
-      .is("topic_id", null)  // Comprehensive tests have null topic_id
+      .eq("topic_id", firstTopicId)
       .single();
 
     if (existingTest) {
@@ -70,7 +87,7 @@ serve(async (req) => {
         );
       }
       
-      // Return existing in-progress test
+      // Return existing in-progress test with questions
       if (existingTest.diagnostic_questions && existingTest.diagnostic_questions.length > 0) {
         const { data: questions } = await supabase
           .from("diagnostic_questions")
@@ -82,25 +99,15 @@ serve(async (req) => {
           JSON.stringify({
             test: existingTest,
             questions: questions || [],
+            topics: allTopics,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
-    // Get all topics
-    const { data: topics, error: topicsError } = await supabase
-      .from("topics")
-      .select("id, name, description, order_index")
-      .order("order_index");
-
-    if (topicsError || !topics || topics.length === 0) {
-      console.error("Topics error:", topicsError);
-      return new Response(
-        JSON.stringify({ error: "No topics found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Use already fetched topics
+    const topics = allTopics;
 
     // Get all subtopics
     const { data: subtopics, error: subtopicsError } = await supabase
@@ -127,19 +134,21 @@ serve(async (req) => {
 
     console.log(`Generating comprehensive diagnostic covering ${topics.length} topics, ${subtopics.length} subtopics`);
 
-    // Create diagnostic test record
+    // Create or reuse diagnostic test record
     let diagnosticTest;
     if (existingTest) {
       diagnosticTest = existingTest;
     } else {
-      // We use NULL topic_id to indicate this is a comprehensive test
+      // Use upsert to handle race conditions - use first topic as placeholder
       const { data: newTest, error: createError } = await supabase
         .from("diagnostic_tests")
-        .insert({
+        .upsert({
           user_id: userId,
-          topic_id: topics[0].id, // We'll use first topic as placeholder since topic_id is required
+          topic_id: firstTopicId,
           status: "not_started",
-          total_questions: subtopics.length, // 1 question per subtopic
+          total_questions: subtopics.length,
+        }, {
+          onConflict: "user_id,topic_id",
         })
         .select()
         .single();
