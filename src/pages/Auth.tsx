@@ -5,15 +5,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Calculator, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Calculator, Mail, Lock, Eye, EyeOff, ArrowRight, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
 
 const emailSchema = z.string().email('Please enter a valid email address');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
 
+type AuthView = 'login' | 'signup' | 'forgot-password';
+
 export default function Auth() {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [view, setView] = useState<AuthView>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -39,13 +42,15 @@ export default function Auth() {
       newErrors.email = emailResult.error.issues[0].message;
     }
     
-    const passwordResult = passwordSchema.safeParse(password);
-    if (!passwordResult.success) {
-      newErrors.password = passwordResult.error.issues[0].message;
-    }
+    if (view !== 'forgot-password') {
+      const passwordResult = passwordSchema.safeParse(password);
+      if (!passwordResult.success) {
+        newErrors.password = passwordResult.error.issues[0].message;
+      }
 
-    if (isSignUp && password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      if (view === 'signup' && password !== confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+      }
     }
     
     setErrors(newErrors);
@@ -60,7 +65,7 @@ export default function Auth() {
     setIsLoading(true);
 
     try {
-      if (isSignUp) {
+      if (view === 'signup') {
         const { error } = await signUp(email, password, displayName || undefined);
         if (error) {
           if (error.message.includes('already registered')) {
@@ -71,7 +76,7 @@ export default function Auth() {
         } else {
           toast.success('Account created successfully! Welcome to MathPath.');
         }
-      } else {
+      } else if (view === 'login') {
         const { error } = await signIn(email, password);
         if (error) {
           if (error.message.includes('Invalid login credentials')) {
@@ -82,6 +87,16 @@ export default function Auth() {
         } else {
           toast.success('Welcome back!');
         }
+      } else if (view === 'forgot-password') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/auth?reset=true`,
+        });
+        if (error) {
+          toast.error(error.message);
+        } else {
+          toast.success('Password reset link sent! Check your email.');
+          setView('login');
+        }
       }
     } catch (error) {
       toast.error('An unexpected error occurred. Please try again.');
@@ -90,7 +105,7 @@ export default function Auth() {
     }
   };
 
-  // Floating orbs for login background
+  // Floating orbs for login/forgot password background
   const FloatingOrbs = () => (
     <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
       <motion.div 
@@ -136,27 +151,29 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Header */}
-      <header className="w-full border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <Calculator className="w-5 h-5 text-primary-foreground" />
+      {/* Header - hidden on forgot password */}
+      {view !== 'forgot-password' && (
+        <header className="w-full border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+                <Calculator className="w-5 h-5 text-primary-foreground" />
+              </div>
+              <span className="text-xl font-bold text-foreground">MathPath</span>
             </div>
-            <span className="text-xl font-bold text-foreground">MathPath</span>
+            <Button
+              variant="outline"
+              onClick={() => setView(view === 'signup' ? 'login' : 'signup')}
+              className="border-border/50 hover:bg-secondary/50"
+            >
+              {view === 'signup' ? 'Log In' : 'Sign Up'}
+            </Button>
           </div>
-          <Button
-            variant="outline"
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="border-border/50 hover:bg-secondary/50"
-          >
-            {isSignUp ? 'Log In' : 'Sign Up'}
-          </Button>
-        </div>
-      </header>
+        </header>
+      )}
 
       <AnimatePresence mode="wait">
-        {isSignUp ? (
+        {view === 'signup' ? (
           /* Sign Up View - Split Layout */
           <motion.div 
             key="signup"
@@ -331,7 +348,7 @@ export default function Auth() {
                   <button
                     type="button"
                     onClick={() => {
-                      setIsSignUp(false);
+                      setView('login');
                       setErrors({});
                     }}
                     className="text-primary hover:underline font-medium"
@@ -341,6 +358,91 @@ export default function Auth() {
                 </p>
               </motion.div>
             </div>
+          </motion.div>
+        ) : view === 'forgot-password' ? (
+          /* Forgot Password View */
+          <motion.div 
+            key="forgot-password"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col items-center justify-center min-h-screen relative"
+          >
+            {/* Background glow */}
+            <div className="fixed inset-0 -z-10 bg-[radial-gradient(circle_at_50%_0%,hsl(var(--primary)/0.12),transparent_50%)]" />
+            
+            {/* Logo */}
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-3 mb-8"
+            >
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                <Calculator className="w-6 h-6 text-primary-foreground" />
+              </div>
+              <span className="text-2xl font-bold text-foreground">MathPath</span>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="relative z-10 w-full max-w-md mx-4 p-8 rounded-2xl bg-secondary/70 backdrop-blur-xl border border-border/50 shadow-2xl"
+            >
+              <h1 className="text-2xl font-bold text-foreground mb-3">Forgot Password?</h1>
+              <p className="text-muted-foreground mb-6">
+                Enter the email associated with your account and we'll send you a link to reset your password.
+              </p>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="resetEmail" className="text-sm text-muted-foreground">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <Input
+                      id="resetEmail"
+                      type="email"
+                      placeholder="e.g., euler@math-mastery.com"
+                      value={email}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        setErrors(prev => ({ ...prev, email: undefined }));
+                      }}
+                      className={`h-12 pl-12 bg-background/50 border-border/50 rounded-xl focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all ${errors.email ? 'border-destructive' : ''}`}
+                      required
+                    />
+                  </div>
+                  {errors.email && (
+                    <p className="text-sm text-destructive">{errors.email}</p>
+                  )}
+                </div>
+                
+                <Button 
+                  type="submit" 
+                  className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-base font-medium shadow-lg shadow-primary/25"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                </Button>
+              </form>
+            </motion.div>
+
+            {/* Back to Login */}
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              type="button"
+              onClick={() => {
+                setView('login');
+                setErrors({});
+              }}
+              className="mt-8 flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Log In
+            </motion.button>
           </motion.div>
         ) : (
           /* Login View - Centered Glass Panel */
@@ -391,7 +493,14 @@ export default function Auth() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <Label htmlFor="loginPassword" className="text-sm text-muted-foreground">Password</Label>
-                    <button type="button" className="text-sm text-primary hover:underline">
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setView('forgot-password');
+                        setErrors({});
+                      }}
+                      className="text-sm text-primary hover:underline"
+                    >
                       Forgot Password?
                     </button>
                   </div>
@@ -474,7 +583,7 @@ export default function Auth() {
                 <button
                   type="button"
                   onClick={() => {
-                    setIsSignUp(true);
+                    setView('signup');
                     setErrors({});
                   }}
                   className="text-primary hover:underline font-medium"
@@ -487,10 +596,12 @@ export default function Auth() {
         )}
       </AnimatePresence>
 
-      {/* Footer */}
-      <footer className="absolute bottom-0 left-0 right-0 py-6 text-center text-sm text-muted-foreground border-t border-border/30 bg-background/50 backdrop-blur-sm">
-        © 2024 MathPath. All rights reserved.
-      </footer>
+      {/* Footer - hidden on forgot password */}
+      {view !== 'forgot-password' && (
+        <footer className="absolute bottom-0 left-0 right-0 py-6 text-center text-sm text-muted-foreground border-t border-border/30 bg-background/50 backdrop-blur-sm">
+          © 2024 MathPath. All rights reserved.
+        </footer>
+      )}
     </div>
   );
 }
