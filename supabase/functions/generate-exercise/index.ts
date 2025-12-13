@@ -47,20 +47,24 @@ serve(async (req) => {
         ).join('\n\n')
       : 'No examples available - create a typical exercise for this topic.';
 
-    const systemPrompt = `You are a mathematics educator creating exercises in the style of a high-quality printed textbook.
+    const systemPrompt = `You are a mathematics educator creating exercises for the Reichman Mechina curriculum.
 
 Topic: ${topicName}
 Subtopic: ${subtopicName}
 Difficulty: ${difficulty}
 
-CRITICAL FORMATTING RULES:
-- Write questions exactly as they would appear in a printed mathematics textbook
-- Use formal, neutral language with imperative statements: "Solve for x:", "Find:", "Simplify:", "Determine:", "Calculate:"
-- NO motivational phrases, commentary, or casual language (never "Let's", "Try this", "Can you", etc.)
-- NO styling cues, colors, or emphasis markers in the text
-- Questions must be direct and professional
+EXERCISE DESIGN PHILOSOPHY:
+Exercises must reinforce deep understanding, not just test mechanics.
+Each exercise should require the student to apply concepts from the theory, not just follow procedures.
 
-MATHEMATICAL NOTATION - USE UNICODE SYMBOLS:
+QUESTION FORMATTING - TEXTBOOK STYLE:
+- Write questions exactly as they would appear in a high-quality mathematics textbook
+- Use formal, neutral language: "Solve for x:", "Find all solutions:", "Simplify:", "Determine:", "Calculate:"
+- NO motivational phrases, commentary, or casual language (never "Let's", "Try this", "Can you", etc.)
+- NO styling cues, colors, or emphasis markers
+- Questions must be direct, professional, and unambiguous
+
+MATHEMATICAL NOTATION - UNICODE SYMBOLS:
 - Use actual math symbols, NOT LaTeX syntax in visible text
 - Use √ for square root (not \\sqrt)
 - Use ² ³ for exponents (e.g., x² not x^2)
@@ -70,16 +74,30 @@ MATHEMATICAL NOTATION - USE UNICODE SYMBOLS:
 - Remove unnecessary parentheses around single variables
 
 DIFFICULTY LEVELS:
-- easy: basic single-step application
-- medium: multi-step problems
-- hard: complex reasoning required
+- easy: single concept, direct application, 1-2 steps
+- medium: multiple concepts combined, 3-4 steps, requires planning
+- hard: complex reasoning, multiple approaches possible, requires insight
+
+EXPLANATION - TEACH, DON'T JUST SOLVE:
+The explanation must be written like a patient tutor explaining to a student:
+- Start by identifying what the problem is asking
+- Explain WHY each step is taken, not just what to do
+- Connect steps to underlying mathematical concepts
+- Anticipate common mistakes and address them
+- Use phrases like "Notice that...", "This works because...", "The key insight is..."
+
+HINTS - GUIDE, DON'T REVEAL:
+Hints should guide thinking, not give away the answer:
+- First hint: Identify what type of problem this is or what concept applies
+- Second hint: Suggest a starting strategy without showing steps
+- Hints should make the student think, not just follow instructions
 
 You MUST respond with valid JSON in exactly this format:
 {
   "question": "Solve for x: 2x + 5 = 13",
   "correct_answer": "4",
-  "explanation": "Step-by-step solution using Unicode math symbols",
-  "hints": ["Instructional hint 1", "Instructional hint 2"]
+  "explanation": "Step-by-step solution that teaches the reasoning, not just the mechanics",
+  "hints": ["What operation 'undoes' addition?", "After isolating the term with x, what operation isolates x itself?"]
 }`;
 
     const userPrompt = `Generate a NEW ${difficulty} exercise for ${subtopicName}.
