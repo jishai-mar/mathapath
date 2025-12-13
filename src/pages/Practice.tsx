@@ -770,7 +770,43 @@ export default function Practice() {
             )}
 
             {/* Completed Mode - Results */}
-            {mode === 'completed' && sessionStats && (
+            {mode === 'completed' && sessionStats && (() => {
+              const accuracy = sessionStats.totalQuestions > 0 
+                ? Math.round((sessionStats.correctAnswers / sessionStats.totalQuestions) * 100)
+                : 0;
+              
+              const getCompletionFeedback = () => {
+                if (accuracy >= 90) {
+                  return {
+                    title: "Excellent Progress",
+                    message: `You've demonstrated a strong understanding of ${selectedSubtopic?.name}. Keep maintaining this momentum.`
+                  };
+                } else if (accuracy >= 70) {
+                  return {
+                    title: "Great Work",
+                    message: `You're making solid progress in ${selectedSubtopic?.name}. A bit more practice and you'll master it.`
+                  };
+                } else if (accuracy >= 50) {
+                  return {
+                    title: "Keep Practicing",
+                    message: `You're getting there with ${selectedSubtopic?.name}. Focus on the concepts you found challenging.`
+                  };
+                } else if (accuracy >= 25) {
+                  return {
+                    title: "Room to Grow",
+                    message: `${selectedSubtopic?.name} needs more attention. Review the theory and try again with a fresh perspective.`
+                  };
+                } else {
+                  return {
+                    title: "Focus Needed",
+                    message: `${selectedSubtopic?.name} requires more practice. Consider reviewing the theory section before trying again.`
+                  };
+                }
+              };
+              
+              const feedback = getCompletionFeedback();
+              
+              return (
               <motion.div
                 key="completed"
                 initial={{ opacity: 0, y: 20 }}
@@ -786,11 +822,11 @@ export default function Practice() {
                   </div>
                   
                   <h1 className="text-4xl md:text-5xl font-bold text-foreground">
-                    Excellent Progress
+                    {feedback.title}
                   </h1>
                   
                   <p className="text-muted-foreground max-w-md mx-auto">
-                    You've demonstrated a strong understanding of {selectedSubtopic?.name}. Keep maintaining this momentum.
+                    {feedback.message}
                   </p>
                 </div>
 
@@ -902,7 +938,8 @@ export default function Practice() {
                   )}
                 </div>
               </motion.div>
-            )}
+              );
+            })()}
           </AnimatePresence>
         </main>
       </div>
