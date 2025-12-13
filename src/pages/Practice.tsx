@@ -619,6 +619,7 @@ export default function Practice() {
             
             <LearnView
               subtopicName={selectedSubtopic?.name || ''}
+              topicName={topic?.name || ''}
               theoryExplanation={selectedSubtopic?.theory_explanation || null}
               workedExamples={selectedSubtopic?.worked_examples || []}
               onStartPractice={startPractice}
