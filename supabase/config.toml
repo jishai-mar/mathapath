@@ -20,3 +20,6 @@ verify_jwt = true
 
 [functions.analyze-comprehensive-diagnostic]
 verify_jwt = true
+
+[functions.generate-theory-content]
+verify_jwt = true
