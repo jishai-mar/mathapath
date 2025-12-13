@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { subtopicId, difficulty, existingExercises } = await req.json();
+    const { subtopicId, difficulty, existingExercises, userId, performanceData } = await req.json();
 
     if (!subtopicId || !difficulty) {
       return new Response(
@@ -41,6 +41,63 @@ serve(async (req) => {
     const topicName = (subtopic as any)?.topics?.name || 'Mathematics';
     const subtopicName = subtopic?.name || 'General';
 
+    // Fetch student's performance data if userId provided
+    let studentContext = '';
+    if (userId) {
+      const { data: recentAttempts } = await supabase
+        .from('exercise_attempts')
+        .select(`
+          is_correct,
+          hints_used,
+          misconception_tag,
+          exercises!inner(difficulty, subtopic_id)
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(30);
+
+      const subtopicAttempts = (recentAttempts || []).filter((a: any) => a.exercises?.subtopic_id === subtopicId);
+      
+      if (subtopicAttempts.length > 0) {
+        const stats = { easy: { c: 0, t: 0 }, medium: { c: 0, t: 0 }, hard: { c: 0, t: 0 } };
+        const misconceptions: string[] = [];
+        
+        subtopicAttempts.forEach((a: any) => {
+          const d = a.exercises?.difficulty;
+          if (d && stats[d as keyof typeof stats]) {
+            stats[d as keyof typeof stats].t++;
+            if (a.is_correct) stats[d as keyof typeof stats].c++;
+          }
+          if (a.misconception_tag && !misconceptions.includes(a.misconception_tag)) {
+            misconceptions.push(a.misconception_tag);
+          }
+        });
+
+        const successRates = Object.entries(stats)
+          .filter(([_, v]) => v.t > 0)
+          .map(([k, v]) => `${k}: ${Math.round((v.c / v.t) * 100)}%`)
+          .join(', ');
+
+        studentContext = `
+STUDENT PERFORMANCE CONTEXT:
+- Success rates by difficulty: ${successRates || 'No data yet'}
+- Common misconceptions: ${misconceptions.length > 0 ? misconceptions.join(', ') : 'None identified'}
+- Total attempts in this subtopic: ${subtopicAttempts.length}
+
+PERSONALIZATION INSTRUCTIONS:
+${difficulty === 'easy' && stats.easy.t > 3 && (stats.easy.c / stats.easy.t) < 0.5 
+  ? '- Student is struggling with easy problems. Create a very clear, foundational exercise with explicit structure.'
+  : ''}
+${difficulty === 'medium' && misconceptions.length > 0 
+  ? `- Target these misconceptions in the exercise design: ${misconceptions.slice(0, 2).join(', ')}`
+  : ''}
+${difficulty === 'hard' && stats.hard.t > 2 && (stats.hard.c / stats.hard.t) > 0.7
+  ? '- Student excels at hard problems. Create a challenging multi-step problem requiring insight.'
+  : ''}
+`;
+      }
+    }
+
     const examplesText = existingExercises && existingExercises.length > 0
       ? existingExercises.map((ex: any, i: number) => 
           `Example ${i + 1}:\nQuestion: ${ex.question}\nAnswer: ${ex.correct_answer}`
@@ -52,7 +109,7 @@ serve(async (req) => {
 Topic: ${topicName}
 Subtopic: ${subtopicName}
 Difficulty: ${difficulty}
-
+${studentContext}
 EXERCISE DESIGN PHILOSOPHY:
 Exercises must reinforce deep understanding, not just test mechanics.
 Each exercise should require the student to apply concepts from the theory, not just follow procedures.

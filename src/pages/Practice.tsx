@@ -177,7 +177,7 @@ export default function Practice() {
         toast.info('Generating a new exercise for you...');
         
         const { data, error: genError } = await supabase.functions.invoke('generate-exercise', {
-          body: { subtopicId, difficulty, existingExercises: [] }
+          body: { subtopicId, difficulty, existingExercises: [], userId: user?.id }
         });
         
         if (genError) throw genError;
@@ -247,7 +247,12 @@ export default function Practice() {
 
       if (error) throw error;
 
-      const { isCorrect, explanation, correctAnswer } = data;
+      const { isCorrect, explanation, correctAnswer, suggestedDifficulty } = data;
+      
+      // Store the server's difficulty suggestion for next exercise
+      if (suggestedDifficulty) {
+        setCurrentDifficulty(suggestedDifficulty);
+      }
       
       // Update local tracking
       setAttemptedExerciseIds(prev => new Set(prev).add(currentExercise.id));
