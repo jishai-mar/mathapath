@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
 import MathRenderer from './MathRenderer';
@@ -20,7 +20,8 @@ import {
   Target,
   TrendingUp,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  ChevronRight
 } from 'lucide-react';
 
 interface WorkedExample {
@@ -68,12 +69,10 @@ export default function LearnView({
   const [showVideo, setShowVideo] = useState(true);
   const [showMistakes, setShowMistakes] = useState(false);
   
-  // Enhanced content state
   const [enhancedContent, setEnhancedContent] = useState<EnhancedTheoryContent | null>(null);
   const [isLoadingContent, setIsLoadingContent] = useState(false);
   const [hasGeneratedContent, setHasGeneratedContent] = useState(false);
 
-  // Use enhanced content if available, otherwise fall back to props
   const displayTheory = enhancedContent?.theory_explanation || theoryExplanation;
   const displayExamples = enhancedContent?.worked_examples?.length ? enhancedContent.worked_examples : workedExamples;
   const keyConcepts = enhancedContent?.key_concepts || [];
@@ -83,7 +82,6 @@ export default function LearnView({
   const hasTheory = displayTheory && displayTheory.trim().length > 0;
   const hasExamples = displayExamples && displayExamples.length > 0;
 
-  // Auto-generate content if none exists
   useEffect(() => {
     const shouldGenerate = !hasTheory && !hasExamples && !hasGeneratedContent && !isLoadingContent;
     if (shouldGenerate) {
@@ -117,7 +115,6 @@ export default function LearnView({
     }
   };
 
-  // Generate animation steps from theory content
   const animationSteps = useMemo(() => {
     if (!hasTheory) return [];
     return generateAnimationSteps(
@@ -129,174 +126,200 @@ export default function LearnView({
 
   if (isLoadingContent && !hasTheory) {
     return (
-      <div className="space-y-6 animate-fade-in">
-        <Card className="border-border/50 bg-card/50">
-          <CardHeader className="pb-3">
-            <Skeleton className="h-6 w-48" />
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <div className="space-y-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-6 rounded-2xl bg-card/50 border border-border/30 backdrop-blur-sm"
+        >
+          <Skeleton className="h-6 w-48 mb-4" />
+          <div className="space-y-3">
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-3/4" />
-            <div className="flex items-center gap-2 text-muted-foreground pt-4">
-              <Sparkles className="w-4 h-4 animate-pulse" />
-              <span className="text-sm">Generating personalized theory content...</span>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="flex items-center gap-2 text-primary pt-6">
+            <Sparkles className="w-4 h-4 animate-pulse" />
+            <span className="text-sm">Generating personalized theory content...</span>
+          </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6">
       {/* Key Concepts Section */}
       {keyConcepts.length > 0 && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Target className="w-5 h-5 text-primary" />
-              Key Concepts to Master
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-2">
-              {keyConcepts.map((concept, idx) => (
-                <li key={idx} className="flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
-                  <span className="text-foreground/90 text-sm">
-                    <MathRenderer latex={concept} />
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 rounded-2xl bg-primary/5 border border-primary/20 backdrop-blur-sm"
+        >
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4">
+            <Target className="w-5 h-5 text-primary" />
+            Key Concepts to Master
+          </h3>
+          <ul className="space-y-3">
+            {keyConcepts.map((concept, idx) => (
+              <motion.li 
+                key={idx}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.1 }}
+                className="flex items-start gap-3"
+              >
+                <CheckCircle2 className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
+                <span className="text-foreground/90 text-sm leading-relaxed">
+                  <MathRenderer latex={concept} />
+                </span>
+              </motion.li>
+            ))}
+          </ul>
+        </motion.div>
       )}
 
       {/* Animated Video Section */}
       {animationSteps.length > 0 && (
-        <Collapsible open={showVideo} onOpenChange={setShowVideo}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-between border-primary/30 bg-primary/5 hover:bg-primary/10"
-            >
-              <span className="flex items-center gap-2">
-                <Video className="w-4 h-4 text-primary" />
-                <span className="font-medium">Watch: {subtopicName}</span>
-              </span>
-              <ChevronDown 
-                className={`w-4 h-4 transition-transform ${showVideo ? 'rotate-180' : ''}`} 
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <Collapsible open={showVideo} onOpenChange={setShowVideo}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-between p-4 rounded-2xl bg-primary/5 border border-primary/20 hover:bg-primary/10 transition-colors group">
+                <span className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center group-hover:bg-primary/30 transition-colors">
+                    <Video className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <span className="font-semibold text-foreground block">Watch Animation</span>
+                    <span className="text-sm text-muted-foreground">{subtopicName}</span>
+                  </div>
+                </span>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showVideo ? 'rotate-180' : ''}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <AnimatedMathVideo
+                title={subtopicName}
+                steps={animationSteps}
               />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3">
-            <AnimatedMathVideo
-              title={subtopicName}
-              steps={animationSteps}
-            />
-          </CollapsibleContent>
-        </Collapsible>
+            </CollapsibleContent>
+          </Collapsible>
+        </motion.div>
       )}
 
       {/* Theory Section */}
-      <Card className="border-border/50 bg-card/50">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <BookOpen className="w-5 h-5 text-primary" />
-              Theory: {subtopicName}
-            </CardTitle>
-            {!enhancedContent && hasTheory && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={generateTheoryContent}
-                disabled={isLoadingContent}
-                className="text-muted-foreground"
-              >
-                {isLoadingContent ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-1" />
-                    Enhance
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {hasTheory ? (
-            <div className="prose prose-invert prose-sm max-w-none">
-              <div className="text-foreground/90 leading-relaxed space-y-3">
-                {displayTheory!.split('\n\n').map((paragraph, idx) => (
-                  <div key={idx} className="theory-paragraph">
-                    {paragraph.startsWith('**') ? (
-                      <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                        <MathRenderer latex={paragraph.replace(/\*\*/g, '')} />
-                      </div>
-                    ) : paragraph.match(/^\d\./) ? (
-                      <div className="pl-4 border-l-2 border-primary/30">
-                        <MathRenderer latex={paragraph} />
-                      </div>
-                    ) : (
-                      <MathRenderer latex={paragraph} />
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-6 text-muted-foreground">
-              <Lightbulb className="w-10 h-10 mx-auto mb-3 opacity-50" />
-              <p>Theory content coming soon for this subtopic.</p>
-              <p className="text-sm mt-1">You can start practicing right away!</p>
-            </div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="p-6 rounded-2xl bg-card/50 border border-border/30 backdrop-blur-sm"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+            <BookOpen className="w-5 h-5 text-primary" />
+            Theory: {subtopicName}
+          </h3>
+          {!enhancedContent && hasTheory && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={generateTheoryContent}
+              disabled={isLoadingContent}
+              className="text-muted-foreground hover:text-primary"
+            >
+              {isLoadingContent ? (
+                <RefreshCw className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-1" />
+                  Enhance
+                </>
+              )}
+            </Button>
           )}
-        </CardContent>
-      </Card>
+        </div>
+        
+        {hasTheory ? (
+          <div className="prose prose-invert prose-sm max-w-none">
+            <div className="text-foreground/90 leading-relaxed space-y-4">
+              {displayTheory!.split('\n\n').map((paragraph, idx) => (
+                <motion.div 
+                  key={idx}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.1 * idx }}
+                >
+                  {paragraph.startsWith('**') ? (
+                    <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                      <MathRenderer latex={paragraph.replace(/\*\*/g, '')} />
+                    </div>
+                  ) : paragraph.match(/^\d\./) ? (
+                    <div className="pl-4 border-l-2 border-primary/30">
+                      <MathRenderer latex={paragraph} />
+                    </div>
+                  ) : (
+                    <MathRenderer latex={paragraph} />
+                  )}
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <Lightbulb className="w-12 h-12 mx-auto mb-4 opacity-40" />
+            <p>Theory content coming soon for this subtopic.</p>
+            <p className="text-sm mt-1">You can start practicing right away!</p>
+          </div>
+        )}
+      </motion.div>
 
       {/* Visual Description Section */}
       {visualDescription && (
-        <Card className="border-border/50 bg-card/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              Visual Representation
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="p-4 rounded-lg bg-secondary/20 border border-border/50">
-              <p className="text-sm text-foreground/80 mb-3">{visualDescription.description}</p>
-              <div className="space-y-1">
-                {visualDescription.key_points.map((point, idx) => (
-                  <p key={idx} className="text-xs text-muted-foreground flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-primary/50" />
-                    {point}
-                  </p>
-                ))}
-              </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="p-6 rounded-2xl bg-card/50 border border-border/30 backdrop-blur-sm"
+        >
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-4">
+            <TrendingUp className="w-5 h-5 text-primary" />
+            Visual Representation
+          </h3>
+          <div className="p-4 rounded-xl bg-border/10 border border-border/30">
+            <p className="text-sm text-foreground/80 mb-3">{visualDescription.description}</p>
+            <div className="space-y-2">
+              {visualDescription.key_points.map((point, idx) => (
+                <p key={idx} className="text-xs text-muted-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-primary/50" />
+                  {point}
+                </p>
+              ))}
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
       )}
 
       {/* Worked Examples Section */}
       {hasExamples && (
-        <Card className="border-border/50 bg-card/50">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <CheckCircle2 className="w-5 h-5 text-primary" />
-              Worked Examples
-            </CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Step-by-step solutions with explanations
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="p-6 rounded-2xl bg-card/50 border border-border/30 backdrop-blur-sm"
+        >
+          <h3 className="flex items-center gap-2 text-lg font-semibold text-foreground mb-2">
+            <CheckCircle2 className="w-5 h-5 text-primary" />
+            Worked Examples
+          </h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            Step-by-step solutions with explanations
+          </p>
+          
+          <div className="space-y-3">
             {displayExamples.map((example, idx) => (
               <Collapsible
                 key={idx}
@@ -304,127 +327,137 @@ export default function LearnView({
                 onOpenChange={() => setExpandedExample(expandedExample === idx ? null : idx)}
               >
                 <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-colors">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-border/10 hover:bg-border/20 transition-colors group">
                     <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-primary/20 text-primary text-sm flex items-center justify-center font-medium">
+                      <span className="w-8 h-8 rounded-full bg-primary/20 text-primary text-sm flex items-center justify-center font-semibold">
                         {idx + 1}
                       </span>
-                      <span className="text-left text-sm">
+                      <span className="text-left text-sm text-foreground">
                         <MathRenderer latex={example.problem} />
                       </span>
                     </div>
-                    <ChevronDown 
-                      className={`w-4 h-4 text-muted-foreground transition-transform ${
-                        expandedExample === idx ? 'rotate-180' : ''
-                      }`} 
-                    />
+                    <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${expandedExample === idx ? 'rotate-180' : ''}`} />
                   </div>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <div className="mt-2 ml-9 space-y-3 animate-fade-in">
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-3 ml-11 space-y-3"
+                  >
                     {example.steps.map((step, stepIdx) => (
-                      <div 
+                      <motion.div 
                         key={stepIdx}
-                        className="flex items-start gap-3 text-sm p-3 rounded-lg bg-secondary/20 border-l-2 border-primary/30"
-                        style={{ animationDelay: `${stepIdx * 100}ms` }}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: stepIdx * 0.1 }}
+                        className="flex items-start gap-3 p-3 rounded-xl bg-border/10 border-l-2 border-primary/30"
                       >
-                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary font-mono text-xs flex items-center justify-center flex-shrink-0">
+                        <span className="w-6 h-6 rounded-full bg-primary/10 text-primary font-mono text-xs flex items-center justify-center flex-shrink-0">
                           {stepIdx + 1}
                         </span>
-                        <div className="text-foreground/80">
+                        <div className="text-foreground/80 text-sm">
                           <MathRenderer latex={step} />
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
-                    <div className="flex items-center gap-2 p-4 rounded-lg bg-primary/10 border border-primary/20">
-                      <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0" />
-                      <span className="font-medium text-primary text-lg">
+                    <div className="flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                      <CheckCircle2 className="w-6 h-6 text-primary flex-shrink-0" />
+                      <span className="font-semibold text-primary text-lg">
                         <MathRenderer latex={example.answer} />
                       </span>
                     </div>
-                  </div>
+                  </motion.div>
                 </CollapsibleContent>
               </Collapsible>
             ))}
-          </CardContent>
-        </Card>
+          </div>
+        </motion.div>
       )}
 
       {/* Common Mistakes Section */}
       {commonMistakes.length > 0 && (
-        <Collapsible open={showMistakes} onOpenChange={setShowMistakes}>
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-between border-destructive/30 bg-destructive/5 hover:bg-destructive/10"
-            >
-              <span className="flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-destructive" />
-                <span className="font-medium">Common Mistakes to Avoid</span>
-              </span>
-              <ChevronDown 
-                className={`w-4 h-4 transition-transform ${showMistakes ? 'rotate-180' : ''}`} 
-              />
-            </Button>
-          </CollapsibleTrigger>
-          <CollapsibleContent className="mt-3">
-            <Card className="border-destructive/20 bg-destructive/5">
-              <CardContent className="pt-4 space-y-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <Collapsible open={showMistakes} onOpenChange={setShowMistakes}>
+            <CollapsibleTrigger asChild>
+              <button className="w-full flex items-center justify-between p-4 rounded-2xl bg-destructive/5 border border-destructive/20 hover:bg-destructive/10 transition-colors">
+                <span className="flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  <span className="font-semibold text-foreground">Common Mistakes to Avoid</span>
+                </span>
+                <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showMistakes ? 'rotate-180' : ''}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-3">
+              <div className="p-5 rounded-2xl bg-destructive/5 border border-destructive/20 space-y-4">
                 {commonMistakes.map((item, idx) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex items-start gap-2">
-                      <span className="text-destructive font-medium text-sm">✗</span>
+                      <span className="text-destructive font-bold">✗</span>
                       <p className="text-sm text-foreground/80">
                         <MathRenderer latex={item.mistake} />
                       </p>
                     </div>
                     <div className="flex items-start gap-2 ml-4">
-                      <span className="text-primary font-medium text-sm">→</span>
+                      <ChevronRight className="w-4 h-4 text-primary mt-0.5" />
                       <p className="text-sm text-muted-foreground">
                         <MathRenderer latex={item.correction} />
                       </p>
                     </div>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-          </CollapsibleContent>
-        </Collapsible>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </motion.div>
       )}
 
       {/* Ask Tutor Section */}
-      <Collapsible open={showTutor} onOpenChange={setShowTutor}>
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="outline"
-            className="w-full justify-between border-border/50 hover:border-primary/30"
-          >
-            <span className="flex items-center gap-2">
-              <MessageCircle className="w-4 h-4" />
-              Ask the tutor about this topic
-            </span>
-            <ChevronDown 
-              className={`w-4 h-4 transition-transform ${showTutor ? 'rotate-180' : ''}`} 
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
+        <Collapsible open={showTutor} onOpenChange={setShowTutor}>
+          <CollapsibleTrigger asChild>
+            <button className="w-full flex items-center justify-between p-4 rounded-2xl bg-card/50 border border-border/30 hover:border-primary/30 transition-colors group">
+              <span className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <MessageCircle className="w-5 h-5 text-primary" />
+                </div>
+                <span className="font-semibold text-foreground">Ask the tutor about this topic</span>
+              </span>
+              <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showTutor ? 'rotate-180' : ''}`} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-3">
+            <TutorChat 
+              subtopicName={subtopicName}
+              theoryContext={displayTheory || ''}
             />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-3">
-          <TutorChat 
-            subtopicName={subtopicName}
-            theoryContext={displayTheory || ''}
-          />
-        </CollapsibleContent>
-      </Collapsible>
+          </CollapsibleContent>
+        </Collapsible>
+      </motion.div>
 
       {/* Start Practice Button */}
-      <Button
-        onClick={onStartPractice}
-        size="lg"
-        className="w-full py-6 text-lg font-semibold gap-3"
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
       >
-        <PlayCircle className="w-6 h-6" />
-        Start Practice
-      </Button>
+        <Button
+          onClick={onStartPractice}
+          size="lg"
+          className="w-full py-7 text-lg font-semibold gap-3 shadow-primary-glow hover:shadow-primary-glow-lg transition-shadow"
+        >
+          <PlayCircle className="w-6 h-6" />
+          Start Practice
+        </Button>
+      </motion.div>
     </div>
   );
 }
