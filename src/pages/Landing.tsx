@@ -14,10 +14,12 @@ import {
   Lightbulb,
   GraduationCap,
   BarChart3,
-  Infinity,
-  Clock,
-  type LucideIcon
+  Infinity as InfinityIcon,
+  Clock
 } from 'lucide-react';
+import type { LucideProps } from 'lucide-react';
+
+type IconComponent = React.ForwardRefExoticComponent<Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>>;
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -73,8 +75,16 @@ function AnimatedTutorBoard() {
             </div>
           </motion.div>
         </div>
-        <motion.div className="absolute top-4 right-4 w-20 h-20 rounded-full border border-primary/20" animate={{ rotate: 360 }} transition={{ duration: 30, repeat: Infinity, ease: "linear" }} />
-        <motion.div className="absolute bottom-4 left-4 w-12 h-12 rounded-full border border-accent/20" animate={{ rotate: -360 }} transition={{ duration: 25, repeat: Infinity, ease: "linear" }} />
+        <motion.div 
+          className="absolute top-4 right-4 w-20 h-20 rounded-full border border-primary/20" 
+          animate={{ rotate: 360 }} 
+          transition={{ duration: 30, repeat: Infinity, ease: "linear" }} 
+        />
+        <motion.div 
+          className="absolute bottom-4 left-4 w-12 h-12 rounded-full border border-accent/20" 
+          animate={{ rotate: -360 }} 
+          transition={{ duration: 25, repeat: Infinity, ease: "linear" }} 
+        />
       </div>
     </motion.div>
   );
@@ -84,15 +94,33 @@ function HeroBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden">
       <div className="absolute inset-0 bg-gradient-to-b from-background via-background to-card/30" />
-      <motion.div className="absolute w-[800px] h-[800px] rounded-full" style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 60%)', top: '-30%', right: '-20%' }} animate={{ x: [0, -30, 0], y: [0, 40, 0], scale: [1, 1.1, 1] }} transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }} />
-      <motion.div className="absolute w-[600px] h-[600px] rounded-full" style={{ background: 'radial-gradient(circle, hsl(var(--accent) / 0.08) 0%, transparent 60%)', bottom: '-20%', left: '-15%' }} animate={{ x: [0, 40, 0], y: [0, -30, 0], scale: [1, 1.15, 1] }} transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }} />
-      <motion.div className="absolute w-[400px] h-[400px] rounded-full" style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.08) 0%, transparent 60%)', top: '40%', left: '30%' }} animate={{ x: [0, 60, 0], y: [0, -40, 0] }} transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }} />
-      <div className="absolute inset-0 opacity-[0.015]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }} />
+      <motion.div 
+        className="absolute w-[800px] h-[800px] rounded-full" 
+        style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.15) 0%, transparent 60%)', top: '-30%', right: '-20%' }} 
+        animate={{ x: [0, -30, 0], y: [0, 40, 0], scale: [1, 1.1, 1] }} 
+        transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }} 
+      />
+      <motion.div 
+        className="absolute w-[600px] h-[600px] rounded-full" 
+        style={{ background: 'radial-gradient(circle, hsl(var(--accent) / 0.08) 0%, transparent 60%)', bottom: '-20%', left: '-15%' }} 
+        animate={{ x: [0, 40, 0], y: [0, -30, 0], scale: [1, 1.15, 1] }} 
+        transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }} 
+      />
+      <motion.div 
+        className="absolute w-[400px] h-[400px] rounded-full" 
+        style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.08) 0%, transparent 60%)', top: '40%', left: '30%' }} 
+        animate={{ x: [0, 60, 0], y: [0, -40, 0] }} 
+        transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }} 
+      />
+      <div 
+        className="absolute inset-0 opacity-[0.015]" 
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E")` }} 
+      />
     </div>
   );
 }
 
-function PremiumFeatureCard({ icon: Icon, title, description, gradient }: { icon: LucideIcon; title: string; description: string; gradient: string }) {
+function PremiumFeatureCard({ icon: Icon, title, description, gradient }: { icon: IconComponent; title: string; description: string; gradient: string }) {
   return (
     <motion.div className="group relative p-6 rounded-2xl bg-card/40 backdrop-blur-sm border border-border/30 overflow-hidden" variants={fadeInUp} whileHover={{ y: -5, transition: { duration: 0.2 } }}>
       <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${gradient}`} />
@@ -108,7 +136,7 @@ function PremiumFeatureCard({ icon: Icon, title, description, gradient }: { icon
   );
 }
 
-function StepItem({ number, icon: Icon, title, description, isLast = false }: { number: number; icon: LucideIcon; title: string; description: string; isLast?: boolean }) {
+function StepItem({ number, icon: Icon, title, description, isLast = false }: { number: number; icon: IconComponent; title: string; description: string; isLast?: boolean }) {
   return (
     <motion.div className="relative flex flex-col items-center text-center" variants={fadeInUp}>
       <div className="relative mb-4">
@@ -125,7 +153,7 @@ function StepItem({ number, icon: Icon, title, description, isLast = false }: { 
   );
 }
 
-function ClaimCard({ icon: Icon, title, description }: { icon: LucideIcon; title: string; description: string }) {
+function ClaimCard({ icon: Icon, title, description }: { icon: IconComponent; title: string; description: string }) {
   return (
     <motion.div className="flex flex-col items-center text-center p-6" variants={scaleIn}>
       <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 flex items-center justify-center mb-4 border border-primary/10">
@@ -196,10 +224,31 @@ export default function Landing() {
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Four steps to transform your understanding — personalized to how you learn.</p>
           </motion.div>
           <motion.div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-4" variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }}>
-            <StepItem number={1} icon={Target} title="Diagnostic" description="A friendly assessment that maps your knowledge across all topics." />
-            <StepItem number={2} icon={Brain} title="Personalized Theory" description="Clear explanations and worked examples tailored to your gaps." />
-            <StepItem number={3} icon={MessageCircle} title="Guided Practice" description="AI-generated exercises that adapt in real-time to your level." />
-            <StepItem number={4} icon={TrendingUp} title="Progress & Mastery" description="Track your growth and watch your understanding deepen." isLast />
+            <StepItem 
+              number={1} 
+              icon={Target} 
+              title="Diagnostic" 
+              description="A friendly assessment that maps your knowledge across all topics." 
+            />
+            <StepItem 
+              number={2} 
+              icon={Brain} 
+              title="Personalized Theory" 
+              description="Clear explanations and worked examples tailored to your gaps." 
+            />
+            <StepItem 
+              number={3} 
+              icon={MessageCircle} 
+              title="Guided Practice" 
+              description="AI-generated exercises that adapt in real-time to your level." 
+            />
+            <StepItem 
+              number={4} 
+              icon={TrendingUp} 
+              title="Progress & Mastery" 
+              description="Track your growth and watch your understanding deepen." 
+              isLast 
+            />
           </motion.div>
         </div>
       </section>
@@ -213,7 +262,7 @@ export default function Landing() {
           </motion.div>
           <motion.div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5" variants={staggerContainer} initial="hidden" whileInView="show" viewport={{ once: true }}>
             <PremiumFeatureCard icon={Brain} title="Tutor-Like Guidance" description="Our AI explains the 'why' behind every step — like a patient tutor by your side." gradient="bg-gradient-to-br from-primary/5 to-transparent" />
-            <PremiumFeatureCard icon={Infinity} title="Unlimited Exercises" description="AI generates fresh problems at exactly your level. Never run out of practice." gradient="bg-gradient-to-br from-accent/5 to-transparent" />
+            <PremiumFeatureCard icon={InfinityIcon} title="Unlimited Exercises" description="AI generates fresh problems at exactly your level. Never run out of practice." gradient="bg-gradient-to-br from-accent/5 to-transparent" />
             <PremiumFeatureCard icon={Play} title="Theory + Video" description="Every topic includes clear explanations, worked examples, and animated lessons." gradient="bg-gradient-to-br from-success/5 to-transparent" />
             <PremiumFeatureCard icon={BarChart3} title="Progress Tracking" description="See your mastery grow with insights into strengths and areas to improve." gradient="bg-gradient-to-br from-warning/5 to-transparent" />
           </motion.div>
@@ -248,7 +297,17 @@ export default function Landing() {
       <section className="relative py-24 sm:py-32">
         <div className="absolute inset-0">
           <div className="absolute inset-0 bg-gradient-to-t from-primary/5 via-transparent to-transparent" />
-          <motion.div className="absolute w-[600px] h-[600px] rounded-full" style={{ background: 'radial-gradient(circle, hsl(var(--primary) / 0.1) 0%, transparent 60%)', bottom: '-30%', left: '50%', transform: 'translateX(-50%)' }} animate={{ scale: [1, 1.1, 1] }} transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }} />
+          <motion.div 
+            className="absolute w-[600px] h-[600px] rounded-full" 
+            style={{ 
+              background: 'radial-gradient(circle, hsl(var(--primary) / 0.1) 0%, transparent 60%)', 
+              bottom: '-30%', 
+              left: '50%', 
+              transform: 'translateX(-50%)' 
+            }} 
+            animate={{ scale: [1, 1.1, 1] }} 
+            transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }} 
+          />
         </div>
         <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center">
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.7 }}>
