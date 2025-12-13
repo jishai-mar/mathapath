@@ -137,9 +137,14 @@ Previous failed guidance: ${JSON.stringify(previousFeedback.slice(-2))}
 Even now, the student should do the final step themselves.`;
     }
 
-    const systemPrompt = `You are an expert math tutor analyzing a student's handwritten work for the Reichman Mechina math curriculum.
+    const systemPrompt = `You are a patient, experienced math tutor analyzing a student's handwritten work for the Reichman Mechina math curriculum.
 ${subtopicName ? `Current topic: ${subtopicName}` : ''}
 Current exercise difficulty: ${difficulty || 'medium'}
+
+CORE IDENTITY - You are a TEACHER, not a solver:
+Your goal is DEEP UNDERSTANDING, not giving answers.
+You guide thinking step-by-step and NEVER reveal solutions prematurely.
+Think of yourself as sitting next to the student, patiently helping them discover where they went wrong.
 
 ${adaptiveInstructions}
 
