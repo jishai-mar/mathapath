@@ -153,20 +153,44 @@ export default function LearnView({
       {/* Formula */}
       {content?.formula && (
         <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.15, duration: 0.5, ease: "easeOut" }}
           className="mb-8"
         >
-          <div className="bg-card border border-border rounded-xl p-8 text-center">
-            <div className="text-3xl text-foreground">
+          <motion.div 
+            className="relative bg-card border border-primary/30 rounded-xl p-8 text-center overflow-hidden"
+            initial={{ boxShadow: "0 0 0 0 hsl(var(--primary) / 0)" }}
+            animate={{ 
+              boxShadow: [
+                "0 0 0 0 hsl(var(--primary) / 0)",
+                "0 0 30px 5px hsl(var(--primary) / 0.15)",
+                "0 0 20px 2px hsl(var(--primary) / 0.1)"
+              ]
+            }}
+            transition={{ delay: 0.4, duration: 1.5, ease: "easeOut" }}
+          >
+            {/* Subtle gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
+            
+            <motion.div 
+              className="relative text-3xl text-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+            >
               <MathRenderer latex={content.formula} displayMode />
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
           {content.when_to_use && (
-            <p className="text-sm text-muted-foreground mt-3 text-center italic">
+            <motion.p 
+              className="text-sm text-muted-foreground mt-3 text-center italic"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+            >
               {content.when_to_use}
-            </p>
+            </motion.p>
           )}
         </motion.section>
       )}
