@@ -6,13 +6,243 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Topic-specific difficulty matrices with precise criteria
+const DIFFICULTY_MATRICES: Record<string, {
+  easy: { description: string; maxSteps: number; criteria: string[] };
+  medium: { description: string; maxSteps: number; criteria: string[] };
+  hard: { description: string; maxSteps: number; criteria: string[] };
+}> = {
+  "Linear Equations": {
+    easy: {
+      description: "Single variable, positive integers, one operation",
+      maxSteps: 2,
+      criteria: ["Only positive whole numbers (1-20)", "Single operation to solve", "Form: ax = b or x + a = b", "No negative results"]
+    },
+    medium: {
+      description: "Variable on both sides, simple fractions, negatives allowed",
+      maxSteps: 4,
+      criteria: ["Variables on both sides allowed", "Simple fractions (halves, thirds)", "Negative numbers allowed", "May require distribution once"]
+    },
+    hard: {
+      description: "Nested expressions, multiple distribution, complex setup",
+      maxSteps: 6,
+      criteria: ["Nested parentheses", "Multiple distributions", "Word problems requiring equation setup", "Complex fractions"]
+    }
+  },
+  "Quadratic Equations": {
+    easy: {
+      description: "Perfect squares, direct square roots",
+      maxSteps: 2,
+      criteria: ["Form: x² = a (perfect squares)", "Direct factoring like x² - 4 = 0", "Integer solutions only", "No middle term (b=0)"]
+    },
+    medium: {
+      description: "Factoring with middle term, completing the square",
+      maxSteps: 4,
+      criteria: ["Standard form with middle term", "Factoring required", "Completing the square prep", "Integer or simple fraction solutions"]
+    },
+    hard: {
+      description: "Quadratic formula required, discriminant analysis",
+      maxSteps: 6,
+      criteria: ["Quadratic formula needed", "Irrational or complex solutions", "Discriminant analysis", "Setting up from word problems"]
+    }
+  },
+  "Fractions & Algebraic Expressions": {
+    easy: {
+      description: "Simple fraction operations, single variable",
+      maxSteps: 2,
+      criteria: ["Single fraction simplification", "Adding fractions with same denominator", "No variables in denominator", "Small integers"]
+    },
+    medium: {
+      description: "Different denominators, polynomial numerators",
+      maxSteps: 4,
+      criteria: ["Finding common denominators", "Polynomial expressions", "Simplifying by factoring", "Variables in one term"]
+    },
+    hard: {
+      description: "Complex rational expressions, multiple variables",
+      maxSteps: 6,
+      criteria: ["Variables in denominators", "Multiple operations combined", "Partial fractions", "Complex factoring needed"]
+    }
+  },
+  "Radical Equations": {
+    easy: {
+      description: "Single radical, direct solving",
+      maxSteps: 2,
+      criteria: ["Form: √x = a", "Perfect square results", "Single radical only", "No extraneous solutions"]
+    },
+    medium: {
+      description: "Radical with linear expression inside",
+      maxSteps: 4,
+      criteria: ["Form: √(ax + b) = c", "Squaring both sides once", "May have extraneous solution", "Simple linear under radical"]
+    },
+    hard: {
+      description: "Multiple radicals, nested expressions",
+      maxSteps: 6,
+      criteria: ["Multiple radicals", "Radicals on both sides", "Nested radicals", "Multiple squaring needed"]
+    }
+  },
+  "Exponents & Exponential Equations": {
+    easy: {
+      description: "Same base, direct comparison",
+      maxSteps: 2,
+      criteria: ["Same base on both sides", "Simple exponent rules", "Integer exponents only", "Direct solve"]
+    },
+    medium: {
+      description: "Converting to same base, negative exponents",
+      maxSteps: 4,
+      criteria: ["Different bases (convertible)", "Negative exponents", "Exponent rules application", "One conversion step"]
+    },
+    hard: {
+      description: "Logarithms needed, complex expressions",
+      maxSteps: 6,
+      criteria: ["Bases not easily convertible", "Requires logarithms", "Multiple exponent rules", "Complex expressions"]
+    }
+  },
+  "Logarithms & Logarithmic Equations": {
+    easy: {
+      description: "Direct evaluation, simple equations",
+      maxSteps: 2,
+      criteria: ["Direct log evaluation", "Form: log_a(x) = b", "Common bases (10, 2, e)", "Integer results"]
+    },
+    medium: {
+      description: "Log rules application, combining logs",
+      maxSteps: 4,
+      criteria: ["Product/quotient rules", "Combining multiple logs", "Change of base formula", "One variable"]
+    },
+    hard: {
+      description: "Complex log equations, multiple variables",
+      maxSteps: 6,
+      criteria: ["Multiple log terms", "Quadratic in log form", "Nested logarithms", "Domain restrictions matter"]
+    }
+  },
+  "Inequalities": {
+    easy: {
+      description: "Simple linear inequalities",
+      maxSteps: 2,
+      criteria: ["Form: ax + b < c", "No sign flipping needed", "Positive coefficients", "Integer endpoints"]
+    },
+    medium: {
+      description: "Compound inequalities, sign changes",
+      maxSteps: 4,
+      criteria: ["Dividing by negatives", "Compound inequalities", "Interval notation", "Simple absolute value"]
+    },
+    hard: {
+      description: "Quadratic inequalities, rational inequalities",
+      maxSteps: 6,
+      criteria: ["Quadratic inequalities", "Rational expressions", "Multiple intervals", "Sign analysis needed"]
+    }
+  },
+  "Linear Functions & Lines": {
+    easy: {
+      description: "Identify slope/intercept, plot points",
+      maxSteps: 2,
+      criteria: ["Given y = mx + b form", "Identify slope and intercept", "Plot two points", "Integer values"]
+    },
+    medium: {
+      description: "Find equation from points, parallel/perpendicular",
+      maxSteps: 4,
+      criteria: ["Find equation from two points", "Parallel and perpendicular lines", "Convert between forms", "Intercept calculations"]
+    },
+    hard: {
+      description: "Systems context, distance/midpoint applications",
+      maxSteps: 6,
+      criteria: ["Word problems", "Distance and midpoint", "Systems of lines", "Area calculations with lines"]
+    }
+  },
+  "Quadratic Functions & Parabolas": {
+    easy: {
+      description: "Identify vertex from standard form",
+      maxSteps: 2,
+      criteria: ["Vertex form given", "Find axis of symmetry", "Identify direction", "Simple graphing"]
+    },
+    medium: {
+      description: "Convert forms, find vertex from standard",
+      maxSteps: 4,
+      criteria: ["Standard to vertex form", "Find x-intercepts", "Completing the square", "Range/domain"]
+    },
+    hard: {
+      description: "Word problems, optimization",
+      maxSteps: 6,
+      criteria: ["Optimization problems", "Projectile motion", "Multiple parabolas", "System with parabola and line"]
+    }
+  },
+  "Limits": {
+    easy: {
+      description: "Direct substitution",
+      maxSteps: 2,
+      criteria: ["Direct substitution works", "Polynomial limits", "No indeterminate forms", "Finite results"]
+    },
+    medium: {
+      description: "Factor and cancel, simple indeterminate",
+      maxSteps: 4,
+      criteria: ["0/0 form requiring factoring", "Conjugate multiplication", "Simple rational functions", "One-sided limits"]
+    },
+    hard: {
+      description: "L'Hôpital's rule, limits at infinity",
+      maxSteps: 6,
+      criteria: ["L'Hôpital's rule", "Limits at infinity", "Complex indeterminate forms", "Trigonometric limits"]
+    }
+  },
+  "Derivatives & Applications": {
+    easy: {
+      description: "Power rule, basic derivatives",
+      maxSteps: 2,
+      criteria: ["Power rule only", "Polynomial functions", "Basic differentiation", "No chain rule"]
+    },
+    medium: {
+      description: "Product/quotient rule, chain rule intro",
+      maxSteps: 4,
+      criteria: ["Product or quotient rule", "Simple chain rule", "Finding critical points", "Basic slope problems"]
+    },
+    hard: {
+      description: "Implicit differentiation, optimization",
+      maxSteps: 6,
+      criteria: ["Implicit differentiation", "Related rates", "Optimization problems", "Multiple rules combined"]
+    }
+  }
+};
+
+// Difficulty-specific instructions for AI
+const DIFFICULTY_INSTRUCTIONS = {
+  easy: `
+EASY DIFFICULTY - For students who need confidence building:
+- Use ONLY positive whole numbers under 20 (no negatives, no fractions, no decimals)
+- Maximum 2 steps to solve
+- Single operation type per problem
+- Pattern should be obvious and direct
+- Numbers should be "friendly" (multiples of 2, 5, 10)
+- Answer should be a clean whole number
+- No hidden tricks or edge cases
+GOAL: Build confidence with guaranteed success. Student should feel "I can do this!"
+`,
+  medium: `
+MEDIUM DIFFICULTY - For students with basic understanding:
+- Negative numbers and simple fractions (halves, thirds, quarters) allowed
+- Maximum 4 steps to solve
+- May combine 2 concepts (but not more)
+- May require one distribution or collecting like terms
+- Numbers can be larger but answers should still be clean
+- One small challenge or decision point
+GOAL: Reinforce concepts with moderate challenge. Student should think but not struggle.
+`,
+  hard: `
+HARD DIFFICULTY - For advanced students seeking challenge:
+- Complex expressions, nested parentheses, multiple operations
+- 5-6 steps typically required
+- Requires insight or non-obvious first step
+- May combine multiple topic concepts
+- Answers may involve radicals, fractions, or multiple solutions
+- May require strategic approach selection
+GOAL: Push critical thinking. Student should feel accomplished after solving.
+`
+};
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { subtopicId, difficulty, existingExercises, userId, performanceData } = await req.json();
+    const { subtopicId, difficulty, existingExercises, userId, performanceData, subLevel } = await req.json();
 
     if (!subtopicId || !difficulty) {
       return new Response(
@@ -41,8 +271,14 @@ serve(async (req) => {
     const topicName = (subtopic as any)?.topics?.name || 'Mathematics';
     const subtopicName = subtopic?.name || 'General';
 
+    // Get topic-specific difficulty matrix
+    const topicMatrix = DIFFICULTY_MATRICES[topicName] || DIFFICULTY_MATRICES["Linear Equations"];
+    const difficultySpec = topicMatrix[difficulty as keyof typeof topicMatrix];
+
     // Fetch student's performance data if userId provided
     let studentContext = '';
+    let misconceptions: string[] = [];
+    
     if (userId) {
       const { data: recentAttempts } = await supabase
         .from('exercise_attempts')
@@ -60,7 +296,6 @@ serve(async (req) => {
       
       if (subtopicAttempts.length > 0) {
         const stats = { easy: { c: 0, t: 0 }, medium: { c: 0, t: 0 }, hard: { c: 0, t: 0 } };
-        const misconceptions: string[] = [];
         
         subtopicAttempts.forEach((a: any) => {
           const d = a.exercises?.difficulty;
@@ -78,25 +313,56 @@ serve(async (req) => {
           .map(([k, v]) => `${k}: ${Math.round((v.c / v.t) * 100)}%`)
           .join(', ');
 
-        studentContext = `
-STUDENT PERFORMANCE CONTEXT:
-- Success rates by difficulty: ${successRates || 'No data yet'}
-- Common misconceptions: ${misconceptions.length > 0 ? misconceptions.join(', ') : 'None identified'}
-- Total attempts in this subtopic: ${subtopicAttempts.length}
+        // Calculate if student is struggling or excelling
+        const currentStats = stats[difficulty as keyof typeof stats];
+        const isStruggling = currentStats.t >= 3 && (currentStats.c / currentStats.t) < 0.4;
+        const isExcelling = currentStats.t >= 3 && (currentStats.c / currentStats.t) > 0.8;
 
-PERSONALIZATION INSTRUCTIONS:
-${difficulty === 'easy' && stats.easy.t > 3 && (stats.easy.c / stats.easy.t) < 0.5 
-  ? '- Student is struggling with easy problems. Create a very clear, foundational exercise with explicit structure.'
-  : ''}
-${difficulty === 'medium' && misconceptions.length > 0 
-  ? `- Target these misconceptions in the exercise design: ${misconceptions.slice(0, 2).join(', ')}`
-  : ''}
-${difficulty === 'hard' && stats.hard.t > 2 && (stats.hard.c / stats.hard.t) > 0.7
-  ? '- Student excels at hard problems. Create a challenging multi-step problem requiring insight.'
-  : ''}
+        studentContext = `
+STUDENT PERFORMANCE ANALYSIS:
+- Success rates: ${successRates || 'No data yet'}
+- Attempts in this subtopic: ${subtopicAttempts.length}
+- Current difficulty (${difficulty}) performance: ${currentStats.t > 0 ? Math.round((currentStats.c / currentStats.t) * 100) + '%' : 'new'}
+${isStruggling ? `
+⚠️ STUDENT IS STRUGGLING at ${difficulty} level:
+- Create a SIMPLER exercise within this difficulty tier
+- Use more obvious patterns and smaller numbers
+- Provide clearer structure with fewer steps
+- Focus on ONE concept only
+` : ''}
+${isExcelling ? `
+✓ STUDENT IS EXCELLING at ${difficulty} level:
+- Create a slightly more challenging exercise within this tier
+- Can include minor additional complexity
+- Push toward the upper bound of this difficulty
+` : ''}
+`;
+      }
+
+      // Add misconception targeting
+      if (misconceptions.length > 0) {
+        studentContext += `
+CRITICAL - TARGET THESE SPECIFIC WEAKNESSES:
+${misconceptions.slice(0, 3).map((m, i) => `${i + 1}. ${m}`).join('\n')}
+
+Generate an exercise that DIRECTLY addresses one of these misconceptions.
+The exercise should help the student practice the exact skill they're missing.
+For example:
+- If misconception is "forgets to distribute negative sign" → create: "Solve: 5 - 2(x + 3) = 1"
+- If misconception is "sign errors with negatives" → use problems with negative coefficients
+- If misconception is "fraction operations" → include simple fractions
 `;
       }
     }
+
+    // Add sub-level guidance for finer difficulty tuning
+    const subLevelGuidance = subLevel 
+      ? `\nSUB-LEVEL TUNING: This is sub-level ${subLevel} of 3 within ${difficulty}. ${
+          subLevel === 1 ? 'Use the EASIEST variant within this difficulty tier.' :
+          subLevel === 2 ? 'Use a MIDDLE variant within this difficulty tier.' :
+          'Use the HARDER variant within this difficulty tier (but still within the tier).'
+        }`
+      : '';
 
     const examplesText = existingExercises && existingExercises.length > 0
       ? existingExercises.map((ex: any, i: number) => 
@@ -109,7 +375,17 @@ ${difficulty === 'hard' && stats.hard.t > 2 && (stats.hard.c / stats.hard.t) > 0
 Topic: ${topicName}
 Subtopic: ${subtopicName}
 Difficulty: ${difficulty}
+
+TOPIC-SPECIFIC DIFFICULTY CRITERIA FOR ${topicName.toUpperCase()} (${difficulty.toUpperCase()}):
+${difficultySpec.description}
+Maximum steps: ${difficultySpec.maxSteps}
+Requirements:
+${difficultySpec.criteria.map(c => `• ${c}`).join('\n')}
+
+${DIFFICULTY_INSTRUCTIONS[difficulty as keyof typeof DIFFICULTY_INSTRUCTIONS]}
+${subLevelGuidance}
 ${studentContext}
+
 EXERCISE DESIGN PHILOSOPHY:
 Exercises must reinforce deep understanding, not just test mechanics.
 Each exercise should require the student to apply concepts from the theory, not just follow procedures.
@@ -161,11 +437,6 @@ INCORRECT EXAMPLES (never do this):
 ✗ "Try to find x in: \\sqrt{x+5} = 3"
 ✗ "Here's a challenge! Can you simplify (2x^3 + 6x^2) / 2x?"
 
-DIFFICULTY LEVELS:
-- easy: single concept, direct application, 1-2 steps
-- medium: multiple concepts combined, 3-4 steps, requires planning
-- hard: complex reasoning, multiple approaches possible, requires insight
-
 EXPLANATION - TEACH THE REASONING:
 - Start by identifying what the problem is asking
 - Explain WHY each step is taken, not just what to do
@@ -195,15 +466,20 @@ You MUST respond with valid JSON in exactly this format:
 ${examplesText}
 
 Create a similar but DIFFERENT exercise appropriate for ${difficulty} difficulty.
+Remember: ${difficulty === 'easy' ? 'Keep it simple with small positive numbers and obvious patterns.' : 
+           difficulty === 'medium' ? 'Include moderate complexity with some challenge.' : 
+           'Create a challenging problem requiring insight.'}
 
 CRITICAL REQUIREMENTS:
 1. Question must use ONLY Unicode math symbols (√, ², ³, ±, ≤, ≥)
 2. NO LaTeX syntax ($, \\, \\frac, \\sqrt, ^)
 3. NO motivational phrases - just the mathematical task
 4. Formal textbook language only (e.g., "Solve for x:", "Find all solutions:")
-5. Clean, unambiguous mathematical notation`;
+5. Clean, unambiguous mathematical notation
+6. MUST match the difficulty criteria provided above`;
 
     console.log('Generating new exercise with AI...');
+    console.log(`Topic: ${topicName}, Subtopic: ${subtopicName}, Difficulty: ${difficulty}, SubLevel: ${subLevel || 'none'}`);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',

@@ -66,6 +66,69 @@ type PracticeMode = 'browsing' | 'learning' | 'practicing' | 'completed';
 
 const XP_REWARDS = { easy: 5, medium: 10, hard: 20 };
 
+// Helper to determine smart starting difficulty based on student performance
+const determineStartingDifficulty = async (
+  supabase: any, 
+  userId: string, 
+  subtopicId: string
+): Promise<{ difficulty: 'easy' | 'medium' | 'hard'; subLevel: number }> => {
+  try {
+    // Check subtopic progress
+    const { data: progress } = await supabase
+      .from('user_subtopic_progress')
+      .select('mastery_percentage, exercises_completed, exercises_correct')
+      .eq('user_id', userId)
+      .eq('subtopic_id', subtopicId)
+      .single();
+
+    if (progress) {
+      const mastery = progress.mastery_percentage || 0;
+      const completed = progress.exercises_completed || 0;
+      
+      if (completed >= 5) {
+        // Has some history - use mastery to determine
+        if (mastery >= 80) {
+          return { difficulty: 'hard', subLevel: 2 };
+        } else if (mastery >= 50) {
+          return { difficulty: 'medium', subLevel: 2 };
+        } else if (mastery >= 30) {
+          return { difficulty: 'easy', subLevel: 3 }; // Harder easy
+        }
+      }
+    }
+
+    // Check recent attempts for this subtopic
+    const { data: recentAttempts } = await supabase
+      .from('exercise_attempts')
+      .select(`
+        is_correct,
+        exercises!inner(difficulty, subtopic_id)
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    const subtopicAttempts = (recentAttempts || []).filter(
+      (a: any) => a.exercises?.subtopic_id === subtopicId
+    );
+
+    if (subtopicAttempts.length >= 3) {
+      const correctRate = subtopicAttempts.filter((a: any) => a.is_correct).length / subtopicAttempts.length;
+      if (correctRate >= 0.8) {
+        return { difficulty: 'medium', subLevel: 2 };
+      } else if (correctRate < 0.3) {
+        return { difficulty: 'easy', subLevel: 1 }; // Very easy
+      }
+    }
+
+    // Default: start with easy, sub-level 2 (middle of easy)
+    return { difficulty: 'easy', subLevel: 2 };
+  } catch (error) {
+    console.error('Error determining starting difficulty:', error);
+    return { difficulty: 'easy', subLevel: 2 };
+  }
+};
+
 export default function Practice() {
   const { topicId } = useParams<{ topicId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -79,6 +142,7 @@ export default function Practice() {
   const [selectedSubtopic, setSelectedSubtopic] = useState<Subtopic | null>(null);
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
   const [currentDifficulty, setCurrentDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [currentSubLevel, setCurrentSubLevel] = useState<number>(2); // 1-3 within each tier
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [consecutiveCorrect, setConsecutiveCorrect] = useState(0);
   const [consecutiveWrong, setConsecutiveWrong] = useState(0);
@@ -210,17 +274,27 @@ export default function Practice() {
   };
 
   const startPractice = async () => {
-    if (!selectedSubtopic) return;
+    if (!selectedSubtopic || !user) return;
     setMode('practicing');
     setExercisesAttempted(0);
     setExercisesCorrect(0);
     setConsecutiveCorrect(0);
     setConsecutiveWrong(0);
-    setCurrentDifficulty('easy');
     setAttemptedExerciseIds(new Set());
     setHintsUsedThisExercise(0);
     setSessionStartTime(new Date());
-    await loadExercise(selectedSubtopic.id, 'easy');
+    
+    // Smart starting difficulty based on student's history
+    const { difficulty: startDifficulty, subLevel } = await determineStartingDifficulty(
+      supabase,
+      user.id,
+      selectedSubtopic.id
+    );
+    
+    setCurrentDifficulty(startDifficulty);
+    setCurrentSubLevel(subLevel);
+    
+    await loadExercise(selectedSubtopic.id, startDifficulty);
   };
 
   const handleHintReveal = () => {
@@ -246,10 +320,19 @@ export default function Practice() {
 
       if (error) throw error;
 
-      const { isCorrect, explanation, correctAnswer, suggestedDifficulty } = data;
+      const { isCorrect, explanation, correctAnswer, suggestedDifficulty, suggestedSubLevel, consecutiveCorrect: newConsecCorrect, consecutiveWrong: newConsecWrong } = data;
       
       if (suggestedDifficulty) {
         setCurrentDifficulty(suggestedDifficulty);
+      }
+      if (suggestedSubLevel) {
+        setCurrentSubLevel(suggestedSubLevel);
+      }
+      if (newConsecCorrect !== undefined) {
+        setConsecutiveCorrect(newConsecCorrect);
+      }
+      if (newConsecWrong !== undefined) {
+        setConsecutiveWrong(newConsecWrong);
       }
       
       setAttemptedExerciseIds(prev => new Set(prev).add(currentExercise.id));
@@ -755,6 +838,8 @@ export default function Practice() {
                   <ExerciseView
                     exercise={currentExercise}
                     subtopicName={selectedSubtopic?.name || ''}
+                    currentDifficulty={currentDifficulty}
+                    currentSubLevel={currentSubLevel}
                     onSubmitAnswer={handleSubmitAnswer}
                     onSubmitImage={handleSubmitImage}
                     onNextExercise={handleNextExercise}
