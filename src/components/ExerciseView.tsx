@@ -35,6 +35,8 @@ interface AIFeedback {
 interface ExerciseViewProps {
   exercise: Exercise;
   subtopicName: string;
+  currentDifficulty?: 'easy' | 'medium' | 'hard';
+  currentSubLevel?: number;
   onSubmitAnswer: (answer: string) => Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string }>;
   onSubmitImage: (file: File) => Promise<AIFeedback>;
   onNextExercise: (suggestedDifficulty?: 'easy' | 'medium' | 'hard') => void;
@@ -54,9 +56,18 @@ const mathSymbols = [
   { label: ')', value: ')' },
 ];
 
+// Difficulty level display config
+const difficultyConfig = {
+  easy: { label: '🌱 Foundation', color: 'text-green-400', bg: 'bg-green-500/20', border: 'border-green-500/30' },
+  medium: { label: '🌿 Growing', color: 'text-amber-400', bg: 'bg-amber-500/20', border: 'border-amber-500/30' },
+  hard: { label: '🌳 Advanced', color: 'text-red-400', bg: 'bg-red-500/20', border: 'border-red-500/30' },
+};
+
 export default function ExerciseView({
   exercise,
   subtopicName,
+  currentDifficulty,
+  currentSubLevel,
   onSubmitAnswer,
   onSubmitImage,
   onNextExercise,
@@ -124,14 +135,40 @@ export default function ExerciseView({
     setAnswer(prev => prev + symbol);
   };
 
+  const displayDifficulty = currentDifficulty || exercise.difficulty;
+  const config = difficultyConfig[displayDifficulty];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       {/* Left: Question */}
       <div className="space-y-6">
-        {/* Question title */}
-        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-          Simplify the algebraic fraction
-        </h2>
+        {/* Difficulty indicator */}
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+            Solve the problem
+          </h2>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bg} border ${config.border}`}>
+            <span className={`text-sm font-medium ${config.color}`}>
+              {config.label}
+            </span>
+            {currentSubLevel && (
+              <div className="flex gap-0.5 ml-1">
+                {[1, 2, 3].map((level) => (
+                  <div
+                    key={level}
+                    className={`w-1.5 h-1.5 rounded-full transition-colors ${
+                      level <= currentSubLevel 
+                        ? displayDifficulty === 'easy' ? 'bg-green-400' 
+                        : displayDifficulty === 'medium' ? 'bg-amber-400' 
+                        : 'bg-red-400'
+                        : 'bg-muted-foreground/30'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
 
         {/* Question Card */}
         <motion.div 

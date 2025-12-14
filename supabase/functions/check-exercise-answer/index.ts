@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { exerciseId, userAnswer, userId, hintsUsed, timeSpentSeconds } = await req.json();
+    const { exerciseId, userAnswer, userId, hintsUsed, timeSpentSeconds, currentSubLevel } = await req.json();
 
     if (!exerciseId || !userId) {
       return new Response(
@@ -46,6 +46,8 @@ serve(async (req) => {
       s.toLowerCase()
         .replace(/\s+/g, '')
         .replace(/,/g, '')
+        .replace(/±/g, '+-')
+        .replace(/−/g, '-')
         .trim();
 
     const isCorrect = userAnswer 
@@ -62,19 +64,55 @@ serve(async (req) => {
       `)
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(30);
 
     // Calculate performance stats by difficulty
-    const performanceByDifficulty = { easy: { correct: 0, total: 0 }, medium: { correct: 0, total: 0 }, hard: { correct: 0, total: 0 } };
+    const performanceByDifficulty = { 
+      easy: { correct: 0, total: 0, streak: 0 }, 
+      medium: { correct: 0, total: 0, streak: 0 }, 
+      hard: { correct: 0, total: 0, streak: 0 } 
+    };
+    
     const subtopicAttempts = (recentAttempts || []).filter((a: any) => a.exercises?.subtopic_id === exercise.subtopic_id);
     
-    subtopicAttempts.forEach((attempt: any) => {
-      const diff = attempt.exercises?.difficulty as 'easy' | 'medium' | 'hard';
+    // Track consecutive correct answers for current difficulty
+    let consecutiveCorrectCurrent = 0;
+    let consecutiveWrongCurrent = 0;
+    let foundWrong = false;
+    let foundCorrect = false;
+
+    for (const attempt of subtopicAttempts) {
+      const exerciseData = (attempt as any).exercises;
+      const diff = exerciseData?.difficulty as 'easy' | 'medium' | 'hard' | undefined;
       if (diff && performanceByDifficulty[diff]) {
         performanceByDifficulty[diff].total++;
         if (attempt.is_correct) performanceByDifficulty[diff].correct++;
       }
-    });
+      
+      // Count consecutive for current difficulty (before this attempt)
+      if (diff === exercise.difficulty) {
+        if (!foundWrong && attempt.is_correct) {
+          consecutiveCorrectCurrent++;
+        } else {
+          foundWrong = true;
+        }
+        
+        if (!foundCorrect && !attempt.is_correct) {
+          consecutiveWrongCurrent++;
+        } else {
+          foundCorrect = true;
+        }
+      }
+    }
+
+    // Update streaks based on this answer
+    if (isCorrect) {
+      consecutiveCorrectCurrent++;
+      consecutiveWrongCurrent = 0;
+    } else {
+      consecutiveWrongCurrent++;
+      consecutiveCorrectCurrent = 0;
+    }
 
     // Calculate success rates
     const successRates = {
@@ -83,23 +121,66 @@ serve(async (req) => {
       hard: performanceByDifficulty.hard.total > 0 ? Math.round((performanceByDifficulty.hard.correct / performanceByDifficulty.hard.total) * 100) : null,
     };
 
-    // Determine recommended next difficulty based on performance
+    // Enhanced difficulty progression with sub-levels
+    // Sub-levels: 1 (easiest within tier), 2 (middle), 3 (hardest within tier)
     let suggestedDifficulty: 'easy' | 'medium' | 'hard' = exercise.difficulty;
+    let suggestedSubLevel = currentSubLevel || 2; // Default to middle sub-level
     const currentDiff = exercise.difficulty;
     
     if (isCorrect) {
-      // Student got it right - consider moving up
-      if (currentDiff === 'easy' && (successRates.easy === null || successRates.easy >= 80)) {
-        suggestedDifficulty = 'medium';
-      } else if (currentDiff === 'medium' && (successRates.medium === null || successRates.medium >= 75)) {
-        suggestedDifficulty = 'hard';
+      // Student got it right - progress within tier first, then to next tier
+      if (consecutiveCorrectCurrent >= 2) {
+        // Ready to progress
+        if (suggestedSubLevel < 3) {
+          // Progress within current tier
+          suggestedSubLevel = Math.min(3, suggestedSubLevel + 1);
+        } else {
+          // At max sub-level, move to next tier
+          if (currentDiff === 'easy') {
+            suggestedDifficulty = 'medium';
+            suggestedSubLevel = 1; // Start at easiest of new tier
+          } else if (currentDiff === 'medium') {
+            suggestedDifficulty = 'hard';
+            suggestedSubLevel = 1;
+          }
+          // If already at hard, stay at hard sub-level 3
+        }
       }
     } else {
-      // Student got it wrong - consider moving down
-      if (currentDiff === 'hard' && successRates.hard !== null && successRates.hard < 50) {
-        suggestedDifficulty = 'medium';
-      } else if (currentDiff === 'medium' && successRates.medium !== null && successRates.medium < 40) {
-        suggestedDifficulty = 'easy';
+      // Student got it wrong - regress within tier first, then to previous tier
+      if (consecutiveWrongCurrent >= 2) {
+        // Need to regress
+        if (suggestedSubLevel > 1) {
+          // Regress within current tier
+          suggestedSubLevel = Math.max(1, suggestedSubLevel - 1);
+        } else {
+          // At min sub-level, move to previous tier
+          if (currentDiff === 'hard') {
+            suggestedDifficulty = 'medium';
+            suggestedSubLevel = 3; // Start at hardest of lower tier
+          } else if (currentDiff === 'medium') {
+            suggestedDifficulty = 'easy';
+            suggestedSubLevel = 3;
+          }
+          // If already at easy, stay at easy sub-level 1
+        }
+      }
+    }
+
+    // Performance-based adjustments (override streak logic if performance is very clear)
+    const currentDiffTyped = currentDiff as 'easy' | 'medium' | 'hard';
+    const currentStats = successRates[currentDiffTyped];
+    if (currentStats !== null) {
+      if (currentStats >= 85 && performanceByDifficulty[currentDiffTyped].total >= 5) {
+        // Very strong at this level - definitely move up
+        if (currentDiffTyped === 'easy') suggestedDifficulty = 'medium';
+        else if (currentDiffTyped === 'medium') suggestedDifficulty = 'hard';
+        suggestedSubLevel = 2; // Start at middle of new tier
+      } else if (currentStats < 30 && performanceByDifficulty[currentDiffTyped].total >= 4) {
+        // Really struggling - move down
+        if (currentDiffTyped === 'hard') suggestedDifficulty = 'medium';
+        else if (currentDiffTyped === 'medium') suggestedDifficulty = 'easy';
+        suggestedSubLevel = 2;
       }
     }
 
@@ -123,7 +204,18 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Answer checked for exercise ${exerciseId}: ${isCorrect ? 'correct' : 'incorrect'}, suggested next: ${suggestedDifficulty}`);
+    console.log(`Answer checked for exercise ${exerciseId}: ${isCorrect ? 'correct' : 'incorrect'}, suggested: ${suggestedDifficulty} (sub-level ${suggestedSubLevel})`);
+
+    // Generate adaptive message based on progression
+    let progressionMessage = null;
+    if (suggestedDifficulty !== currentDiff) {
+      if ((suggestedDifficulty === 'medium' && currentDiff === 'easy') || 
+          (suggestedDifficulty === 'hard' && currentDiff === 'medium')) {
+        progressionMessage = "Great progress! Moving to more challenging exercises.";
+      } else {
+        progressionMessage = "Let's reinforce the fundamentals with some focused practice.";
+      }
+    }
 
     // Only return the correct answer and explanation AFTER submission
     return new Response(
@@ -132,9 +224,13 @@ serve(async (req) => {
         correctAnswer: exercise.correct_answer,
         explanation: exercise.explanation,
         suggestedDifficulty,
+        suggestedSubLevel,
+        consecutiveCorrect: consecutiveCorrectCurrent,
+        consecutiveWrong: consecutiveWrongCurrent,
         performanceInsight: {
           currentDifficulty: exercise.difficulty,
           successRates,
+          progressionMessage,
           recommendation: suggestedDifficulty !== exercise.difficulty 
             ? `Based on your performance, ${suggestedDifficulty} exercises are recommended next.`
             : null,
