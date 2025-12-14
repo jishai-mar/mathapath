@@ -141,12 +141,27 @@ export default function LearnView({
           transition={{ delay: 0.1 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 p-5 rounded-xl bg-primary/10 border border-primary/20">
-            <Lightbulb className="w-6 h-6 text-primary flex-shrink-0" />
+          <motion.div 
+            className="flex items-center gap-3 p-5 rounded-xl bg-primary/10 border border-primary/20"
+            animate={{ 
+              boxShadow: [
+                "0 0 0 0 hsl(var(--primary) / 0)",
+                "0 0 0 8px hsl(var(--primary) / 0.15)",
+                "0 0 0 0 hsl(var(--primary) / 0)"
+              ]
+            }}
+            transition={{ delay: 0.5, duration: 1.2, ease: "easeOut" }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.1, 1] }}
+              transition={{ delay: 0.5, duration: 0.6, ease: "easeOut" }}
+            >
+              <Lightbulb className="w-6 h-6 text-primary flex-shrink-0" />
+            </motion.div>
             <p className="text-xl font-semibold text-primary">
               <MathRenderer latex={content.key_rule} />
             </p>
-          </div>
+          </motion.div>
         </motion.section>
       )}
 
