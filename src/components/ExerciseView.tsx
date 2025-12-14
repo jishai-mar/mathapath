@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import MathRenderer from './MathRenderer';
 import ImageUploader from './ImageUploader';
 import FeedbackCard from './FeedbackCard';
+import ToolPanel from './tools/ToolPanel';
 import { 
   Lightbulb, 
   ArrowRight, 
@@ -362,6 +363,9 @@ export default function ExerciseView({
         </div>
         <span className="text-xs opacity-60">Cmd + Enter to Submit</span>
       </div>
+
+      {/* Interactive Tools Panel */}
+      <ToolPanel subtopicName={subtopicName} />
     </div>
   );
 }
