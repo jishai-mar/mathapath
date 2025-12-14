@@ -509,22 +509,19 @@ export default function Dashboard() {
                 const { masteryPercentage } = getTopicProgress(topic.id);
                 const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
                 const isCompleted = diagnostic?.status === 'completed';
-                const isCurrent = index === 1; // Second topic as current for demo
-                const isLocked = index > 1 && !isCompleted;
+                const isCurrent = index === 0 && !isCompleted; // First incomplete topic
 
                 return (
                   <div 
                     key={topic.id}
-                    className={`snap-center shrink-0 relative z-10 ${isCurrent ? 'w-[320px] transform scale-105 origin-center' : 'w-[300px]'} ${isLocked ? 'opacity-70 hover:opacity-100' : ''} transition-opacity`}
+                    className={`snap-center shrink-0 relative z-10 ${isCurrent ? 'w-[320px] transform scale-105 origin-center' : 'w-[300px]'} transition-opacity`}
                   >
                     <div 
-                      onClick={() => !isLocked && handleTopicClick(topic.id)}
+                      onClick={() => handleTopicClick(topic.id)}
                       className={`glass p-6 rounded-2xl h-full flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-1 ${
                         isCurrent 
                           ? 'bg-surface-highlight/60 border border-primary shadow-glow relative overflow-hidden' 
-                          : isLocked 
-                            ? 'border border-border hover:border-muted-foreground/50' 
-                            : 'border border-primary/20 hover:border-primary/50 hover:shadow-glow'
+                          : 'border border-primary/20 hover:border-primary/50 hover:shadow-glow'
                       }`}
                     >
                       {isCurrent && <div className="absolute top-0 left-0 w-full h-1 bg-primary" />}
@@ -533,26 +530,24 @@ export default function Dashboard() {
                           <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
                             isCurrent 
                               ? 'bg-primary/20 text-primary border-primary/30' 
-                              : isLocked 
-                                ? 'bg-card text-muted-foreground border-border' 
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                              : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                           }`}>
                             {topic.icon === 'sigma' ? <Sigma className="w-5 h-5" /> : <Calculator className="w-5 h-5" />}
                           </div>
                           <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${
                             isCurrent 
                               ? 'bg-primary/20 text-primary border-primary/30 animate-pulse' 
-                              : isLocked 
-                                ? 'bg-card text-muted-foreground border-border' 
+                              : masteryPercentage >= 80 
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                 : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
                           }`}>
-                            {isCurrent ? 'Current' : isLocked ? 'Locked' : 'Developing'}
+                            {isCurrent ? 'Current' : masteryPercentage >= 80 ? 'Mastered' : 'Developing'}
                           </span>
                         </div>
-                        <h3 className={`text-lg font-medium mb-1 ${isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
+                        <h3 className="text-lg font-medium mb-1 text-foreground">
                           {topic.name}
                         </h3>
-                        <p className={`text-sm mb-4 line-clamp-2 ${isLocked ? 'text-muted-foreground/70' : 'text-muted-foreground'}`}>
+                        <p className="text-sm mb-4 line-clamp-2 text-muted-foreground">
                           {topic.description || 'Master this topic to unlock the next level.'}
                         </p>
                       </div>
@@ -564,11 +559,11 @@ export default function Dashboard() {
                         <div>
                           <div className="flex justify-between text-xs text-muted-foreground mb-2">
                             <span>Mastery</span>
-                            <span className={isLocked ? '' : 'text-foreground'}>{masteryPercentage}%</span>
+                            <span className="text-foreground">{masteryPercentage}%</span>
                           </div>
                           <div className="h-1 bg-card rounded-full overflow-hidden">
                             <div 
-                              className={`h-full rounded-full ${isLocked ? 'bg-muted-foreground/30' : 'bg-blue-500'}`}
+                              className={`h-full rounded-full ${masteryPercentage >= 80 ? 'bg-emerald-500' : 'bg-blue-500'}`}
                               style={{ width: `${masteryPercentage}%` }}
                             />
                           </div>
