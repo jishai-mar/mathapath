@@ -505,7 +505,7 @@ export default function Dashboard() {
           <div className="relative">
             <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2 z-0" />
             <div className="flex gap-6 overflow-x-auto pb-8 pt-4 px-2 snap-x no-scrollbar">
-              {topics.slice(0, 4).map((topic, index) => {
+              {topics.map((topic, index) => {
                 const { masteryPercentage } = getTopicProgress(topic.id);
                 const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
                 const isCompleted = diagnostic?.status === 'completed';
