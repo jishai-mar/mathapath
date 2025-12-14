@@ -21,149 +21,98 @@ serve(async (req) => {
 
     console.log(`Generating theory content for: ${subtopicName} (Topic: ${topicName})`);
 
-const systemPrompt = `You are a patient, experienced math tutor creating ENGAGING, INTERACTIVE educational content for high school and Mechina students (ages 16-20).
+const systemPrompt = `You are a math tutor creating MINIMAL, CLEAN educational content. Less is more.
 
-YOUR TEACHING PHILOSOPHY:
-You teach like a real human tutor sitting one-on-one with the student. Content must be VISUALLY RICH, INTERACTIVE, and ENGAGING - not walls of text.
+CRITICAL RULES:
+- Keep explanations SHORT and SCANNABLE
+- Focus on ONE key principle per topic
+- Include a clear FORMULA or GENERAL FORM
+- Provide step-by-step PROCESS (max 3-4 steps)
+- Add ONE practical tip about common mistakes
 
-CORE PRINCIPLES:
-- BREAK UP TEXT with visuals, examples, and practice
-- Use CONCRETE examples before abstract formulas
-- Include MINI-PRACTICE exercises inline to keep students active
-- Create ASCII diagrams and visual representations
-- Make content scannable with clear sections and bullet points
+CONTENT STRUCTURE:
 
-CONTENT STRUCTURE (theory_explanation):
-Organize your explanation into clearly marked SECTIONS. Use these markers:
+1. THEORY EXPLANATION (theory_explanation):
+Start with **The Fundamental Principle** in 2-3 sentences.
+Then provide the general form/formula.
+Keep total text under 150 words.
 
-[HOOK] - Start with a relatable question or scenario (1-2 sentences)
+Example format:
+"**The Fundamental Principle**
 
-[VISUAL] - Include an ASCII diagram, number line, or visual representation
+Just as numerical fractions can be simplified by dividing out common factors (e.g., 12/16 = 3/4), algebraic fractions follow the exact same logic. The key is to see expressions as products of factors.
+
+**General Form:**
+\\frac{A \\times C}{B \\times C} = \\frac{A}{B}"
+
+2. WORKED EXAMPLES (worked_examples):
+Create 1-2 examples with CLEAR, CONCISE steps.
+Each step format: "Title: Brief description → math result"
+
 Example:
-\`\`\`
-   y
-   │    /
-   │   /  slope = rise/run
-   │  /
-   │ /
-   └────── x
-\`\`\`
+{
+  "problem": "Simplify: \\frac{x^2 - 9}{2x + 6}",
+  "steps": [
+    "Factorize Completely: Identify factors in numerator and denominator → (x-3)(x+3) / 2(x+3)",
+    "Cancel Common Factors: Remove (x+3) from top and bottom → (x-3) / 2",
+    "Write Final Answer: Simplified form → \\frac{x-3}{2}"
+  ],
+  "answer": "\\frac{x-3}{2}"
+}
 
-[CONCEPT] - Explain one key idea with an example (not a wall of text)
+3. KEY CONCEPTS (key_concepts):
+List 2-3 essential takeaways as short, memorable phrases.
 
-[TRY IT] - Mini practice question for the student
-Question: What is 3x if x = 4?
-Answer: 12
+4. COMMON MISTAKES (common_mistakes):
+List 1-2 common errors with correction.
 
-[EXAMPLE BOX] - Boxed worked example
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Example: Solve 2x + 5 = 11
-Step 1: Subtract 5 → 2x = 6
-Step 2: Divide by 2 → x = 3
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+{
+  "mistake": "Students try to cancel terms that are added, not multiplied. (x+3)/3 ≠ x",
+  "correction": "You can only cancel factors that are MULTIPLIED, not added terms."
+}
 
-[KEY INSIGHT] - The "aha moment" in a highlighted box
-
-[REMEMBER] - Quick memory aid or rule
-
-FORMAT REQUIREMENTS:
-1. NO long paragraphs - use bullet points and short sentences
-2. Include at least 2 [VISUAL] sections with ASCII art/diagrams
-3. Include at least 2 [TRY IT] mini-exercises
-4. Include at least 1 [EXAMPLE BOX]
-5. Use emojis sparingly for visual interest: ✓ ✗ → 💡 ⚡ 📝
-6. Use LaTeX for math: \\frac{a}{b}, \\sqrt{x}, x^2
-
-WORKED EXAMPLES (worked_examples):
-Create 2-3 progressively harder examples:
-- Show EVERY step with WHY, not just WHAT
-- Include verification: "Check: 2(3) + 5 = 11 ✓"
-- Add a "Pro tip" or "Watch out" note where helpful
-
-MINI PRACTICE (mini_practice):
-Create 3-4 quick practice problems for inline engagement:
-- Mix of easy and medium difficulty
-- Instant feedback style - show answer
-- Connect to the concept just taught
-
-KEY CONCEPTS (key_concepts):
-- 3-5 memorable takeaways as complete sentences
-- Include the "why" when possible
-- Make them quotable/memorable
-
-COMMON MISTAKES (common_mistakes):
-- 2-3 errors with clear before/after
-- Explain the underlying confusion
-- Use ✗ and ✓ symbols
-
-VISUAL DESCRIPTION (visual_description):
-Describe a visual aid that would help understanding
+5. VISUAL DESCRIPTION (visual_description):
+Describe what graph/diagram would help.
 
 RESPONSE FORMAT (JSON):
 {
-  "theory_explanation": "Use [HOOK], [VISUAL], [CONCEPT], [TRY IT], [EXAMPLE BOX], [KEY INSIGHT], [REMEMBER] markers throughout. Make it interactive and visual.",
+  "theory_explanation": "**The Fundamental Principle**\\n\\nConcise explanation here.\\n\\n**General Form:**\\n[formula in LaTeX]",
   "worked_examples": [
     {
-      "problem": "Solve: 2x + 5 = 11",
+      "problem": "Problem statement",
       "steps": [
-        "💡 First, identify what we need to 'undo': x is multiplied by 2, then 5 is added",
-        "Step 1: Undo the +5 by subtracting 5 from both sides → 2x = 6",
-        "Step 2: Undo the ×2 by dividing both sides by 2 → x = 3",
-        "✓ Check: 2(3) + 5 = 6 + 5 = 11 ✓"
+        "Step 1 Title: Description → result",
+        "Step 2 Title: Description → result"
       ],
-      "answer": "x = 3",
-      "pro_tip": "Always work backwards - undo the last operation first!"
-    }
-  ],
-  "mini_practice": [
-    {
-      "question": "Solve: x + 7 = 10",
-      "hint": "What number plus 7 gives 10?",
-      "answer": "x = 3",
-      "difficulty": "easy"
-    },
-    {
-      "question": "Solve: 3x = 15",
-      "hint": "Divide both sides by 3",
-      "answer": "x = 5",
-      "difficulty": "easy"
-    },
-    {
-      "question": "Solve: 4x - 3 = 9",
-      "hint": "First add 3, then divide by 4",
-      "answer": "x = 3",
-      "difficulty": "medium"
+      "answer": "Final answer"
     }
   ],
   "key_concepts": [
-    "Solving equations = finding the mystery number that makes it true",
-    "Keep the balance: same operation on both sides"
+    "Short concept 1",
+    "Short concept 2"
   ],
   "common_mistakes": [
     {
-      "mistake": "Forgetting to apply operations to both sides",
-      "correction": "Think 'balance scale' - equal changes on each side"
+      "mistake": "What students do wrong",
+      "correction": "The correct approach"
     }
   ],
   "visual_description": {
-    "type": "diagram",
-    "description": "Balance scale showing equation as balanced weights",
-    "key_points": ["Left side = right side", "Operations maintain balance"]
+    "type": "graph",
+    "description": "What the visual shows",
+    "key_points": ["Point 1", "Point 2"]
   }
 }`;
 
-    const userPrompt = `Create comprehensive theory content for teaching this concept to a first-time learner:
+    const userPrompt = `Create MINIMAL, CLEAN theory content for:
 
 TOPIC: ${topicName}
 SUBTOPIC: ${subtopicName}
 
-${existingTheory ? `EXISTING CONTENT (enhance with better intuition and reasoning):
+${existingTheory ? `EXISTING CONTENT TO SIMPLIFY:
 ${existingTheory}` : ''}
 
-${existingExamples && existingExamples.length > 0 ? `EXISTING EXAMPLES (improve with step-by-step reasoning):
-${JSON.stringify(existingExamples, null, 2)}` : ''}
-
-Remember: Write as a patient tutor who wants the student to truly UNDERSTAND, not just memorize. Focus on intuition, reasoning, and the "why" behind every concept. The student should be able to understand this topic completely before starting any exercises.`;
+Remember: Less is more. Keep it scannable. Focus on ONE key principle with a formula and 2-3 process steps.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
