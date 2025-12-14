@@ -11,7 +11,8 @@ import {
   ArrowLeft,
   PlayCircle, 
   MessageCircle,
-  AlertTriangle
+  AlertTriangle,
+  Lightbulb
 } from 'lucide-react';
 
 interface WorkedExample {
@@ -21,22 +22,18 @@ interface WorkedExample {
 }
 
 interface CommonMistake {
-  mistake: string;
-  correction: string;
+  wrong: string;
+  right: string;
 }
 
-interface VisualDescription {
-  type: 'graph' | 'diagram' | 'number_line' | 'coordinate_plane';
-  description: string;
-  key_points: string[];
-}
-
-interface EnhancedTheoryContent {
-  theory_explanation: string;
-  worked_examples: WorkedExample[];
-  key_concepts: string[];
-  common_mistakes: CommonMistake[];
-  visual_description: VisualDescription | null;
+interface TheoryContent {
+  definition: string;
+  key_rule: string;
+  formula: string;
+  when_to_use: string;
+  worked_example: WorkedExample;
+  common_mistake: CommonMistake;
+  needs_graph: boolean;
 }
 
 interface LearnViewProps {
@@ -59,82 +56,53 @@ export default function LearnView({
   onBack,
 }: LearnViewProps) {
   const [showTutor, setShowTutor] = useState(false);
-  const [enhancedContent, setEnhancedContent] = useState<EnhancedTheoryContent | null>(null);
-  const [isLoadingContent, setIsLoadingContent] = useState(false);
-  const [hasGeneratedContent, setHasGeneratedContent] = useState(false);
+  const [content, setContent] = useState<TheoryContent | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
 
-  const displayTheory = enhancedContent?.theory_explanation || theoryExplanation;
-  const displayExamples = enhancedContent?.worked_examples?.length ? enhancedContent.worked_examples : workedExamples;
-  const commonMistakes = enhancedContent?.common_mistakes || [];
-  const visualDescription = enhancedContent?.visual_description;
-
-  const hasTheory = displayTheory && displayTheory.trim().length > 0;
-  const hasExamples = displayExamples && displayExamples.length > 0;
+  const hasExistingContent = theoryExplanation && theoryExplanation.trim().length > 0;
 
   useEffect(() => {
-    const shouldGenerate = !hasTheory && !hasExamples && !hasGeneratedContent && !isLoadingContent;
-    if (shouldGenerate) {
-      generateTheoryContent();
+    if (!hasLoaded && !isLoading) {
+      generateContent();
     }
-  }, [subtopicName, hasTheory, hasExamples, hasGeneratedContent, isLoadingContent]);
+  }, [subtopicName]);
 
-  const generateTheoryContent = async () => {
-    setIsLoadingContent(true);
+  const generateContent = async () => {
+    setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('generate-theory-content', {
         body: { subtopicName, topicName, existingTheory: theoryExplanation, existingExamples: workedExamples }
       });
       if (error) throw error;
-      if (data && !data.error) setEnhancedContent(data);
+      if (data && !data.error) setContent(data);
     } catch (error) {
-      console.error('Error generating theory content:', error);
+      console.error('Error generating theory:', error);
       toast.error('Could not load theory content.');
     } finally {
-      setIsLoadingContent(false);
-      setHasGeneratedContent(true);
+      setIsLoading(false);
+      setHasLoaded(true);
     }
   };
 
-  // Extract formula from theory
-  const extractFormula = (text: string): string | null => {
-    const match = text.match(/\*\*Formula:\*\*\s*(.+?)(?:\n|$)/i);
-    if (match) return match[1].trim();
-    const latexMatch = text.match(/\\frac\{[^}]+\}\{[^}]+\}|[a-z]\s*=\s*[^.\n]+/i);
-    return latexMatch ? latexMatch[0] : null;
-  };
-
-  // Get clean explanation without formula line
-  const getCleanExplanation = (text: string): string => {
-    return text
-      .replace(/\*\*Formula:\*\*\s*.+?(?:\n|$)/gi, '')
-      .replace(/\*\*/g, '')
-      .trim()
-      .split('\n')
-      .filter(line => line.trim())
-      .slice(0, 2)
-      .join(' ');
-  };
-
-  const formula = displayTheory ? extractFormula(displayTheory) : null;
-  const explanation = displayTheory ? getCleanExplanation(displayTheory) : '';
-
-  if (isLoadingContent && !hasTheory) {
+  if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto px-6 py-12">
-        <Skeleton className="h-8 w-1/3 mb-6" />
-        <Skeleton className="h-20 w-full mb-8" />
+      <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
+        <Skeleton className="h-10 w-2/3" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-16 w-full" />
         <Skeleton className="h-40 w-full" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-3xl mx-auto px-6 py-8">
       {/* Back button */}
       {onBack && (
         <button 
           onClick={onBack}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm">Back</span>
@@ -145,127 +113,153 @@ export default function LearnView({
       <motion.h1
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-3xl font-bold text-foreground mb-8"
+        className="text-3xl font-bold text-foreground mb-10"
       >
         {subtopicName}
       </motion.h1>
 
-      {/* Core Concept */}
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mb-10"
-      >
-        {explanation && (
-          <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-            <MathRenderer latex={explanation} />
+      {/* Definition */}
+      {content?.definition && (
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-8"
+        >
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Definition</span>
+          <p className="mt-2 text-xl font-semibold text-foreground leading-relaxed">
+            <MathRenderer latex={content.definition} />
           </p>
-        )}
+        </motion.section>
+      )}
 
-        {/* Formula Box */}
-        {formula && (
-          <div className="bg-muted/50 border border-border rounded-xl p-6 text-center">
-            <div className="text-2xl text-foreground">
-              <MathRenderer latex={formula} displayMode />
-            </div>
+      {/* Key Rule */}
+      {content?.key_rule && (
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-8"
+        >
+          <div className="flex items-center gap-3 p-5 rounded-xl bg-primary/10 border border-primary/20">
+            <Lightbulb className="w-6 h-6 text-primary flex-shrink-0" />
+            <p className="text-xl font-semibold text-primary">
+              <MathRenderer latex={content.key_rule} />
+            </p>
           </div>
-        )}
-      </motion.section>
+        </motion.section>
+      )}
 
-      {/* Graph - Only show if visual_description exists */}
-      {visualDescription && (
+      {/* Formula */}
+      {content?.formula && (
         <motion.section
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="mb-10"
+          className="mb-8"
         >
-          <InteractiveMathGraph concept={displayTheory || ''} subtopicName={subtopicName} />
+          <div className="bg-card border border-border rounded-xl p-8 text-center">
+            <div className="text-3xl text-foreground">
+              <MathRenderer latex={content.formula} displayMode />
+            </div>
+          </div>
+          {content.when_to_use && (
+            <p className="text-sm text-muted-foreground mt-3 text-center italic">
+              {content.when_to_use}
+            </p>
+          )}
         </motion.section>
       )}
 
-      {/* Worked Example */}
-      {hasExamples && (
+      {/* Graph */}
+      {content?.needs_graph && (
         <motion.section
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mb-10"
+          className="mb-8"
         >
-          <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-            Example
-          </h2>
+          <InteractiveMathGraph concept={content.definition || ''} subtopicName={subtopicName} />
+        </motion.section>
+      )}
+
+      {/* Worked Example */}
+      {content?.worked_example && (
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="mb-8"
+        >
+          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Example</span>
           
-          {displayExamples.slice(0, 1).map((example, idx) => (
-            <div key={idx} className="bg-card border border-border rounded-xl p-6">
-              {/* Problem */}
-              <div className="text-lg text-foreground mb-6">
-                <MathRenderer latex={example.problem} />
-              </div>
-              
-              {/* Steps */}
-              <div className="space-y-4">
-                {example.steps.map((step, stepIdx) => {
-                  const [action, rest] = step.split(':');
-                  const [description, result] = (rest || '').split('→');
-                  
-                  return (
-                    <motion.div
-                      key={stepIdx}
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.3 + stepIdx * 0.1 }}
-                      className="flex items-start gap-4"
-                    >
-                      <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-xs flex items-center justify-center font-medium">
-                        {stepIdx + 1}
-                      </span>
-                      <div className="flex-1">
-                        <span className="font-medium text-foreground">{action?.trim()}</span>
-                        {description && (
-                          <span className="text-muted-foreground">: {description.trim()}</span>
-                        )}
-                        {result && (
-                          <div className="mt-2 text-primary font-mono text-sm">
-                            <MathRenderer latex={result.trim()} />
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </div>
-              
-              {/* Answer */}
-              <div className="mt-6 pt-4 border-t border-border">
-                <span className="text-sm text-muted-foreground">Answer: </span>
-                <span className="text-foreground font-medium">
-                  <MathRenderer latex={example.answer} />
-                </span>
-              </div>
+          <div className="mt-3 bg-card border border-border rounded-xl p-6">
+            {/* Problem */}
+            <div className="text-lg font-medium text-foreground mb-5">
+              <MathRenderer latex={content.worked_example.problem} />
             </div>
-          ))}
+            
+            {/* Steps */}
+            <div className="space-y-3">
+              {content.worked_example.steps.map((step, idx) => {
+                const parts = step.split('→');
+                const action = parts[0]?.trim();
+                const result = parts[1]?.trim();
+                
+                return (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3 + idx * 0.1 }}
+                    className="flex items-start gap-3"
+                  >
+                    <span className="flex-shrink-0 w-6 h-6 rounded-full bg-primary/10 text-primary text-sm flex items-center justify-center font-medium">
+                      {idx + 1}
+                    </span>
+                    <div className="flex-1 flex items-center gap-2 text-foreground">
+                      <span><MathRenderer latex={action} /></span>
+                      {result && (
+                        <>
+                          <span className="text-muted-foreground">→</span>
+                          <span className="text-primary font-medium">
+                            <MathRenderer latex={result} />
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+            
+            {/* Answer */}
+            <div className="mt-5 pt-4 border-t border-border flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Answer:</span>
+              <span className="text-lg font-semibold text-foreground">
+                <MathRenderer latex={content.worked_example.answer} />
+              </span>
+            </div>
+          </div>
         </motion.section>
       )}
 
       {/* Common Mistake */}
-      {commonMistakes.length > 0 && (
+      {content?.common_mistake && (
         <motion.section
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-10"
+          transition={{ delay: 0.35 }}
+          className="mb-8"
         >
           <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/5 border border-destructive/20">
             <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm text-destructive font-medium mb-1">
-                <MathRenderer latex={commonMistakes[0].mistake} />
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <MathRenderer latex={commonMistakes[0].correction} />
-              </p>
+            <div className="text-sm">
+              <span className="text-destructive font-medium">Don't: </span>
+              <span className="text-muted-foreground">{content.common_mistake.wrong}</span>
+              <span className="mx-2 text-muted-foreground">→</span>
+              <span className="text-foreground font-medium">Do: </span>
+              <span className="text-muted-foreground">{content.common_mistake.right}</span>
             </div>
           </div>
         </motion.section>
@@ -275,8 +269,8 @@ export default function LearnView({
       <motion.section
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="mb-10"
+        transition={{ delay: 0.4 }}
+        className="mb-8"
       >
         <Button
           variant="outline"
@@ -294,7 +288,7 @@ export default function LearnView({
             animate={{ opacity: 1, height: 'auto' }}
             className="mt-4"
           >
-            <TutorChat subtopicName={subtopicName} theoryContext={displayTheory || ''} />
+            <TutorChat subtopicName={subtopicName} theoryContext={content?.definition || ''} />
           </motion.div>
         )}
       </motion.section>
@@ -303,7 +297,7 @@ export default function LearnView({
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.45 }}
       >
         <Button onClick={onStartPractice} size="lg" className="w-full py-6 text-lg gap-2">
           <PlayCircle className="w-5 h-5" />

@@ -22,63 +22,41 @@ serve(async (req) => {
     console.log(`Generating theory content for: ${subtopicName} (Topic: ${topicName})`);
 
     // Determine if this topic needs a visual graph
-    const graphTopics = ['linear', 'quadratic', 'parabola', 'function', 'graph', 'derivative', 'limit', 'exponential', 'logarithm'];
+    const graphTopics = ['function', 'graph', 'parabola', 'curve', 'plot'];
     const needsGraph = graphTopics.some(t => 
       subtopicName.toLowerCase().includes(t) || topicName.toLowerCase().includes(t)
     );
 
-    const systemPrompt = `You are an expert math tutor. Create ULTRA-MINIMAL theory content.
+    const systemPrompt = `You are an expert math tutor. Generate ULTRA-CLEAN theory content.
 
-ABSOLUTE RULES:
-1. NO filler words, NO motivational text, NO "let's learn" phrases
-2. Maximum 3 sentences for the core concept
-3. ONE formula box only
-4. ONE worked example with 3 steps max
-5. ONE common mistake
-6. Write like a professional textbook, not a chatbot
-
-STRUCTURE:
-
-theory_explanation: Write EXACTLY this structure:
-"[One sentence defining what this is]
-
-[One sentence explaining when/why to use it]
-
-**Formula:** [LaTeX formula]"
-
-That's it. Nothing more.
-
-worked_examples: ONE example only:
+OUTPUT STRUCTURE (JSON only, no markdown):
 {
-  "problem": "[Problem in LaTeX]",
-  "steps": [
-    "[Action verb]: [What to do] → [Result in LaTeX]",
-    "[Action verb]: [What to do] → [Result in LaTeX]",
-    "[Action verb]: [What to do] → [Result in LaTeX]"
-  ],
-  "answer": "[Final answer in LaTeX]"
+  "definition": "One sentence defining what this is. Clear and direct.",
+  "key_rule": "The ONE rule students must remember. Max 12 words.",
+  "formula": "LaTeX formula only. No text.",
+  "when_to_use": "One phrase: when/why to use this.",
+  "worked_example": {
+    "problem": "LaTeX problem",
+    "steps": ["Step 1 → result", "Step 2 → result", "Step 3 → result"],
+    "answer": "Final answer in LaTeX"
+  },
+  "common_mistake": {
+    "wrong": "What students do wrong (under 10 words)",
+    "right": "Correct approach (under 10 words)"
+  },
+  "needs_graph": ${needsGraph}
 }
 
-key_concepts: 2 bullet points max. Each under 10 words.
+RULES:
+- Definition: ONE clear sentence. No filler.
+- Key Rule: The SINGLE most important principle. Students should memorize this.
+- Formula: Pure LaTeX. No "where x is..." explanations.
+- Example: MAX 3 steps. Each step shows action → result.
+- Common Mistake: Brief and actionable.
+- NO motivational text. NO "Let's learn". NO chatbot language.
+- Write like a professional textbook.`;
 
-common_mistakes: ONE mistake only:
-{
-  "mistake": "[What students do wrong - under 15 words]",
-  "correction": "[Correct approach - under 15 words]"
-}
-
-visual_description: ${needsGraph ? 'Describe what a graph would show (type: "graph")' : 'Set to null - this topic does not need a graph'}
-
-RESPONSE (pure JSON, no markdown):
-{
-  "theory_explanation": "...",
-  "worked_examples": [...],
-  "key_concepts": [...],
-  "common_mistakes": [...],
-  "visual_description": ${needsGraph ? '{...}' : 'null'}
-}`;
-
-    const userPrompt = `Generate ultra-minimal theory for: "${subtopicName}" (from ${topicName})`;
+    const userPrompt = `Generate clean theory for: "${subtopicName}" (Topic: ${topicName}). Return ONLY valid JSON.`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
