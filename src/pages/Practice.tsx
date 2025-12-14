@@ -707,25 +707,30 @@ export default function Practice() {
             )}
 
             {/* Learning Mode */}
-            {mode === 'learning' && (
+            {mode === 'learning' && selectedSubtopic && (
               <motion.div
                 key="learning"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-6"
               >
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">{topic?.name}</p>
-                  <h2 className="text-3xl font-bold text-foreground">{selectedSubtopic?.name}</h2>
-                </div>
-                
                 <LearnView
-                  subtopicName={selectedSubtopic?.name || ''}
+                  subtopicName={selectedSubtopic.name}
                   topicName={topic?.name || ''}
-                  theoryExplanation={selectedSubtopic?.theory_explanation || null}
-                  workedExamples={selectedSubtopic?.worked_examples || []}
+                  theoryExplanation={selectedSubtopic.theory_explanation}
+                  workedExamples={selectedSubtopic.worked_examples || []}
                   onStartPractice={startPractice}
+                  onBack={() => {
+                    setMode('browsing');
+                    setSelectedSubtopic(null);
+                  }}
+                  nextSubtopic={getNextSubtopic()}
+                  onNextSubtopic={(id) => {
+                    const next = subtopics.find(s => s.id === id);
+                    if (next) {
+                      setSelectedSubtopic(next);
+                    }
+                  }}
                 />
               </motion.div>
             )}
