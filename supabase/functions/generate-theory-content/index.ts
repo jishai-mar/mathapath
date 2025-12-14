@@ -21,98 +21,64 @@ serve(async (req) => {
 
     console.log(`Generating theory content for: ${subtopicName} (Topic: ${topicName})`);
 
-const systemPrompt = `You are a math tutor creating MINIMAL, CLEAN educational content. Less is more.
+    // Determine if this topic needs a visual graph
+    const graphTopics = ['linear', 'quadratic', 'parabola', 'function', 'graph', 'derivative', 'limit', 'exponential', 'logarithm'];
+    const needsGraph = graphTopics.some(t => 
+      subtopicName.toLowerCase().includes(t) || topicName.toLowerCase().includes(t)
+    );
 
-CRITICAL RULES:
-- Keep explanations SHORT and SCANNABLE
-- Focus on ONE key principle per topic
-- Include a clear FORMULA or GENERAL FORM
-- Provide step-by-step PROCESS (max 3-4 steps)
-- Add ONE practical tip about common mistakes
+    const systemPrompt = `You are an expert math tutor. Create ULTRA-MINIMAL theory content.
 
-CONTENT STRUCTURE:
+ABSOLUTE RULES:
+1. NO filler words, NO motivational text, NO "let's learn" phrases
+2. Maximum 3 sentences for the core concept
+3. ONE formula box only
+4. ONE worked example with 3 steps max
+5. ONE common mistake
+6. Write like a professional textbook, not a chatbot
 
-1. THEORY EXPLANATION (theory_explanation):
-Start with **The Fundamental Principle** in 2-3 sentences.
-Then provide the general form/formula.
-Keep total text under 150 words.
+STRUCTURE:
 
-Example format:
-"**The Fundamental Principle**
+theory_explanation: Write EXACTLY this structure:
+"[One sentence defining what this is]
 
-Just as numerical fractions can be simplified by dividing out common factors (e.g., 12/16 = 3/4), algebraic fractions follow the exact same logic. The key is to see expressions as products of factors.
+[One sentence explaining when/why to use it]
 
-**General Form:**
-\\frac{A \\times C}{B \\times C} = \\frac{A}{B}"
+**Formula:** [LaTeX formula]"
 
-2. WORKED EXAMPLES (worked_examples):
-Create 1-2 examples with CLEAR, CONCISE steps.
-Each step format: "Title: Brief description → math result"
+That's it. Nothing more.
 
-Example:
+worked_examples: ONE example only:
 {
-  "problem": "Simplify: \\frac{x^2 - 9}{2x + 6}",
+  "problem": "[Problem in LaTeX]",
   "steps": [
-    "Factorize Completely: Identify factors in numerator and denominator → (x-3)(x+3) / 2(x+3)",
-    "Cancel Common Factors: Remove (x+3) from top and bottom → (x-3) / 2",
-    "Write Final Answer: Simplified form → \\frac{x-3}{2}"
+    "[Action verb]: [What to do] → [Result in LaTeX]",
+    "[Action verb]: [What to do] → [Result in LaTeX]",
+    "[Action verb]: [What to do] → [Result in LaTeX]"
   ],
-  "answer": "\\frac{x-3}{2}"
+  "answer": "[Final answer in LaTeX]"
 }
 
-3. KEY CONCEPTS (key_concepts):
-List 2-3 essential takeaways as short, memorable phrases.
+key_concepts: 2 bullet points max. Each under 10 words.
 
-4. COMMON MISTAKES (common_mistakes):
-List 1-2 common errors with correction.
-
+common_mistakes: ONE mistake only:
 {
-  "mistake": "Students try to cancel terms that are added, not multiplied. (x+3)/3 ≠ x",
-  "correction": "You can only cancel factors that are MULTIPLIED, not added terms."
+  "mistake": "[What students do wrong - under 15 words]",
+  "correction": "[Correct approach - under 15 words]"
 }
 
-5. VISUAL DESCRIPTION (visual_description):
-Describe what graph/diagram would help.
+visual_description: ${needsGraph ? 'Describe what a graph would show (type: "graph")' : 'Set to null - this topic does not need a graph'}
 
-RESPONSE FORMAT (JSON):
+RESPONSE (pure JSON, no markdown):
 {
-  "theory_explanation": "**The Fundamental Principle**\\n\\nConcise explanation here.\\n\\n**General Form:**\\n[formula in LaTeX]",
-  "worked_examples": [
-    {
-      "problem": "Problem statement",
-      "steps": [
-        "Step 1 Title: Description → result",
-        "Step 2 Title: Description → result"
-      ],
-      "answer": "Final answer"
-    }
-  ],
-  "key_concepts": [
-    "Short concept 1",
-    "Short concept 2"
-  ],
-  "common_mistakes": [
-    {
-      "mistake": "What students do wrong",
-      "correction": "The correct approach"
-    }
-  ],
-  "visual_description": {
-    "type": "graph",
-    "description": "What the visual shows",
-    "key_points": ["Point 1", "Point 2"]
-  }
+  "theory_explanation": "...",
+  "worked_examples": [...],
+  "key_concepts": [...],
+  "common_mistakes": [...],
+  "visual_description": ${needsGraph ? '{...}' : 'null'}
 }`;
 
-    const userPrompt = `Create MINIMAL, CLEAN theory content for:
-
-TOPIC: ${topicName}
-SUBTOPIC: ${subtopicName}
-
-${existingTheory ? `EXISTING CONTENT TO SIMPLIFY:
-${existingTheory}` : ''}
-
-Remember: Less is more. Keep it scannable. Focus on ONE key principle with a formula and 2-3 process steps.`;
+    const userPrompt = `Generate ultra-minimal theory for: "${subtopicName}" (from ${topicName})`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -126,7 +92,6 @@ Remember: Less is more. Keep it scannable. Focus on ONE key principle with a for
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
         ],
-        temperature: 0.7,
       }),
     });
 
@@ -146,13 +111,11 @@ Remember: Less is more. Keep it scannable. Focus on ONE key principle with a for
     // Parse the JSON response
     let theoryContent;
     try {
-      // Extract JSON from the response (handle markdown code blocks)
       const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;
       theoryContent = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error('Failed to parse AI response as JSON:', parseError);
-      // Return a structured fallback
       theoryContent = {
         theory_explanation: content,
         worked_examples: [],
