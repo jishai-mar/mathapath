@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Lightbulb
 } from 'lucide-react';
+import InteractiveMathGraph from './InteractiveMathGraph';
 
 interface WorkedExample {
   problem: string;
@@ -304,52 +305,16 @@ export default function LearnView({
 
         {/* Sidebar - Right */}
         <div className="space-y-6">
-          {/* Graph Visualization */}
+          {/* Interactive Graph Visualization */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.15 }}
-            className="rounded-2xl bg-card border border-border/50 overflow-hidden"
           >
-            {/* Window controls */}
-            <div className="flex items-center gap-1.5 p-3 border-b border-border/30">
-              <div className="w-3 h-3 rounded-full bg-red-500/80" />
-              <div className="w-3 h-3 rounded-full bg-yellow-500/80" />
-              <div className="w-3 h-3 rounded-full bg-green-500/80" />
-            </div>
-            
-            {/* Graph area */}
-            <div className="p-4 h-40 flex items-center justify-center">
-              <svg viewBox="0 0 200 80" className="w-full h-full">
-                <defs>
-                  <linearGradient id="graphGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
-                    <stop offset="50%" stopColor="hsl(var(--primary))" stopOpacity="0.8" />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.2" />
-                  </linearGradient>
-                </defs>
-                {/* Axis */}
-                <line x1="20" y1="70" x2="180" y2="70" stroke="hsl(var(--border))" strokeWidth="1" />
-                <line x1="20" y1="10" x2="20" y2="70" stroke="hsl(var(--border))" strokeWidth="1" />
-                {/* Curve */}
-                <path
-                  d="M 20 60 Q 50 20, 100 40 T 180 30"
-                  fill="none"
-                  stroke="url(#graphGradient)"
-                  strokeWidth="2"
-                />
-                {/* Dots on curve */}
-                <circle cx="60" cy="30" r="3" fill="hsl(var(--primary))" />
-                <circle cx="100" cy="40" r="3" fill="hsl(var(--primary))" />
-                <circle cx="140" cy="32" r="3" fill="hsl(var(--primary))" />
-              </svg>
-            </div>
-            
-            <div className="px-4 pb-4">
-              <p className="text-xs text-muted-foreground text-center font-mono">
-                fig 1.1: Concept visualizer
-              </p>
-            </div>
+            <InteractiveMathGraph 
+              concept={displayTheory || ''} 
+              subtopicName={subtopicName} 
+            />
           </motion.div>
 
           {/* AI Pro Tip */}
