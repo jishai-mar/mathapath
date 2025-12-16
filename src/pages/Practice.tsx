@@ -9,7 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, BookOpen, Sparkles, Trophy, ChevronRight, Moon, Sun, Clock, TrendingUp, CheckCircle2, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
 import ExerciseView from '@/components/ExerciseView';
-import LearnView from '@/components/LearnView';
+import ConversationalLearnView from '@/components/learning/ConversationalLearnView';
 
 interface Topic {
   id: string;
@@ -797,7 +797,7 @@ export default function Practice() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
               >
-                <LearnView
+                <ConversationalLearnView
                   subtopicName={selectedSubtopic.name}
                   topicName={topic?.name || ''}
                   theoryExplanation={selectedSubtopic.theory_explanation}
@@ -806,13 +806,6 @@ export default function Practice() {
                   onBack={() => {
                     setMode('browsing');
                     setSelectedSubtopic(null);
-                  }}
-                  nextSubtopic={getNextSubtopic()}
-                  onNextSubtopic={(id) => {
-                    const next = subtopics.find(s => s.id === id);
-                    if (next) {
-                      setSelectedSubtopic(next);
-                    }
                   }}
                 />
               </motion.div>
