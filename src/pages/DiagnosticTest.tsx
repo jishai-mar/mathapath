@@ -221,10 +221,21 @@ export default function DiagnosticTest() {
   const handleSkip = () => {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
-      setCurrentAnswer('');
+      const nextQuestion = questions[currentIndex + 1];
+      setCurrentAnswer(answers.get(nextQuestion.id) || '');
       setShowHint(false);
     } else {
       analyzeResults();
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentIndex > 0) {
+      const previousIndex = currentIndex - 1;
+      const previousQuestion = questions[previousIndex];
+      setCurrentAnswer(answers.get(previousQuestion.id) || '');
+      setCurrentIndex(previousIndex);
+      setShowHint(false);
     }
   };
 
@@ -397,6 +408,15 @@ export default function DiagnosticTest() {
               )}
 
               <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handlePrevious}
+                  disabled={isSubmitting || currentIndex === 0}
+                  className="flex-1"
+                >
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  Previous
+                </Button>
                 <Button
                   variant="outline"
                   onClick={handleSkip}
