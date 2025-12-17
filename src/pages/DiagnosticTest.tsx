@@ -7,9 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
+import TutorCharacter from '@/components/tutor/TutorCharacter';
 
 interface DiagnosticQuestion {
   id: string;
@@ -37,6 +38,12 @@ interface LearningProfile {
   learning_style_notes: string;
 }
 
+interface TutorFeedback {
+  what_went_well: string;
+  where_it_breaks: string;
+  what_to_focus_on_next: string;
+}
+
 export default function DiagnosticTest() {
   const { topicId } = useParams<{ topicId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -55,6 +62,11 @@ export default function DiagnosticTest() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [profile, setProfile] = useState<LearningProfile | null>(null);
   const [phase, setPhase] = useState<'intro' | 'test' | 'analyzing' | 'results'>('intro');
+  
+  // Feedback state
+  const [currentFeedback, setCurrentFeedback] = useState<TutorFeedback | null>(null);
+  const [showingFeedback, setShowingFeedback] = useState(false);
+  const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -152,17 +164,19 @@ export default function DiagnosticTest() {
     const question = questions[currentIndex];
 
     try {
-      // Normalize answers for comparison
-      const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/,/g, '');
-      const isCorrect = normalize(currentAnswer) === normalize(question.correct_answer);
-
-      // Save response
-      await supabase.from('diagnostic_responses').insert({
-        diagnostic_question_id: question.id,
-        user_id: user!.id,
-        user_answer: currentAnswer,
-        is_correct: isCorrect,
+      // Call edge function to check answer (secure, server-side validation)
+      const { data, error } = await supabase.functions.invoke('check-diagnostic-answer', {
+        body: {
+          questionId: question.id,
+          userAnswer: currentAnswer,
+          userId: user!.id,
+        },
       });
+
+      if (error) throw error;
+
+      const isCorrect = data.isCorrect;
+      setLastAnswerCorrect(isCorrect);
 
       // Update local state
       setAnswers(prev => new Map(prev).set(question.id, currentAnswer));
@@ -173,20 +187,40 @@ export default function DiagnosticTest() {
         .update({ questions_answered: currentIndex + 1 })
         .eq('id', test.id);
 
-      // Move to next question or finish
-      if (currentIndex < questions.length - 1) {
-        setCurrentIndex(prev => prev + 1);
-        setCurrentAnswer('');
-        setShowHint(false);
+      if (isCorrect) {
+        // Correct answer - show brief celebration, then move on
+        setShowingFeedback(true);
+        setCurrentFeedback(null);
+        
+        // Auto-advance after a short delay for correct answers
+        setTimeout(() => {
+          proceedToNextQuestion();
+        }, 1500);
       } else {
-        // All questions answered, analyze results
-        await analyzeResults();
+        // Incorrect - show tutor feedback
+        setCurrentFeedback(data.feedback);
+        setShowingFeedback(true);
       }
     } catch (error) {
       console.error('Error submitting answer:', error);
       toast.error('Failed to save your answer. Please try again.');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const proceedToNextQuestion = () => {
+    setShowingFeedback(false);
+    setCurrentFeedback(null);
+    setLastAnswerCorrect(null);
+    
+    if (currentIndex < questions.length - 1) {
+      setCurrentIndex(prev => prev + 1);
+      setCurrentAnswer('');
+      setShowHint(false);
+    } else {
+      // All questions answered, analyze results
+      analyzeResults();
     }
   };
 
@@ -374,74 +408,151 @@ export default function DiagnosticTest() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input
-                value={currentAnswer}
-                onChange={(e) => setCurrentAnswer(e.target.value)}
-                placeholder="Your answer..."
-                onKeyDown={(e) => e.key === 'Enter' && handleAnswerSubmit()}
-                disabled={isSubmitting}
-                className="text-lg"
-              />
+              {/* Show feedback after answering */}
+              {showingFeedback ? (
+                <div className="space-y-4">
+                  {/* Tutor character */}
+                  <div className="flex justify-center">
+                    <TutorCharacter 
+                      mood={lastAnswerCorrect ? 'celebrating' : 'explaining'} 
+                      size="md"
+                      showSpeechBubble={lastAnswerCorrect}
+                    />
+                  </div>
 
-              {/* Hint section */}
-              {currentQuestion.hints && currentQuestion.hints.length > 0 && (
-                <div>
-                  {!showHint ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowHint(true)}
-                      className="text-muted-foreground"
-                    >
-                      <Lightbulb className="w-4 h-4 mr-2" />
-                      Need a hint?
-                    </Button>
-                  ) : (
-                    <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                      <p className="text-sm text-primary">
-                        <Lightbulb className="w-4 h-4 inline mr-2" />
-                        {currentQuestion.hints[0]}
-                      </p>
+                  {lastAnswerCorrect ? (
+                    // Correct answer feedback
+                    <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20 text-center">
+                      <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                      <p className="font-semibold text-green-400">Correct!</p>
+                      <p className="text-sm text-muted-foreground mt-1">Moving to the next question...</p>
+                    </div>
+                  ) : currentFeedback ? (
+                    // Incorrect answer feedback with tutor explanation
+                    <div className="space-y-3">
+                      <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="font-medium text-amber-400 mb-1">Not quite right</p>
+                            <p className="text-sm text-muted-foreground">Let's understand what happened...</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* What went well */}
+                      <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                        <div className="flex items-start gap-2">
+                          <ThumbsUp className="w-4 h-4 text-green-500 mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium text-green-400 mb-1">What went well</p>
+                            <p className="text-sm">{currentFeedback.what_went_well}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Where it breaks */}
+                      <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                        <div className="flex items-start gap-2">
+                          <Lightbulb className="w-4 h-4 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium text-primary mb-1">Where to look again</p>
+                            <p className="text-sm">{currentFeedback.where_it_breaks}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* What to focus on */}
+                      <div className="p-3 rounded-lg bg-secondary/50 border border-border/50">
+                        <div className="flex items-start gap-2">
+                          <Target className="w-4 h-4 text-muted-foreground mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs font-medium text-muted-foreground mb-1">Remember for next time</p>
+                            <p className="text-sm">{currentFeedback.what_to_focus_on_next}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button onClick={proceedToNextQuestion} className="w-full" size="lg">
+                        I understand, continue
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              ) : (
+                // Normal question answering UI
+                <>
+                  <Input
+                    value={currentAnswer}
+                    onChange={(e) => setCurrentAnswer(e.target.value)}
+                    placeholder="Your answer..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleAnswerSubmit()}
+                    disabled={isSubmitting}
+                    className="text-lg"
+                  />
+
+                  {/* Hint section */}
+                  {currentQuestion.hints && currentQuestion.hints.length > 0 && (
+                    <div>
+                      {!showHint ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowHint(true)}
+                          className="text-muted-foreground"
+                        >
+                          <Lightbulb className="w-4 h-4 mr-2" />
+                          Need a hint?
+                        </Button>
+                      ) : (
+                        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                          <p className="text-sm text-primary">
+                            <Lightbulb className="w-4 h-4 inline mr-2" />
+                            {currentQuestion.hints[0]}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              <div className="flex gap-3">
-                <Button
-                  variant="outline"
-                  onClick={handlePrevious}
-                  disabled={isSubmitting || currentIndex === 0}
-                  className="flex-1"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handleSkip}
-                  disabled={isSubmitting}
-                  className="flex-1"
-                >
-                  Skip
-                </Button>
-                <Button
-                  onClick={handleAnswerSubmit}
-                  disabled={isSubmitting || !currentAnswer.trim()}
-                  className="flex-1"
-                >
-                  {isSubmitting ? (
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  ) : currentIndex === questions.length - 1 ? (
-                    'Finish'
-                  ) : (
-                    <>
-                      Next
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={handlePrevious}
+                      disabled={isSubmitting || currentIndex === 0}
+                      className="flex-1"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleSkip}
+                      disabled={isSubmitting}
+                      className="flex-1"
+                    >
+                      Skip
+                    </Button>
+                    <Button
+                      onClick={handleAnswerSubmit}
+                      disabled={isSubmitting || !currentAnswer.trim()}
+                      className="flex-1"
+                    >
+                      {isSubmitting ? (
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      ) : currentIndex === questions.length - 1 ? (
+                        'Finish'
+                      ) : (
+                        <>
+                          Next
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
