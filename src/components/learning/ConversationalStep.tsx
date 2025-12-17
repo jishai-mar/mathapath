@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MathRenderer from '@/components/MathRenderer';
-import { Bot, CheckCircle2, XCircle, ArrowRight, Lightbulb } from 'lucide-react';
+import TutorCharacter, { TutorMood } from '@/components/tutor/TutorCharacter';
+import { CheckCircle2, XCircle, ArrowRight, Lightbulb } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
 export type StepType = 
   | 'greeting'
   | 'question'
@@ -368,6 +368,31 @@ export default function ConversationalStep({
     }
   };
 
+  // Determine tutor mood based on step type and state
+  const getTutorMood = (): TutorMood => {
+    if (showResult) {
+      return isCorrect ? 'celebrating' : 'encouraging';
+    }
+    
+    switch (step.type) {
+      case 'greeting':
+      case 'encouragement':
+        return 'happy';
+      case 'question':
+        return 'curious';
+      case 'understanding-check':
+        return 'curious';
+      case 'explanation':
+      case 'formula':
+      case 'example':
+        return 'explaining';
+      case 'hint':
+        return 'thinking';
+      default:
+        return 'idle';
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -378,19 +403,12 @@ export default function ConversationalStep({
         !isActive && "opacity-70"
       )}
     >
-      {/* Tutor avatar */}
+      {/* Animated tutor character */}
       <div className="flex-shrink-0">
-        <div className={cn(
-          "w-10 h-10 rounded-full flex items-center justify-center",
-          step.type === 'understanding-check' 
-            ? "bg-primary/20" 
-            : "bg-secondary"
-        )}>
-          <Bot className={cn(
-            "w-5 h-5",
-            step.type === 'understanding-check' ? "text-primary" : "text-muted-foreground"
-          )} />
-        </div>
+        <TutorCharacter 
+          mood={getTutorMood()} 
+          size="sm"
+        />
       </div>
 
       {/* Content bubble */}
