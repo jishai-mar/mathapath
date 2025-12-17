@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, type Easing } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -14,9 +15,29 @@ interface TutorCharacterProps {
   mood?: TutorMood;
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  showSpeechBubble?: boolean;
 }
 
 const easeInOut: Easing = 'easeInOut';
+
+const celebrationMessages = [
+  "Amazing! 🎉",
+  "You got it! ⭐",
+  "Brilliant! 🌟",
+  "Perfect! 💫",
+  "Nailed it! 🔥",
+  "Awesome! ✨",
+  "Great job! 🏆",
+];
+
+const encouragementMessages = [
+  "Keep going!",
+  "You can do it!",
+  "Almost there!",
+  "Try again!",
+  "Don't give up!",
+  "Stay focused!",
+];
 
 const moodConfig = {
   idle: {
@@ -69,10 +90,24 @@ const sizeConfig = {
 export default function TutorCharacter({ 
   mood = 'idle', 
   size = 'sm',
-  className 
+  className,
+  showSpeechBubble = true
 }: TutorCharacterProps) {
   const config = moodConfig[mood];
   const sizes = sizeConfig[size];
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    if (mood === 'celebrating') {
+      setMessage(celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)]);
+    } else if (mood === 'encouraging') {
+      setMessage(encouragementMessages[Math.floor(Math.random() * encouragementMessages.length)]);
+    } else {
+      setMessage('');
+    }
+  }, [mood]);
+
+  const showBubble = showSpeechBubble && (mood === 'celebrating' || mood === 'encouraging') && message;
 
   return (
     <motion.div 
@@ -81,6 +116,34 @@ export default function TutorCharacter({
       animate={{ scale: 1, opacity: 1 }}
       transition={{ type: 'spring', stiffness: 260, damping: 20 }}
     >
+      {/* Speech bubble */}
+      <AnimatePresence>
+        {showBubble && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0, y: 5 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            className={cn(
+              "absolute -top-10 left-1/2 -translate-x-1/2 z-10 whitespace-nowrap",
+              "px-2.5 py-1 rounded-lg text-xs font-medium shadow-lg",
+              mood === 'celebrating' 
+                ? "bg-green-500 text-white" 
+                : "bg-blue-500 text-white"
+            )}
+          >
+            {message}
+            {/* Speech bubble tail */}
+            <div 
+              className={cn(
+                "absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45",
+                mood === 'celebrating' ? "bg-green-500" : "bg-blue-500"
+              )} 
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Glow effect */}
       <motion.div
         className={cn(
