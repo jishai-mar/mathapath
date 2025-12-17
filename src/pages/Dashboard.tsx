@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import TopicGrid from '@/components/TopicGrid';
 import { 
   Sparkles, 
   Star, 
@@ -13,7 +14,6 @@ import {
   TrendingUp, 
   AlertTriangle, 
   ArrowRight,
-  ChevronRight,
   Play,
   Calculator,
   Sigma,
@@ -489,92 +489,18 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Your Learning Path */}
+        {/* Your Learning Path - Full Grid View */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3, duration: 0.6 }}
         >
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-serif text-foreground">Your Learning Path</h2>
-            <a href="#" className="text-sm text-primary hover:text-primary/80 transition-colors flex items-center gap-1">
-              View Full Map <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-          
-          <div className="relative">
-            <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent -translate-y-1/2 z-0" />
-            <div className="flex gap-6 overflow-x-auto pb-8 pt-4 px-2 snap-x no-scrollbar">
-              {topics.map((topic, index) => {
-                const { masteryPercentage } = getTopicProgress(topic.id);
-                const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
-                const isCompleted = diagnostic?.status === 'completed';
-                const isCurrent = index === 0 && !isCompleted; // First incomplete topic
-
-                return (
-                  <div 
-                    key={topic.id}
-                    className={`snap-center shrink-0 relative z-10 ${isCurrent ? 'w-[320px] transform scale-105 origin-center' : 'w-[300px]'} transition-opacity`}
-                  >
-                    <div 
-                      onClick={() => handleTopicClick(topic.id)}
-                      className={`glass p-6 rounded-2xl h-full flex flex-col justify-between cursor-pointer transition-all hover:-translate-y-1 ${
-                        isCurrent 
-                          ? 'bg-surface-highlight/60 border border-primary shadow-glow relative overflow-hidden' 
-                          : 'border border-primary/20 hover:border-primary/50 hover:shadow-glow'
-                      }`}
-                    >
-                      {isCurrent && <div className="absolute top-0 left-0 w-full h-1 bg-primary" />}
-                      <div>
-                        <div className="flex justify-between items-start mb-4">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center border ${
-                            isCurrent 
-                              ? 'bg-primary/20 text-primary border-primary/30' 
-                              : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                          }`}>
-                            {topic.icon === 'sigma' ? <Sigma className="w-5 h-5" /> : <Calculator className="w-5 h-5" />}
-                          </div>
-                          <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded border ${
-                            isCurrent 
-                              ? 'bg-primary/20 text-primary border-primary/30 animate-pulse' 
-                              : masteryPercentage >= 80 
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                : 'bg-blue-500/10 text-blue-400 border-blue-500/20'
-                          }`}>
-                            {isCurrent ? 'Current' : masteryPercentage >= 80 ? 'Mastered' : 'Developing'}
-                          </span>
-                        </div>
-                        <h3 className="text-lg font-medium mb-1 text-foreground">
-                          {topic.name}
-                        </h3>
-                        <p className="text-sm mb-4 line-clamp-2 text-muted-foreground">
-                          {topic.description || 'Master this topic to unlock the next level.'}
-                        </p>
-                      </div>
-                      {isCurrent ? (
-                        <Button className="w-full py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
-                          Continue Lesson <Play className="w-4 h-4" />
-                        </Button>
-                      ) : (
-                        <div>
-                          <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                            <span>Mastery</span>
-                            <span className="text-foreground">{masteryPercentage}%</span>
-                          </div>
-                          <div className="h-1 bg-card rounded-full overflow-hidden">
-                            <div 
-                              className={`h-full rounded-full ${masteryPercentage >= 80 ? 'bg-emerald-500' : 'bg-blue-500'}`}
-                              style={{ width: `${masteryPercentage}%` }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <TopicGrid 
+            topics={topics}
+            getTopicProgress={getTopicProgress}
+            diagnosticStatuses={diagnosticStatuses}
+            onTopicClick={handleTopicClick}
+          />
         </motion.div>
       </main>
     </div>
