@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import ConversationalStep, { ConversationalStepData } from './ConversationalStep';
+import ConversationalStep, { ConversationalStepData, CheckResponseData } from './ConversationalStep';
 import TutorChat from '@/components/TutorChat';
 import InteractiveMathGraph from '@/components/InteractiveMathGraph';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useLearningResponseTracker } from '@/hooks/useLearningResponseTracker';
 import { 
   ArrowLeft, 
   PlayCircle, 
@@ -23,6 +24,7 @@ interface WorkedExample {
 
 interface ConversationalLearnViewProps {
   subtopicName: string;
+  subtopicId?: string;
   topicName?: string;
   theoryExplanation: string | null;
   workedExamples: WorkedExample[];
@@ -32,6 +34,7 @@ interface ConversationalLearnViewProps {
 
 export default function ConversationalLearnView({
   subtopicName,
+  subtopicId,
   topicName = '',
   theoryExplanation,
   workedExamples,
@@ -44,10 +47,12 @@ export default function ConversationalLearnView({
   const [showTutor, setShowTutor] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
   const [graphConcept, setGraphConcept] = useState('');
+  const [pastPerformance, setPastPerformance] = useState<Record<string, any> | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { trackResponse, fetchPastResponses, fetchLearningProfile } = useLearningResponseTracker();
 
   useEffect(() => {
-    generateConversation();
+    loadLearningContext();
   }, [subtopicName]);
 
   useEffect(() => {
@@ -57,15 +62,26 @@ export default function ConversationalLearnView({
     }
   }, [currentStep]);
 
-  const generateConversation = async () => {
+  const loadLearningContext = async () => {
     setIsLoading(true);
     try {
+      // Fetch past performance to personalize the lesson
+      const [pastResponses, profile] = await Promise.all([
+        fetchPastResponses(subtopicName),
+        fetchLearningProfile()
+      ]);
+      
+      setPastPerformance(profile);
+      
+      // Generate conversation with personalization context
       const { data, error } = await supabase.functions.invoke('generate-conversational-theory', {
         body: { 
           subtopicName, 
           topicName, 
           existingTheory: theoryExplanation, 
-          existingExamples: workedExamples 
+          existingExamples: workedExamples,
+          pastResponses: pastResponses?.slice(0, 5), // Last 5 responses for context
+          learningProfile: profile?.[subtopicName] || null,
         }
       });
       
@@ -129,6 +145,20 @@ export default function ConversationalLearnView({
     }
   };
 
+  const handleCheckComplete = useCallback((data: CheckResponseData) => {
+    trackResponse({
+      subtopicId,
+      subtopicName,
+      checkQuestion: data.checkQuestion,
+      userAnswer: data.userAnswer,
+      correctAnswer: data.correctAnswer,
+      isCorrect: data.isCorrect,
+      attempts: data.attempts,
+      hintUsed: data.hintUsed,
+      timeSpentSeconds: data.timeSpentSeconds,
+    });
+  }, [subtopicId, subtopicName, trackResponse]);
+
   const handleNeedHelp = () => {
     // Insert a hint step after current step
     const hintStep: ConversationalStepData = {
@@ -190,7 +220,7 @@ export default function ConversationalLearnView({
           <Button
             variant="ghost"
             size="icon"
-            onClick={generateConversation}
+            onClick={loadLearningContext}
             title="Restart lesson"
           >
             <RefreshCw className="w-4 h-4" />
@@ -237,6 +267,7 @@ export default function ConversationalLearnView({
                 isActive={idx === currentStep}
                 onComplete={handleStepComplete}
                 onNeedHelp={handleNeedHelp}
+                onCheckComplete={handleCheckComplete}
               />
             ))}
           </AnimatePresence>

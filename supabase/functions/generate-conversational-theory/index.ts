@@ -21,11 +21,41 @@ serve(async (req) => {
   }
 
   try {
-    const { subtopicName, topicName, existingTheory, existingExamples } = await req.json();
+    const { subtopicName, topicName, existingTheory, existingExamples, pastResponses, learningProfile } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Build personalization context from past responses
+    let personalizationContext = '';
+    if (pastResponses && pastResponses.length > 0) {
+      const struggles = pastResponses.filter((r: any) => !r.is_correct || r.attempts > 1);
+      const successRate = pastResponses.filter((r: any) => r.is_correct).length / pastResponses.length;
+      
+      personalizationContext = `
+STUDENT LEARNING HISTORY FOR THIS TOPIC:
+- Previous attempts: ${pastResponses.length}
+- Success rate: ${Math.round(successRate * 100)}%
+- Areas of difficulty: ${struggles.map((s: any) => s.check_question).slice(0, 3).join('; ') || 'None identified'}
+- Frequently needed hints: ${pastResponses.filter((r: any) => r.hint_used).length > pastResponses.length / 2 ? 'Yes, student often needs hints' : 'No, student rarely needs hints'}
+
+ADAPT YOUR LESSON:
+${successRate < 0.5 ? '- This student struggles with this topic. Use simpler explanations, more examples, and smaller steps.' : ''}
+${successRate > 0.8 ? '- This student is performing well. You can move faster and include more challenging checks.' : ''}
+${struggles.length > 0 ? `- Focus extra attention on concepts similar to: ${struggles[0]?.check_question}` : ''}
+`;
+    }
+
+    if (learningProfile) {
+      personalizationContext += `
+OVERALL LEARNING PROFILE:
+- Total checks completed: ${learningProfile.totalChecks || 0}
+- Correct: ${learningProfile.correct || 0} (${learningProfile.totalChecks ? Math.round((learningProfile.correct / learningProfile.totalChecks) * 100) : 0}%)
+- Average attempts per check: ${learningProfile.totalChecks ? (learningProfile.totalAttempts / learningProfile.totalChecks).toFixed(1) : 'N/A'}
+- Hints used: ${learningProfile.hintsUsed || 0}
+`;
     }
 
     const systemPrompt = `You are an expert AI math tutor creating a CONVERSATIONAL lesson. Your goal is to teach like a real tutor in a one-on-one session - engaging, interactive, and adaptive.
@@ -37,6 +67,9 @@ CRITICAL RULES:
 4. Include understanding checks with real mini-exercises
 5. Be warm, encouraging, and patient in tone
 6. Each step should feel like natural conversation, not a textbook
+7. PERSONALIZE based on the student's learning history when provided
+
+${personalizationContext}
 
 Generate a JSON array of conversational steps that teach "${subtopicName}" (part of ${topicName || 'Mathematics'}).
 

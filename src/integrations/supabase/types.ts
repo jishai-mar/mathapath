@@ -261,6 +261,59 @@ export type Database = {
           },
         ]
       }
+      learning_check_responses: {
+        Row: {
+          attempts: number
+          check_question: string
+          correct_answer: string | null
+          created_at: string
+          hint_used: boolean
+          id: string
+          is_correct: boolean
+          subtopic_id: string | null
+          subtopic_name: string
+          time_spent_seconds: number | null
+          user_answer: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          check_question: string
+          correct_answer?: string | null
+          created_at?: string
+          hint_used?: boolean
+          id?: string
+          is_correct: boolean
+          subtopic_id?: string | null
+          subtopic_name: string
+          time_spent_seconds?: number | null
+          user_answer?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          check_question?: string
+          correct_answer?: string | null
+          created_at?: string
+          hint_used?: boolean
+          id?: string
+          is_correct?: boolean
+          subtopic_id?: string | null
+          subtopic_name?: string
+          time_spent_seconds?: number | null
+          user_answer?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_check_responses_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learning_profiles: {
         Row: {
           created_at: string
