@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,10 +28,21 @@ export interface ConversationalStepData {
   isComplete?: boolean;
 }
 
+export interface CheckResponseData {
+  checkQuestion: string;
+  userAnswer: string;
+  correctAnswer: string;
+  isCorrect: boolean;
+  attempts: number;
+  hintUsed: boolean;
+  timeSpentSeconds: number;
+}
+
 interface ConversationalStepProps {
   step: ConversationalStepData;
   onComplete: () => void;
   onNeedHelp?: () => void;
+  onCheckComplete?: (data: CheckResponseData) => void;
   isActive: boolean;
   stepIndex: number;
 }
@@ -40,6 +51,7 @@ export default function ConversationalStep({
   step, 
   onComplete, 
   onNeedHelp,
+  onCheckComplete,
   isActive,
   stepIndex 
 }: ConversationalStepProps) {
@@ -49,6 +61,28 @@ export default function ConversationalStep({
   const [isCorrect, setIsCorrect] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [attempts, setAttempts] = useState(0);
+  const startTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (isActive && step.type === 'understanding-check') {
+      startTimeRef.current = Date.now();
+    }
+  }, [isActive, step.type]);
+
+  const reportCheckResponse = (answer: string, correct: boolean, attemptCount: number) => {
+    if (onCheckComplete && step.checkQuestion && step.checkAnswer) {
+      const timeSpent = Math.round((Date.now() - startTimeRef.current) / 1000);
+      onCheckComplete({
+        checkQuestion: step.checkQuestion,
+        userAnswer: answer,
+        correctAnswer: step.checkAnswer,
+        isCorrect: correct,
+        attempts: attemptCount,
+        hintUsed: showHint,
+        timeSpentSeconds: timeSpent,
+      });
+    }
+  };
 
   const checkAnswer = () => {
     if (!step.checkAnswer) return;
@@ -60,24 +94,32 @@ export default function ConversationalStep({
                    normalizedUser.includes(normalizedCorrect) ||
                    normalizedCorrect.includes(normalizedUser);
     
+    const newAttempts = attempts + 1;
     setIsCorrect(correct);
     setShowResult(true);
-    setAttempts(prev => prev + 1);
+    setAttempts(newAttempts);
     
     if (correct) {
+      reportCheckResponse(userAnswer, true, newAttempts);
       setTimeout(onComplete, 1500);
+    } else if (newAttempts >= 2) {
+      reportCheckResponse(userAnswer, false, newAttempts);
     }
   };
 
   const checkOption = (option: string) => {
     setSelectedOption(option);
     const correct = option === step.checkAnswer;
+    const newAttempts = attempts + 1;
     setIsCorrect(correct);
     setShowResult(true);
-    setAttempts(prev => prev + 1);
+    setAttempts(newAttempts);
     
     if (correct) {
+      reportCheckResponse(option, true, newAttempts);
       setTimeout(onComplete, 1500);
+    } else if (newAttempts >= 2) {
+      reportCheckResponse(option, false, newAttempts);
     }
   };
 
