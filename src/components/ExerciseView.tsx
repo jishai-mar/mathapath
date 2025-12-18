@@ -24,6 +24,12 @@ interface Exercise {
   hints: string[] | null;
 }
 
+interface TutorFeedback {
+  what_went_well: string;
+  where_it_breaks: string;
+  what_to_focus_on_next: string;
+}
+
 interface AIFeedback {
   what_went_well: string;
   where_it_breaks: string;
@@ -37,7 +43,7 @@ interface ExerciseViewProps {
   subtopicName: string;
   currentDifficulty?: 'easy' | 'medium' | 'hard';
   currentSubLevel?: number;
-  onSubmitAnswer: (answer: string) => Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string }>;
+  onSubmitAnswer: (answer: string) => Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string; tutorFeedback?: TutorFeedback | null }>;
   onSubmitImage: (file: File) => Promise<AIFeedback>;
   onNextExercise: (suggestedDifficulty?: 'easy' | 'medium' | 'hard') => void;
   onHintReveal?: () => void;
@@ -85,6 +91,7 @@ export default function ExerciseView({
     explanation?: string | null;
     correctAnswer?: string;
     aiFeedback?: AIFeedback;
+    tutorFeedback?: TutorFeedback | null;
   } | null>(null);
 
   const handleTextSubmit = async (e: React.FormEvent) => {
@@ -97,6 +104,7 @@ export default function ExerciseView({
       isCorrect: result.isCorrect,
       explanation: result.explanation,
       correctAnswer: result.correctAnswer,
+      tutorFeedback: result.tutorFeedback,
     });
   };
 
@@ -319,6 +327,13 @@ export default function ExerciseView({
           >
             {feedback.type === 'ai' && feedback.aiFeedback ? (
               <FeedbackCard feedback={feedback.aiFeedback} />
+            ) : feedback.type === 'text' && !feedback.isCorrect && feedback.tutorFeedback ? (
+              /* Show tutor-style feedback for incorrect text answers */
+              <FeedbackCard feedback={{
+                ...feedback.tutorFeedback,
+                is_correct: false,
+                suggested_difficulty: currentDifficulty || exercise.difficulty,
+              }} />
             ) : (
               <div className={`p-6 rounded-2xl border-2 ${
                 feedback.isCorrect 

@@ -301,7 +301,7 @@ export default function Practice() {
     setHintsUsedThisExercise(prev => prev + 1);
   };
 
-  const handleSubmitAnswer = async (answer: string): Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string }> => {
+  const handleSubmitAnswer = async (answer: string): Promise<{ isCorrect: boolean; explanation: string | null; correctAnswer?: string; tutorFeedback?: { what_went_well: string; where_it_breaks: string; what_to_focus_on_next: string } | null }> => {
     if (!currentExercise || !user || !selectedSubtopic) {
       return { isCorrect: false, explanation: null };
     }
@@ -315,12 +315,13 @@ export default function Practice() {
           userAnswer: answer,
           userId: user.id,
           hintsUsed: hintsUsedThisExercise,
+          subtopicName: selectedSubtopic.name,
         },
       });
 
       if (error) throw error;
 
-      const { isCorrect, explanation, correctAnswer, suggestedDifficulty, suggestedSubLevel, consecutiveCorrect: newConsecCorrect, consecutiveWrong: newConsecWrong } = data;
+      const { isCorrect, explanation, correctAnswer, tutorFeedback, suggestedDifficulty, suggestedSubLevel, consecutiveCorrect: newConsecCorrect, consecutiveWrong: newConsecWrong } = data;
       
       if (suggestedDifficulty) {
         setCurrentDifficulty(suggestedDifficulty);
@@ -367,7 +368,7 @@ export default function Practice() {
       await updateTopicProgress(isCorrect);
       await updateSubtopicProgress(selectedSubtopic.id, isCorrect, hintsUsedThisExercise);
       
-      return { isCorrect, explanation, correctAnswer };
+      return { isCorrect, explanation, correctAnswer, tutorFeedback };
     } catch (error) {
       console.error('Error submitting answer:', error);
       return { isCorrect: false, explanation: null };
