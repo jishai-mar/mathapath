@@ -520,6 +520,48 @@ export type Database = {
         }
         Relationships: []
       }
+      tutor_customization_items: {
+        Row: {
+          category: Database["public"]["Enums"]["item_category"]
+          created_at: string
+          description: string | null
+          icon_key: string
+          id: string
+          is_premium: boolean
+          name: string
+          order_index: number
+          rarity: Database["public"]["Enums"]["item_rarity"]
+          unlock_requirement_type: Database["public"]["Enums"]["unlock_requirement_type"]
+          unlock_requirement_value: number
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          description?: string | null
+          icon_key: string
+          id?: string
+          is_premium?: boolean
+          name: string
+          order_index?: number
+          rarity?: Database["public"]["Enums"]["item_rarity"]
+          unlock_requirement_type: Database["public"]["Enums"]["unlock_requirement_type"]
+          unlock_requirement_value: number
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["item_category"]
+          created_at?: string
+          description?: string | null
+          icon_key?: string
+          id?: string
+          is_premium?: boolean
+          name?: string
+          order_index?: number
+          rarity?: Database["public"]["Enums"]["item_rarity"]
+          unlock_requirement_type?: Database["public"]["Enums"]["unlock_requirement_type"]
+          unlock_requirement_value?: number
+        }
+        Relationships: []
+      }
       user_subtopic_progress: {
         Row: {
           exercises_completed: number
@@ -604,6 +646,10 @@ export type Database = {
           avatar_style: string | null
           chat_theme: string | null
           created_at: string | null
+          equipped_accessory: string | null
+          equipped_background: string | null
+          equipped_effect: string | null
+          equipped_outfit: string | null
           id: string
           personality: string | null
           tutor_name: string | null
@@ -614,6 +660,10 @@ export type Database = {
           avatar_style?: string | null
           chat_theme?: string | null
           created_at?: string | null
+          equipped_accessory?: string | null
+          equipped_background?: string | null
+          equipped_effect?: string | null
+          equipped_outfit?: string | null
           id?: string
           personality?: string | null
           tutor_name?: string | null
@@ -624,13 +674,78 @@ export type Database = {
           avatar_style?: string | null
           chat_theme?: string | null
           created_at?: string | null
+          equipped_accessory?: string | null
+          equipped_background?: string | null
+          equipped_effect?: string | null
+          equipped_outfit?: string | null
           id?: string
           personality?: string | null
           tutor_name?: string | null
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_tutor_preferences_equipped_accessory_fkey"
+            columns: ["equipped_accessory"]
+            isOneToOne: false
+            referencedRelation: "tutor_customization_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tutor_preferences_equipped_background_fkey"
+            columns: ["equipped_background"]
+            isOneToOne: false
+            referencedRelation: "tutor_customization_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tutor_preferences_equipped_effect_fkey"
+            columns: ["equipped_effect"]
+            isOneToOne: false
+            referencedRelation: "tutor_customization_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_tutor_preferences_equipped_outfit_fkey"
+            columns: ["equipped_outfit"]
+            isOneToOne: false
+            referencedRelation: "tutor_customization_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_unlocked_items: {
+        Row: {
+          id: string
+          is_equipped: boolean
+          item_id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_equipped?: boolean
+          item_id: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_equipped?: boolean
+          item_id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_unlocked_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_customization_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -724,6 +839,14 @@ export type Database = {
     Enums: {
       diagnostic_status: "not_started" | "in_progress" | "completed"
       difficulty_level: "easy" | "medium" | "hard"
+      item_category: "accessory" | "outfit" | "background" | "effect"
+      item_rarity: "common" | "rare" | "epic" | "legendary"
+      unlock_requirement_type:
+        | "xp"
+        | "streak"
+        | "exercises"
+        | "mastery"
+        | "topic_complete"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -853,6 +976,15 @@ export const Constants = {
     Enums: {
       diagnostic_status: ["not_started", "in_progress", "completed"],
       difficulty_level: ["easy", "medium", "hard"],
+      item_category: ["accessory", "outfit", "background", "effect"],
+      item_rarity: ["common", "rare", "epic", "legendary"],
+      unlock_requirement_type: [
+        "xp",
+        "streak",
+        "exercises",
+        "mastery",
+        "topic_complete",
+      ],
     },
   },
 } as const

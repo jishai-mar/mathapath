@@ -1,3 +1,4 @@
+import React from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -10,6 +11,10 @@ interface TutorAvatarProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   showSpeechBubble?: boolean;
+  equippedAccessory?: string;
+  equippedOutfit?: string;
+  equippedBackground?: string;
+  equippedEffect?: string;
 }
 
 const sizeConfig = {
@@ -17,6 +22,13 @@ const sizeConfig = {
   md: 'w-16 h-16',
   lg: 'w-24 h-24',
   xl: 'w-32 h-32',
+};
+
+const backgroundSizeConfig = {
+  sm: 'w-14 h-14',
+  md: 'w-20 h-20',
+  lg: 'w-28 h-28',
+  xl: 'w-36 h-36',
 };
 
 const moodAnimations = {
@@ -44,6 +56,147 @@ const encouragementMessages = [
   "Don't give up!",
   "Let's figure this out together!",
 ];
+
+// Background styles
+const backgroundStyles: Record<string, string> = {
+  'notebook': 'bg-gradient-to-br from-amber-100/30 to-amber-200/30 dark:from-amber-900/20 dark:to-amber-800/20',
+  'chalkboard': 'bg-gradient-to-br from-slate-700/30 to-slate-800/30',
+  'library': 'bg-gradient-to-br from-amber-800/30 to-amber-900/30',
+  'stars': 'bg-gradient-to-br from-indigo-900/40 to-purple-900/40',
+  'space': 'bg-gradient-to-br from-slate-900/50 to-indigo-900/50',
+  'galaxy': 'bg-gradient-to-br from-purple-900/50 via-pink-900/30 to-indigo-900/50',
+};
+
+// Accessory components
+const AccessoryOverlay = ({ type, size }: { type: string; size: 'sm' | 'md' | 'lg' | 'xl' }) => {
+  const sizeScale = { sm: 0.4, md: 0.6, lg: 0.8, xl: 1 };
+  const scale = sizeScale[size];
+  
+  const accessories: Record<string, React.ReactNode> = {
+    'glasses': (
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2" style={{ transform: `translateX(-50%) scale(${scale})` }}>
+        <div className="flex gap-1">
+          <div className="w-4 h-3 rounded-full border-2 border-slate-700 dark:border-slate-300" />
+          <div className="w-4 h-3 rounded-full border-2 border-slate-700 dark:border-slate-300" />
+        </div>
+      </div>
+    ),
+    'graduation-cap': (
+      <div className="absolute -top-3 left-1/2 -translate-x-1/2" style={{ transform: `translateX(-50%) scale(${scale})` }}>
+        <div className="w-8 h-2 bg-slate-800 dark:bg-slate-200 rounded-sm" />
+        <div className="w-6 h-4 bg-slate-800 dark:bg-slate-200 mx-auto -mt-1" />
+        <div className="absolute top-0 left-1/2 w-0.5 h-3 bg-amber-500" />
+        <div className="absolute -top-1 left-1/2 w-2 h-2 bg-amber-500 rounded-full -translate-x-1/2" />
+      </div>
+    ),
+    'crown': (
+      <div className="absolute -top-4 left-1/2 -translate-x-1/2" style={{ transform: `translateX(-50%) scale(${scale})` }}>
+        <div className="relative">
+          <div className="w-10 h-4 bg-gradient-to-b from-amber-400 to-amber-500 rounded-b-sm" />
+          <div className="absolute -top-2 left-0 w-2 h-4 bg-gradient-to-b from-amber-400 to-amber-500" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-2 h-5 bg-gradient-to-b from-amber-400 to-amber-500" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
+          <div className="absolute -top-2 right-0 w-2 h-4 bg-gradient-to-b from-amber-400 to-amber-500" style={{ clipPath: 'polygon(50% 0%, 0% 100%, 100% 100%)' }} />
+        </div>
+      </div>
+    ),
+    'halo': (
+      <motion.div 
+        className="absolute -top-4 left-1/2 -translate-x-1/2"
+        style={{ transform: `translateX(-50%) scale(${scale})` }}
+        animate={{ opacity: [0.7, 1, 0.7] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <div className="w-10 h-3 rounded-full border-2 border-amber-400 bg-amber-400/20 shadow-lg shadow-amber-400/50" />
+      </motion.div>
+    ),
+    'headphones': (
+      <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-full" style={{ transform: `translateX(-50%) scale(${scale})` }}>
+        <div className="relative">
+          <div className="absolute top-2 -left-1 w-3 h-4 bg-slate-700 dark:bg-slate-300 rounded-l-full" />
+          <div className="absolute top-2 -right-1 w-3 h-4 bg-slate-700 dark:bg-slate-300 rounded-r-full" />
+          <div className="w-full h-2 bg-slate-700 dark:bg-slate-300 rounded-t-full" />
+        </div>
+      </div>
+    ),
+    'badge': (
+      <div className="absolute bottom-0 right-0" style={{ transform: `scale(${scale})` }}>
+        <div className="w-4 h-4 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center">
+          <span className="text-[8px]">⭐</span>
+        </div>
+      </div>
+    ),
+  };
+  
+  return accessories[type] || null;
+};
+
+// Effect overlays
+const EffectOverlay = ({ type, size }: { type: string; size: 'sm' | 'md' | 'lg' | 'xl' }) => {
+  const effects: Record<string, React.ReactNode> = {
+    'sparkle': (
+      <motion.div 
+        className="absolute inset-0 pointer-events-none"
+        animate={{ opacity: [0.3, 0.7, 0.3] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      >
+        <span className="absolute top-0 right-0 text-xs">✨</span>
+        <span className="absolute bottom-1 left-0 text-xs">✨</span>
+      </motion.div>
+    ),
+    'glow': (
+      <motion.div 
+        className="absolute inset-0 rounded-full bg-primary/20 blur-md -z-10"
+        animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
+        transition={{ duration: 2, repeat: Infinity }}
+      />
+    ),
+    'rainbow': (
+      <motion.div 
+        className="absolute inset-0 rounded-full -z-10"
+        style={{ background: 'conic-gradient(from 0deg, red, orange, yellow, green, blue, indigo, violet, red)' }}
+        animate={{ rotate: 360 }}
+        transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+      >
+        <div className="absolute inset-1 rounded-full bg-background" />
+      </motion.div>
+    ),
+    'lightning': (
+      <motion.div 
+        className="absolute inset-0 pointer-events-none"
+        animate={{ opacity: [0, 1, 0] }}
+        transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 2 }}
+      >
+        <span className="absolute -top-1 -right-1 text-yellow-400">⚡</span>
+      </motion.div>
+    ),
+    'fire': (
+      <motion.div 
+        className="absolute -bottom-1 left-1/2 -translate-x-1/2 pointer-events-none"
+        animate={{ y: [0, -2, 0], scale: [1, 1.1, 1] }}
+        transition={{ duration: 0.5, repeat: Infinity }}
+      >
+        <span className="text-orange-500">🔥</span>
+      </motion.div>
+    ),
+    'numbers': (
+      <motion.div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="absolute text-[10px] text-primary/50"
+            style={{ left: `${20 + i * 30}%` }}
+            animate={{ y: [20, -20], opacity: [0, 1, 0] }}
+            transition={{ duration: 2, repeat: Infinity, delay: i * 0.5 }}
+          >
+            {['π', '∑', '∞'][i]}
+          </motion.span>
+        ))}
+      </motion.div>
+    ),
+  };
+  
+  return effects[type] || null;
+};
 
 // Friendly Robot Avatar
 const FriendlyRobot = ({ mood, size }: { mood: TutorMood; size: string }) => (
@@ -247,9 +400,20 @@ export const avatarOptions: { style: AvatarStyle; name: string; description: str
   { style: 'helpful-fox', name: 'Helpful Fox', description: 'Playful and encouraging' },
 ];
 
-export function TutorAvatar({ style, mood = 'idle', size = 'md', className, showSpeechBubble }: TutorAvatarProps) {
+export function TutorAvatar({ 
+  style, 
+  mood = 'idle', 
+  size = 'md', 
+  className, 
+  showSpeechBubble,
+  equippedAccessory,
+  equippedOutfit,
+  equippedBackground,
+  equippedEffect
+}: TutorAvatarProps) {
   const AvatarComponent = avatarComponents[style] || FriendlyRobot;
   const sizeClass = sizeConfig[size];
+  const bgSizeClass = backgroundSizeConfig[size];
 
   const getMessage = () => {
     if (mood === 'celebrating') {
@@ -261,9 +425,27 @@ export function TutorAvatar({ style, mood = 'idle', size = 'md', className, show
     return null;
   };
 
+  const bgStyle = equippedBackground ? backgroundStyles[equippedBackground] : '';
+
   return (
     <div className={cn("relative", className)}>
+      {/* Background layer */}
+      {equippedBackground && (
+        <div className={cn(
+          "absolute inset-0 rounded-full -z-10 flex items-center justify-center",
+          bgSizeClass,
+          bgStyle
+        )} style={{ margin: '-8%' }} />
+      )}
+      
+      {/* Effect layer (behind avatar) */}
+      {equippedEffect && <EffectOverlay type={equippedEffect} size={size} />}
+      
+      {/* Main avatar */}
       <AvatarComponent mood={mood} size={sizeClass} />
+      
+      {/* Accessory layer (on top) */}
+      {equippedAccessory && <AccessoryOverlay type={equippedAccessory} size={size} />}
       
       {showSpeechBubble && (mood === 'celebrating' || mood === 'encouraging') && (
         <motion.div
