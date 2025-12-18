@@ -599,6 +599,39 @@ export type Database = {
           },
         ]
       }
+      user_tutor_preferences: {
+        Row: {
+          avatar_style: string | null
+          chat_theme: string | null
+          created_at: string | null
+          id: string
+          personality: string | null
+          tutor_name: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avatar_style?: string | null
+          chat_theme?: string | null
+          created_at?: string | null
+          id?: string
+          personality?: string | null
+          tutor_name?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avatar_style?: string | null
+          chat_theme?: string | null
+          created_at?: string | null
+          id?: string
+          personality?: string | null
+          tutor_name?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       diagnostic_questions_public: {

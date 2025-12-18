@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MathRenderer from '@/components/MathRenderer';
-import TutorCharacter, { TutorMood } from '@/components/tutor/TutorCharacter';
+import { TutorAvatar, TutorMood } from '@/components/tutor/TutorAvatar';
+import { useTutor } from '@/contexts/TutorContext';
 import { CheckCircle2, XCircle, ArrowRight, Lightbulb, PlayCircle, Clock, Target, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 export type StepType = 
@@ -68,6 +69,7 @@ export default function ConversationalStep({
   isActive,
   stepIndex 
 }: ConversationalStepProps) {
+  const { preferences } = useTutor();
   const [userAnswer, setUserAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -511,9 +513,11 @@ export default function ConversationalStep({
     >
       {/* Animated tutor character */}
       <div className="flex-shrink-0">
-        <TutorCharacter 
+        <TutorAvatar 
+          style={preferences.avatarStyle}
           mood={getTutorMood()} 
           size="sm"
+          showSpeechBubble={showResult && isCorrect}
         />
       </div>
 

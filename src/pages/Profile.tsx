@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTutor } from '@/contexts/TutorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -15,7 +16,8 @@ import {
   Award,
   Pencil,
   LogOut,
-  HardDrive
+  HardDrive,
+  Bot
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -23,8 +25,10 @@ import GeneralInfoTab from '@/components/profile/GeneralInfoTab';
 import SecurityPrivacyTab from '@/components/profile/SecurityPrivacyTab';
 import SubscriptionTab from '@/components/profile/SubscriptionTab';
 import NotificationsTab from '@/components/profile/NotificationsTab';
+import { TutorAvatar } from '@/components/tutor/TutorAvatar';
+import { TutorCustomizationModal } from '@/components/tutor/TutorCustomizationModal';
 
-type ProfileTab = 'general' | 'security' | 'subscription' | 'notifications';
+type ProfileTab = 'general' | 'security' | 'subscription' | 'notifications' | 'tutor';
 
 interface ProfileData {
   display_name: string | null;
@@ -35,11 +39,13 @@ interface ProfileData {
 
 export default function Profile() {
   const { user, loading: authLoading, signOut } = useAuth();
+  const { preferences: tutorPreferences, updatePreferences } = useTutor();
   const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState<ProfileTab>('general');
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [showTutorModal, setShowTutorModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -85,6 +91,7 @@ export default function Profile() {
 
   const navItems = [
     { id: 'general' as ProfileTab, label: 'General Info', icon: User },
+    { id: 'tutor' as ProfileTab, label: 'Your Tutor', icon: Bot },
     { id: 'security' as ProfileTab, label: 'Security & Privacy', icon: Shield },
     { id: 'subscription' as ProfileTab, label: 'Subscription', icon: CreditCard },
     { id: 'notifications' as ProfileTab, label: 'Notifications', icon: Bell },
@@ -108,6 +115,58 @@ export default function Profile() {
     switch (activeTab) {
       case 'general':
         return <GeneralInfoTab user={user} displayName={profile?.display_name || null} />;
+      case 'tutor':
+        return (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <div>
+              <h2 className="text-2xl font-bold text-foreground mb-2">Your AI Tutor</h2>
+              <p className="text-muted-foreground">Customize how your personal tutor looks and teaches</p>
+            </div>
+            
+            <div className="bg-card rounded-xl border border-border p-6">
+              <div className="flex items-center gap-6">
+                <TutorAvatar style={tutorPreferences.avatarStyle} mood="happy" size="xl" />
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-foreground">{tutorPreferences.tutorName}</h3>
+                  <p className="text-muted-foreground capitalize">{tutorPreferences.personality} teaching style</p>
+                  <p className="text-sm text-muted-foreground mt-1 capitalize">{tutorPreferences.chatTheme} theme</p>
+                  <Button 
+                    onClick={() => setShowTutorModal(true)} 
+                    className="mt-4 gap-2"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Customize Tutor
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-card rounded-xl border border-border p-4">
+                <h4 className="font-semibold text-foreground mb-2">Teaching Style</h4>
+                <p className="text-sm text-muted-foreground">
+                  {tutorPreferences.personality === 'patient' && 'Takes time to explain concepts carefully with small steps'}
+                  {tutorPreferences.personality === 'encouraging' && 'Celebrates every win and keeps you motivated'}
+                  {tutorPreferences.personality === 'challenging' && 'Pushes you to think deeper and challenges assumptions'}
+                  {tutorPreferences.personality === 'humorous' && 'Makes learning fun with light jokes and casual language'}
+                </p>
+              </div>
+              <div className="bg-card rounded-xl border border-border p-4">
+                <h4 className="font-semibold text-foreground mb-2">Chat Theme</h4>
+                <div className={`h-8 rounded-lg bg-gradient-to-r ${
+                  tutorPreferences.chatTheme === 'default' ? 'from-primary/20 to-primary/10' :
+                  tutorPreferences.chatTheme === 'warm' ? 'from-orange-500/20 to-amber-500/10' :
+                  tutorPreferences.chatTheme === 'cool' ? 'from-blue-500/20 to-cyan-500/10' :
+                  'from-emerald-500/20 to-green-500/10'
+                }`} />
+              </div>
+            </div>
+          </motion.div>
+        );
       case 'security':
         return <SecurityPrivacyTab />;
       case 'subscription':
@@ -220,6 +279,14 @@ export default function Profile() {
           </div>
         </div>
       </main>
+
+      {/* Tutor Customization Modal */}
+      <TutorCustomizationModal
+        open={showTutorModal}
+        onOpenChange={setShowTutorModal}
+        initialPreferences={tutorPreferences}
+        onSave={(prefs) => updatePreferences(prefs)}
+      />
     </div>
   );
 }
