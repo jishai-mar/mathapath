@@ -10,10 +10,14 @@ interface Message {
   content: string;
 }
 
+type Personality = 'patient' | 'encouraging' | 'challenging' | 'humorous';
+
 interface RequestBody {
   question: string;
   subtopicName: string;
   theoryContext: string;
+  tutorName?: string;
+  personality?: Personality;
   conversationHistory: Message[];
 }
 
@@ -23,14 +27,25 @@ serve(async (req) => {
   }
 
   try {
-    const { question, subtopicName, theoryContext, conversationHistory } = await req.json() as RequestBody;
+    const { question, subtopicName, theoryContext, conversationHistory, tutorName = 'Alex', personality = 'patient' } = await req.json() as RequestBody;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-const systemPrompt = `You are a patient, experienced math tutor for Reichman University Mechina students. You teach like a real human tutor in a one-on-one session.
+    // Personality-specific instructions
+    const personalityInstructions: Record<Personality, string> = {
+      patient: `You are extremely patient and gentle. Take your time explaining concepts. Break everything into small, manageable steps. Use phrases like "Let's take this slowly...", "No rush, let's work through this together...", "That's okay, let's try again..."`,
+      encouraging: `You are enthusiastic and celebratory! Praise every small win. Use encouraging phrases like "Amazing progress!", "You're doing great!", "I knew you could figure this out!", "Keep that momentum going!" Use occasional emojis to express excitement.`,
+      challenging: `You are direct and push students to think harder. Challenge their assumptions. Ask probing questions like "Are you sure about that?", "Can you prove it?", "What if I told you there's a faster way?". Don't accept lazy answers.`,
+      humorous: `You have a friendly, light sense of humor. Make occasional math puns or jokes to keep things fun. Use casual language and keep the mood light while still teaching effectively. Example: "Time to divide and conquer this problem! ...get it? Divide? 😄"`,
+    };
+
+const systemPrompt = `You are ${tutorName}, a ${personality} math tutor for Reichman University Mechina students. You teach like a real human tutor in a one-on-one session.
+
+${personalityInstructions[personality]}
+
 Current topic: "${subtopicName}"
 
 ${theoryContext ? `Theory context:\n${theoryContext}\n` : ''}

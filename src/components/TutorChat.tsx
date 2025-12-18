@@ -5,8 +5,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from './MathRenderer';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, Bot, User, Loader2, Calculator, LineChart, Ruler } from 'lucide-react';
+import { Send, User, Loader2, Calculator, LineChart, Ruler } from 'lucide-react';
 import ToolPanel, { ToolSuggestion, detectToolsFromTopic } from './tools/ToolPanel';
+import { useTutor } from '@/contexts/TutorContext';
+import { TutorAvatar } from './tutor/TutorAvatar';
+import { cn } from '@/lib/utils';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -19,7 +22,15 @@ interface TutorChatProps {
   theoryContext: string;
 }
 
+const chatThemeStyles = {
+  default: 'from-primary/20 to-primary/10',
+  warm: 'from-orange-500/20 to-amber-500/10',
+  cool: 'from-blue-500/20 to-cyan-500/10',
+  nature: 'from-emerald-500/20 to-green-500/10',
+};
+
 export default function TutorChat({ subtopicName, theoryContext }: TutorChatProps) {
+  const { preferences } = useTutor();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -69,6 +80,8 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
           subtopicName,
           theoryContext,
           conversationHistory: messages.map(m => ({ role: m.role, content: m.content })),
+          tutorName: preferences.tutorName,
+          personality: preferences.personality,
         }
       });
 
@@ -103,23 +116,27 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
     <div className="relative">
       <Card className="border-border/50 bg-card/50">
         <CardContent className="p-4 space-y-4">
-          {/* Tools indicator */}
-          <div className="flex items-center gap-2 pb-2 border-b border-border/30">
-            <span className="text-xs text-muted-foreground">Tools available:</span>
+          {/* Tutor header */}
+          <div className="flex items-center gap-3 pb-3 border-b border-border/30">
+            <TutorAvatar style={preferences.avatarStyle} mood="idle" size="sm" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-sm">{preferences.tutorName}</h3>
+              <p className="text-xs text-muted-foreground">Your personal math tutor</p>
+            </div>
             <div className="flex gap-1">
               {detectToolsFromTopic(subtopicName).calculator && (
-                <span className="text-xs px-2 py-0.5 bg-primary/10 rounded-full flex items-center gap-1">
-                  <Calculator className="w-3 h-3" /> Calculator
+                <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 rounded-full flex items-center gap-0.5">
+                  <Calculator className="w-2.5 h-2.5" />
                 </span>
               )}
               {detectToolsFromTopic(subtopicName).graph && (
-                <span className="text-xs px-2 py-0.5 bg-primary/10 rounded-full flex items-center gap-1">
-                  <LineChart className="w-3 h-3" /> Graph
+                <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 rounded-full flex items-center gap-0.5">
+                  <LineChart className="w-2.5 h-2.5" />
                 </span>
               )}
               {detectToolsFromTopic(subtopicName).geometry && (
-                <span className="text-xs px-2 py-0.5 bg-primary/10 rounded-full flex items-center gap-1">
-                  <Ruler className="w-3 h-3" /> Measure
+                <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 rounded-full flex items-center gap-0.5">
+                  <Ruler className="w-2.5 h-2.5" />
                 </span>
               )}
             </div>
@@ -130,9 +147,9 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
             <div className="space-y-4">
               {messages.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
-                  <Bot className="w-10 h-10 mx-auto mb-3 opacity-50" />
-                  <p className="text-sm">Ask me anything about <strong>{subtopicName}</strong>!</p>
-                  <p className="text-xs mt-1 opacity-70">I'll guide you with hints and suggest tools to help explore.</p>
+                  <TutorAvatar style={preferences.avatarStyle} mood="curious" size="lg" className="mx-auto mb-3" />
+                  <p className="text-sm">Hi! I'm <strong>{preferences.tutorName}</strong>.</p>
+                  <p className="text-xs mt-1 opacity-70">Ask me anything about <strong>{subtopicName}</strong>!</p>
                 </div>
               )}
               
@@ -144,17 +161,21 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
                   }`}
                 >
                   {message.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <Bot className="w-4 h-4 text-primary" />
-                    </div>
+                    <TutorAvatar 
+                      style={preferences.avatarStyle} 
+                      mood={idx === messages.length - 1 ? 'explaining' : 'idle'} 
+                      size="sm" 
+                      className="flex-shrink-0"
+                    />
                   )}
                   <div className="max-w-[80%] space-y-2">
                     <div
-                      className={`p-3 rounded-lg text-sm ${
+                      className={cn(
+                        "p-3 rounded-lg text-sm",
                         message.role === 'user'
                           ? 'bg-primary text-primary-foreground'
-                          : 'bg-secondary/50'
-                      }`}
+                          : `bg-gradient-to-br ${chatThemeStyles[preferences.chatTheme]}`
+                      )}
                     >
                       <MathRenderer latex={message.content} />
                     </div>
@@ -190,10 +211,8 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
               
               {isLoading && (
                 <div className="flex gap-3 animate-fade-in">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Bot className="w-4 h-4 text-primary" />
-                  </div>
-                  <div className="bg-secondary/50 p-3 rounded-lg">
+                  <TutorAvatar style={preferences.avatarStyle} mood="thinking" size="sm" />
+                  <div className={cn("p-3 rounded-lg bg-gradient-to-br", chatThemeStyles[preferences.chatTheme])}>
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
                   </div>
                 </div>
