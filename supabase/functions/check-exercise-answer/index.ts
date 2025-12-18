@@ -6,13 +6,103 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Generate tutor-style feedback using AI
+async function generateTutorFeedback(
+  question: string,
+  userAnswer: string,
+  correctAnswer: string,
+  subtopicName: string
+): Promise<{
+  what_went_well: string;
+  where_it_breaks: string;
+  what_to_focus_on_next: string;
+}> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY not configured");
+    return {
+      what_went_well: "You attempted the problem.",
+      where_it_breaks: "Review your solution steps carefully.",
+      what_to_focus_on_next: "Try breaking down the problem into smaller steps.",
+    };
+  }
+
+  const systemPrompt = `You are a patient, supportive math tutor helping a student understand their mistake.
+Your role is to guide them toward understanding WITHOUT revealing the correct answer directly.
+
+Guidelines:
+- Be encouraging and acknowledge any correct thinking
+- Identify the likely error or misconception without giving away the answer
+- Provide a guiding hint that helps them think through the problem
+- Use simple, clear language
+- Keep responses concise (1-2 sentences each)
+- If you need to reference math, use plain text notation (e.g., x^2, sqrt(x))`;
+
+  const userPrompt = `Topic: ${subtopicName}
+Question: ${question}
+Student's Answer: ${userAnswer}
+(The correct answer is: ${correctAnswer} - but do NOT reveal this to the student)
+
+Analyze the student's answer and provide supportive feedback:
+1. what_went_well: Acknowledge any correct thinking or approach (even partial)
+2. where_it_breaks: Identify where the mistake likely occurred WITHOUT revealing the answer. Give a hint about what to check.
+3. what_to_focus_on_next: A brief, actionable tip for solving this type of problem
+
+Return ONLY valid JSON in this exact format:
+{
+  "what_went_well": "...",
+  "where_it_breaks": "...",
+  "what_to_focus_on_next": "..."
+}`;
+
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("AI API error:", response.status);
+      throw new Error("AI API error");
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error("No valid JSON in response");
+  } catch (error) {
+    console.error("Error generating feedback:", error);
+    return {
+      what_went_well: "You attempted the problem.",
+      where_it_breaks: "Check your calculation steps carefully.",
+      what_to_focus_on_next: "Try working through the problem step by step.",
+    };
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { exerciseId, userAnswer, userId, hintsUsed, timeSpentSeconds, currentSubLevel } = await req.json();
+    const { exerciseId, userAnswer, userId, hintsUsed, timeSpentSeconds, currentSubLevel, subtopicName } = await req.json();
 
     if (!exerciseId || !userId) {
       return new Response(
@@ -29,7 +119,7 @@ serve(async (req) => {
     // Fetch the exercise with correct answer (only accessible via service role)
     const { data: exercise, error: exerciseError } = await supabase
       .from("exercises")
-      .select("id, correct_answer, explanation, subtopic_id, difficulty")
+      .select("id, correct_answer, explanation, subtopic_id, difficulty, question")
       .eq("id", exerciseId)
       .single();
 
@@ -53,6 +143,17 @@ serve(async (req) => {
     const isCorrect = userAnswer 
       ? normalize(userAnswer) === normalize(exercise.correct_answer)
       : false;
+
+    // Generate AI tutor feedback for incorrect answers
+    let tutorFeedback = null;
+    if (!isCorrect && userAnswer) {
+      tutorFeedback = await generateTutorFeedback(
+        exercise.question,
+        userAnswer,
+        exercise.correct_answer,
+        subtopicName || "Mathematics"
+      );
+    }
 
     // Fetch student's recent performance on this subtopic for personalization
     const { data: recentAttempts } = await supabase
@@ -122,62 +223,49 @@ serve(async (req) => {
     };
 
     // Enhanced difficulty progression with sub-levels
-    // Sub-levels: 1 (easiest within tier), 2 (middle), 3 (hardest within tier)
     let suggestedDifficulty: 'easy' | 'medium' | 'hard' = exercise.difficulty;
-    let suggestedSubLevel = currentSubLevel || 2; // Default to middle sub-level
+    let suggestedSubLevel = currentSubLevel || 2;
     const currentDiff = exercise.difficulty;
     
     if (isCorrect) {
-      // Student got it right - progress within tier first, then to next tier
       if (consecutiveCorrectCurrent >= 2) {
-        // Ready to progress
         if (suggestedSubLevel < 3) {
-          // Progress within current tier
           suggestedSubLevel = Math.min(3, suggestedSubLevel + 1);
         } else {
-          // At max sub-level, move to next tier
           if (currentDiff === 'easy') {
             suggestedDifficulty = 'medium';
-            suggestedSubLevel = 1; // Start at easiest of new tier
+            suggestedSubLevel = 1;
           } else if (currentDiff === 'medium') {
             suggestedDifficulty = 'hard';
             suggestedSubLevel = 1;
           }
-          // If already at hard, stay at hard sub-level 3
         }
       }
     } else {
-      // Student got it wrong - regress within tier first, then to previous tier
       if (consecutiveWrongCurrent >= 2) {
-        // Need to regress
         if (suggestedSubLevel > 1) {
-          // Regress within current tier
           suggestedSubLevel = Math.max(1, suggestedSubLevel - 1);
         } else {
-          // At min sub-level, move to previous tier
           if (currentDiff === 'hard') {
             suggestedDifficulty = 'medium';
-            suggestedSubLevel = 3; // Start at hardest of lower tier
+            suggestedSubLevel = 3;
           } else if (currentDiff === 'medium') {
             suggestedDifficulty = 'easy';
             suggestedSubLevel = 3;
           }
-          // If already at easy, stay at easy sub-level 1
         }
       }
     }
 
-    // Performance-based adjustments (override streak logic if performance is very clear)
+    // Performance-based adjustments
     const currentDiffTyped = currentDiff as 'easy' | 'medium' | 'hard';
     const currentStats = successRates[currentDiffTyped];
     if (currentStats !== null) {
       if (currentStats >= 85 && performanceByDifficulty[currentDiffTyped].total >= 5) {
-        // Very strong at this level - definitely move up
         if (currentDiffTyped === 'easy') suggestedDifficulty = 'medium';
         else if (currentDiffTyped === 'medium') suggestedDifficulty = 'hard';
-        suggestedSubLevel = 2; // Start at middle of new tier
+        suggestedSubLevel = 2;
       } else if (currentStats < 30 && performanceByDifficulty[currentDiffTyped].total >= 4) {
-        // Really struggling - move down
         if (currentDiffTyped === 'hard') suggestedDifficulty = 'medium';
         else if (currentDiffTyped === 'medium') suggestedDifficulty = 'easy';
         suggestedSubLevel = 2;
@@ -194,6 +282,7 @@ serve(async (req) => {
         is_correct: isCorrect,
         hints_used: hintsUsed || 0,
         time_spent_seconds: timeSpentSeconds || null,
+        ai_feedback: tutorFeedback ? JSON.stringify(tutorFeedback) : null,
       });
 
     if (insertError) {
@@ -217,12 +306,12 @@ serve(async (req) => {
       }
     }
 
-    // Only return the correct answer and explanation AFTER submission
     return new Response(
       JSON.stringify({ 
         isCorrect,
         correctAnswer: exercise.correct_answer,
         explanation: exercise.explanation,
+        tutorFeedback,
         suggestedDifficulty,
         suggestedSubLevel,
         consecutiveCorrect: consecutiveCorrectCurrent,
