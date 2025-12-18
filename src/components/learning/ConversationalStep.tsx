@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter, { TutorMood } from '@/components/tutor/TutorCharacter';
-import { CheckCircle2, XCircle, ArrowRight, Lightbulb } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, Lightbulb, PlayCircle, Clock, Target, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 export type StepType = 
   | 'greeting'
@@ -15,7 +15,17 @@ export type StepType =
   | 'understanding-check'
   | 'hint'
   | 'encouragement'
-  | 'transition';
+  | 'transition'
+  | 'practice-recommendation';
+
+export interface PracticePlan {
+  totalExercises: number;
+  breakdown: { easy: number; medium: number; hard: number };
+  estimatedMinutes: number;
+  focusAreas: string[];
+  recommendation?: string;
+  motivationalNote?: string;
+}
 
 export interface ConversationalStepData {
   type: StepType;
@@ -26,6 +36,7 @@ export interface ConversationalStepData {
   options?: string[];
   formula?: string;
   isComplete?: boolean;
+  practicePlan?: PracticePlan;
 }
 
 export interface CheckResponseData {
@@ -43,6 +54,7 @@ interface ConversationalStepProps {
   onComplete: () => void;
   onNeedHelp?: () => void;
   onCheckComplete?: (data: CheckResponseData) => void;
+  onStartPractice?: (plan: PracticePlan) => void;
   isActive: boolean;
   stepIndex: number;
 }
@@ -52,6 +64,7 @@ export default function ConversationalStep({
   onComplete, 
   onNeedHelp,
   onCheckComplete,
+  onStartPractice,
   isActive,
   stepIndex 
 }: ConversationalStepProps) {
@@ -359,6 +372,99 @@ export default function ConversationalStep({
               >
                 Thanks! <ArrowRight className="w-4 h-4" />
               </Button>
+            )}
+          </div>
+        );
+
+      case 'practice-recommendation':
+        const plan = step.practicePlan || {
+          totalExercises: 5,
+          breakdown: { easy: 2, medium: 2, hard: 1 },
+          estimatedMinutes: 15,
+          focusAreas: ['Core concepts', 'Problem solving'],
+        };
+        
+        return (
+          <div className="space-y-4">
+            <div className="text-foreground leading-relaxed">
+              <MathRenderer latex={step.content} />
+            </div>
+            
+            {/* Practice Plan Card */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/30 rounded-xl p-5 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Target className="w-5 h-5 text-primary" />
+                  <span className="font-semibold text-foreground">Your Practice Plan</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  <span>~{plan.estimatedMinutes} min</span>
+                </div>
+              </div>
+              
+              {/* Exercise breakdown */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30">
+                  <span className="text-green-500 text-lg">🌱</span>
+                  <span className="text-sm font-medium text-green-500">{plan.breakdown.easy} Easy</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30">
+                  <span className="text-yellow-500 text-lg">🌿</span>
+                  <span className="text-sm font-medium text-yellow-500">{plan.breakdown.medium} Medium</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/30">
+                  <span className="text-orange-500 text-lg">🌳</span>
+                  <span className="text-sm font-medium text-orange-500">{plan.breakdown.hard} Hard</span>
+                </div>
+              </div>
+              
+              {/* Focus areas */}
+              {plan.focusAreas && plan.focusAreas.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Focus Areas</span>
+                  <div className="flex flex-wrap gap-2">
+                    {plan.focusAreas.map((area, idx) => (
+                      <span 
+                        key={idx}
+                        className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground"
+                      >
+                        {area}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Start button */}
+              {isActive && onStartPractice && (
+                <Button 
+                  onClick={() => onStartPractice(plan)}
+                  size="lg"
+                  className="w-full gap-2 mt-2"
+                >
+                  <PlayCircle className="w-5 h-5" />
+                  Start Practice ({plan.totalExercises} exercises)
+                </Button>
+              )}
+            </motion.div>
+            
+            {/* Motivational note */}
+            {plan.motivationalNote && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="flex items-center gap-2 text-sm text-muted-foreground italic"
+              >
+                <Sparkles className="w-4 h-4 text-primary" />
+                {plan.motivationalNote}
+              </motion.div>
             )}
           </div>
         );

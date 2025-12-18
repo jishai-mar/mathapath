@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import ConversationalStep, { ConversationalStepData, CheckResponseData } from './ConversationalStep';
+import ConversationalStep, { ConversationalStepData, CheckResponseData, PracticePlan } from './ConversationalStep';
 import TutorChat from '@/components/TutorChat';
 import InteractiveMathGraph from '@/components/InteractiveMathGraph';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import { useLearningResponseTracker } from '@/hooks/useLearningResponseTracker';
 import { 
   ArrowLeft, 
-  PlayCircle, 
   MessageCircle,
   RefreshCw
 } from 'lucide-react';
@@ -28,7 +27,7 @@ interface ConversationalLearnViewProps {
   topicName?: string;
   theoryExplanation: string | null;
   workedExamples: WorkedExample[];
-  onStartPractice: () => void;
+  onStartPractice: (plan?: PracticePlan) => void;
   onBack?: () => void;
 }
 
@@ -48,6 +47,7 @@ export default function ConversationalLearnView({
   const [showGraph, setShowGraph] = useState(false);
   const [graphConcept, setGraphConcept] = useState('');
   const [pastPerformance, setPastPerformance] = useState<Record<string, any> | null>(null);
+  const [practicePlan, setPracticePlan] = useState<PracticePlan | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const { trackResponse, fetchPastResponses, fetchLearningProfile } = useLearningResponseTracker();
 
@@ -73,30 +73,60 @@ export default function ConversationalLearnView({
       
       setPastPerformance(profile);
       
-      // Generate conversation with personalization context
-      const { data, error } = await supabase.functions.invoke('generate-conversational-theory', {
-        body: { 
-          subtopicName, 
-          topicName, 
-          existingTheory: theoryExplanation, 
-          existingExamples: workedExamples,
-          pastResponses: pastResponses?.slice(0, 5), // Last 5 responses for context
-          learningProfile: profile?.[subtopicName] || null,
+      // Generate conversation and practice plan in parallel
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+      
+      const [conversationResult, planResult] = await Promise.all([
+        supabase.functions.invoke('generate-conversational-theory', {
+          body: { 
+            subtopicName, 
+            topicName, 
+            existingTheory: theoryExplanation, 
+            existingExamples: workedExamples,
+            pastResponses: pastResponses?.slice(0, 5),
+            learningProfile: profile?.[subtopicName] || null,
+          }
+        }),
+        supabase.functions.invoke('generate-practice-plan', {
+          body: {
+            subtopicId,
+            subtopicName,
+            topicName,
+            userId,
+          }
+        })
+      ]);
+      
+      if (conversationResult.error) throw conversationResult.error;
+      
+      // Store practice plan
+      if (planResult.data && !planResult.error) {
+        setPracticePlan(planResult.data as PracticePlan);
+      }
+      
+      if (conversationResult.data?.steps && Array.isArray(conversationResult.data.steps)) {
+        let generatedSteps = conversationResult.data.steps as ConversationalStepData[];
+        
+        // Add practice recommendation step if not already present
+        const hasPracticeStep = generatedSteps.some(s => s.type === 'practice-recommendation');
+        if (!hasPracticeStep && planResult.data) {
+          generatedSteps.push({
+            type: 'practice-recommendation',
+            content: planResult.data.recommendation || "Now let's put what you've learned into practice!",
+            practicePlan: planResult.data as PracticePlan,
+          });
         }
-      });
-      
-      if (error) throw error;
-      
-      if (data?.steps && Array.isArray(data.steps)) {
-        setSteps(data.steps);
+        
+        setSteps(generatedSteps);
+        
         // Check if we need a graph
-        if (data.needsGraph) {
+        if (conversationResult.data.needsGraph) {
           setShowGraph(true);
-          setGraphConcept(data.graphConcept || subtopicName);
+          setGraphConcept(conversationResult.data.graphConcept || subtopicName);
         }
       } else {
-        // Fallback to default conversation structure
-        setSteps(generateFallbackSteps());
+        setSteps(generateFallbackSteps(planResult.data as PracticePlan | undefined));
       }
     } catch (error) {
       console.error('Error generating conversation:', error);
@@ -107,7 +137,16 @@ export default function ConversationalLearnView({
     }
   };
 
-  const generateFallbackSteps = (): ConversationalStepData[] => {
+  const generateFallbackSteps = (plan?: PracticePlan): ConversationalStepData[] => {
+    const defaultPlan: PracticePlan = plan || {
+      totalExercises: 5,
+      breakdown: { easy: 2, medium: 2, hard: 1 },
+      estimatedMinutes: 15,
+      focusAreas: ['Core concepts', 'Problem solving'],
+      recommendation: "Let's practice what you've learned!",
+      motivationalNote: "You've got this!",
+    };
+    
     return [
       {
         type: 'greeting',
@@ -133,8 +172,9 @@ export default function ConversationalLearnView({
         checkAnswer: 'I understand the concept'
       },
       {
-        type: 'encouragement',
-        content: `Great progress! You're building a solid foundation. Let's move on to practice and apply what you've learned.`
+        type: 'practice-recommendation',
+        content: `Great progress! You've built a solid foundation. Now let's practice to reinforce what you've learned.`,
+        practicePlan: defaultPlan,
       }
     ];
   };
@@ -268,6 +308,7 @@ export default function ConversationalLearnView({
                 onComplete={handleStepComplete}
                 onNeedHelp={handleNeedHelp}
                 onCheckComplete={handleCheckComplete}
+                onStartPractice={(plan) => onStartPractice(plan)}
               />
             ))}
           </AnimatePresence>
@@ -302,33 +343,6 @@ export default function ConversationalLearnView({
         )}
       </AnimatePresence>
 
-      {/* Start Practice Button */}
-      <AnimatePresence>
-        {isComplete && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-6 pt-6 border-t border-border"
-          >
-            <div className="text-center mb-4">
-              <span className="text-lg font-medium text-foreground">
-                Great job! You've completed the lesson. 🎉
-              </span>
-              <p className="text-sm text-muted-foreground mt-1">
-                Ready to test your understanding with some practice problems?
-              </p>
-            </div>
-            <Button 
-              onClick={onStartPractice} 
-              size="lg" 
-              className="w-full py-6 text-lg gap-2"
-            >
-              <PlayCircle className="w-5 h-5" />
-              Start Practice
-            </Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

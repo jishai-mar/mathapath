@@ -10,6 +10,7 @@ import { ArrowLeft, BookOpen, Sparkles, Trophy, ChevronRight, Moon, Sun, Clock, 
 import { toast } from 'sonner';
 import ExerciseView from '@/components/ExerciseView';
 import ConversationalLearnView from '@/components/learning/ConversationalLearnView';
+import { PracticePlan } from '@/components/learning/ConversationalStep';
 
 interface Topic {
   id: string;
@@ -152,6 +153,8 @@ export default function Practice() {
   const [hintsUsedThisExercise, setHintsUsedThisExercise] = useState(0);
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
+  const [practicePlan, setPracticePlan] = useState<PracticePlan | null>(null);
+  const [planExercisesRemaining, setPlanExercisesRemaining] = useState<{ easy: number; medium: number; hard: number } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -273,7 +276,7 @@ export default function Practice() {
     setMode('learning');
   };
 
-  const startPractice = async () => {
+  const startPractice = async (plan?: PracticePlan) => {
     if (!selectedSubtopic || !user) return;
     setMode('practicing');
     setExercisesAttempted(0);
@@ -284,12 +287,31 @@ export default function Practice() {
     setHintsUsedThisExercise(0);
     setSessionStartTime(new Date());
     
-    // Smart starting difficulty based on student's history
-    const { difficulty: startDifficulty, subLevel } = await determineStartingDifficulty(
-      supabase,
-      user.id,
-      selectedSubtopic.id
-    );
+    // Store the practice plan if provided
+    if (plan) {
+      setPracticePlan(plan);
+      setPlanExercisesRemaining({ ...plan.breakdown });
+    } else {
+      setPracticePlan(null);
+      setPlanExercisesRemaining(null);
+    }
+    
+    // Determine starting difficulty based on plan or student history
+    let startDifficulty: 'easy' | 'medium' | 'hard' = 'easy';
+    let subLevel = 2;
+    
+    if (plan && plan.breakdown.easy > 0) {
+      startDifficulty = 'easy';
+    } else if (plan && plan.breakdown.medium > 0) {
+      startDifficulty = 'medium';
+    } else if (plan && plan.breakdown.hard > 0) {
+      startDifficulty = 'hard';
+    } else {
+      // No plan, use smart difficulty determination
+      const result = await determineStartingDifficulty(supabase, user.id, selectedSubtopic.id);
+      startDifficulty = result.difficulty;
+      subLevel = result.subLevel;
+    }
     
     setCurrentDifficulty(startDifficulty);
     setCurrentSubLevel(subLevel);
@@ -476,14 +498,38 @@ export default function Practice() {
     
     let nextDifficulty = currentDifficulty;
     
-    if (suggestedDifficulty) {
-      nextDifficulty = suggestedDifficulty;
-    } else if (consecutiveCorrect >= 2 && currentDifficulty !== 'hard') {
-      nextDifficulty = currentDifficulty === 'easy' ? 'medium' : 'hard';
-      toast.info('Great job! Moving to harder exercises');
-    } else if (consecutiveWrong >= 2 && currentDifficulty !== 'easy') {
-      nextDifficulty = currentDifficulty === 'hard' ? 'medium' : 'easy';
-      toast.info("Let's practice some easier ones first");
+    // If we have a practice plan, follow it
+    if (planExercisesRemaining) {
+      // Update remaining counts based on current exercise
+      const newRemaining = { ...planExercisesRemaining };
+      if (newRemaining[currentDifficulty] > 0) {
+        newRemaining[currentDifficulty]--;
+      }
+      setPlanExercisesRemaining(newRemaining);
+      
+      // Determine next difficulty based on plan
+      if (newRemaining.easy > 0) {
+        nextDifficulty = 'easy';
+      } else if (newRemaining.medium > 0) {
+        nextDifficulty = 'medium';
+      } else if (newRemaining.hard > 0) {
+        nextDifficulty = 'hard';
+      } else {
+        // Plan complete!
+        finishPractice();
+        return;
+      }
+    } else {
+      // No plan - use adaptive difficulty
+      if (suggestedDifficulty) {
+        nextDifficulty = suggestedDifficulty;
+      } else if (consecutiveCorrect >= 2 && currentDifficulty !== 'hard') {
+        nextDifficulty = currentDifficulty === 'easy' ? 'medium' : 'hard';
+        toast.info('Great job! Moving to harder exercises');
+      } else if (consecutiveWrong >= 2 && currentDifficulty !== 'easy') {
+        nextDifficulty = currentDifficulty === 'hard' ? 'medium' : 'easy';
+        toast.info("Let's practice some easier ones first");
+      }
     }
     
     setCurrentDifficulty(nextDifficulty);
@@ -686,14 +732,27 @@ export default function Practice() {
             {mode === 'practicing' && (
               <div className="flex items-center gap-4">
                 <span className="text-sm text-muted-foreground">{topic?.name}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wide">Progress</span>
-                  <span className="font-semibold text-foreground">{exercisesCorrect}/{exercisesAttempted > 0 ? exercisesAttempted : '?'}</span>
-                  <Progress 
-                    value={exercisesAttempted > 0 ? (exercisesCorrect / exercisesAttempted) * 100 : 0} 
-                    className="w-24 h-2"
-                  />
-                </div>
+                {practicePlan ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Plan Progress</span>
+                    <span className="font-semibold text-foreground">
+                      {exercisesAttempted}/{practicePlan.totalExercises}
+                    </span>
+                    <Progress 
+                      value={(exercisesAttempted / practicePlan.totalExercises) * 100} 
+                      className="w-24 h-2"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground uppercase tracking-wide">Progress</span>
+                    <span className="font-semibold text-foreground">{exercisesCorrect}/{exercisesAttempted > 0 ? exercisesAttempted : '?'}</span>
+                    <Progress 
+                      value={exercisesAttempted > 0 ? (exercisesCorrect / exercisesAttempted) * 100 : 0} 
+                      className="w-24 h-2"
+                    />
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -800,6 +859,7 @@ export default function Practice() {
               >
                 <ConversationalLearnView
                   subtopicName={selectedSubtopic.name}
+                  subtopicId={selectedSubtopic.id}
                   topicName={topic?.name || ''}
                   theoryExplanation={selectedSubtopic.theory_explanation}
                   workedExamples={selectedSubtopic.worked_examples || []}
@@ -821,10 +881,19 @@ export default function Practice() {
                 exit={{ opacity: 0, y: -20 }}
                 className="space-y-8"
               >
-                {/* Subtopic header */}
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-primary" />
-                  <span className="text-sm text-primary font-medium uppercase tracking-wide">{selectedSubtopic?.name}</span>
+                {/* Subtopic header with plan info */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <span className="text-sm text-primary font-medium uppercase tracking-wide">{selectedSubtopic?.name}</span>
+                  </div>
+                  {practicePlan && planExercisesRemaining && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="px-2 py-1 rounded bg-green-500/10 text-green-500">🌱 {planExercisesRemaining.easy}</span>
+                      <span className="px-2 py-1 rounded bg-yellow-500/10 text-yellow-500">🌿 {planExercisesRemaining.medium}</span>
+                      <span className="px-2 py-1 rounded bg-orange-500/10 text-orange-500">🌳 {planExercisesRemaining.hard}</span>
+                    </div>
+                  )}
                 </div>
                 
                 {/* Exercise */}

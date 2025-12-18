@@ -29,3 +29,9 @@ verify_jwt = true
 
 [functions.check-exercise-answer]
 verify_jwt = true
+
+[functions.generate-conversational-theory]
+verify_jwt = true
+
+[functions.generate-practice-plan]
+verify_jwt = true
