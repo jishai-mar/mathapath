@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from './MathRenderer';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, User, Loader2, Calculator, LineChart, Ruler } from 'lucide-react';
+import { Send, User, Loader2, Calculator, LineChart, Ruler, X } from 'lucide-react';
 import ToolPanel, { ToolSuggestion, detectToolsFromTopic } from './tools/ToolPanel';
 import { useTutor } from '@/contexts/TutorContext';
 import { TutorAvatar } from './tutor/TutorAvatar';
@@ -19,7 +19,8 @@ interface Message {
 
 interface TutorChatProps {
   subtopicName: string;
-  theoryContext: string;
+  theoryContext?: string;
+  onClose?: () => void;
 }
 
 const chatThemeStyles = {
@@ -29,7 +30,7 @@ const chatThemeStyles = {
   nature: 'from-emerald-500/20 to-green-500/10',
 };
 
-export default function TutorChat({ subtopicName, theoryContext }: TutorChatProps) {
+export default function TutorChat({ subtopicName, theoryContext = '', onClose }: TutorChatProps) {
   const { preferences } = useTutor();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -113,8 +114,11 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
   };
 
   return (
-    <div className="relative">
-      <Card className="border-border/50 bg-card/50">
+    <div className={cn(
+      "relative",
+      onClose && "fixed bottom-24 right-6 z-50 w-96 max-w-[calc(100vw-3rem)] shadow-2xl rounded-2xl"
+    )}>
+      <Card className="border-border/50 bg-card/95 backdrop-blur-xl">
         <CardContent className="p-4 space-y-4">
           {/* Tutor header */}
           <div className="flex items-center gap-3 pb-3 border-b border-border/30">
@@ -123,7 +127,7 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
               <h3 className="font-semibold text-sm">{preferences.tutorName}</h3>
               <p className="text-xs text-muted-foreground">Your personal math tutor</p>
             </div>
-            <div className="flex gap-1">
+            <div className="flex gap-1 items-center">
               {detectToolsFromTopic(subtopicName).calculator && (
                 <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 rounded-full flex items-center gap-0.5">
                   <Calculator className="w-2.5 h-2.5" />
@@ -138,6 +142,14 @@ export default function TutorChat({ subtopicName, theoryContext }: TutorChatProp
                 <span className="text-[10px] px-1.5 py-0.5 bg-primary/10 rounded-full flex items-center gap-0.5">
                   <Ruler className="w-2.5 h-2.5" />
                 </span>
+              )}
+              {onClose && (
+                <button 
+                  onClick={onClose}
+                  className="ml-2 p-1 rounded-lg hover:bg-muted transition-colors"
+                >
+                  <X className="w-4 h-4 text-muted-foreground" />
+                </button>
               )}
             </div>
           </div>
