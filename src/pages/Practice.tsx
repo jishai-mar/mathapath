@@ -1189,22 +1189,45 @@ export default function Practice() {
                 </motion.div>
 
                 {/* Actions */}
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center flex-wrap">
                   <Button
                     variant="outline"
                     size="lg"
                     onClick={() => {
                       setMode('practicing');
                       setSessionStats(null);
+                      setAiSummary(null);
                       setExercisesAttempted(0);
                       setExercisesCorrect(0);
+                      setPracticePlan(null);
+                      setPlanExercisesRemaining(null);
                       setSessionStartTime(new Date());
                       loadExercise(selectedSubtopic!.id, 'easy');
                     }}
                     className="gap-2"
                   >
                     <RotateCcw className="w-4 h-4" />
-                    Retry Practice
+                    Start Over
+                  </Button>
+                  
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    onClick={() => {
+                      // Continue practicing without a plan (adaptive mode)
+                      setMode('practicing');
+                      setSessionStats(null);
+                      setAiSummary(null);
+                      setPracticePlan(null);
+                      setPlanExercisesRemaining(null);
+                      // Keep current progress, just continue with more exercises
+                      setSessionStartTime(new Date());
+                      loadExercise(selectedSubtopic!.id, currentDifficulty);
+                    }}
+                    className="gap-2"
+                  >
+                    <TrendingUp className="w-4 h-4" />
+                    Continue Practicing
                   </Button>
                   
                   {getNextSubtopic() && (
@@ -1216,6 +1239,7 @@ export default function Practice() {
                           setSelectedSubtopic(nextSubtopic);
                           setMode('learning');
                           setSessionStats(null);
+                          setAiSummary(null);
                         }
                       }}
                       className="gap-2"
