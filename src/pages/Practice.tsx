@@ -166,6 +166,7 @@ export default function Practice() {
   const [planExercisesRemaining, setPlanExercisesRemaining] = useState<{ easy: number; medium: number; hard: number } | null>(null);
   const [aiSummary, setAiSummary] = useState<AISessionSummary | null>(null);
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [previousSessionStats, setPreviousSessionStats] = useState<{ correct: number; total: number; accuracy: number } | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -1108,6 +1109,74 @@ export default function Practice() {
                   </div>
                 </div>
 
+                {/* Performance Comparison (shown when continuing practice) */}
+                {previousSessionStats && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="p-6 rounded-2xl bg-gradient-to-br from-secondary/5 to-secondary/10 border border-secondary/20"
+                  >
+                    <div className="flex items-center gap-2 mb-4">
+                      <TrendingUp className="w-5 h-5 text-secondary" />
+                      <h3 className="font-semibold text-foreground">Session Comparison</h3>
+                    </div>
+                    
+                    {(() => {
+                      const currentAccuracy = accuracy;
+                      const prevAccuracy = previousSessionStats.accuracy;
+                      const improvement = currentAccuracy - prevAccuracy;
+                      const additionalExercises = exercisesAttempted - previousSessionStats.total;
+                      const additionalCorrect = exercisesCorrect - previousSessionStats.correct;
+                      
+                      return (
+                        <div className="space-y-4">
+                          {/* Before vs After */}
+                          <div className="grid grid-cols-3 gap-4 text-center">
+                            <div className="p-3 rounded-xl bg-muted/30">
+                              <p className="text-xs text-muted-foreground mb-1">Before</p>
+                              <p className="text-2xl font-bold text-foreground">{prevAccuracy}%</p>
+                              <p className="text-xs text-muted-foreground">{previousSessionStats.correct}/{previousSessionStats.total}</p>
+                            </div>
+                            
+                            <div className="p-3 rounded-xl bg-muted/30 flex flex-col items-center justify-center">
+                              <p className="text-xs text-muted-foreground mb-1">Change</p>
+                              <p className={`text-2xl font-bold ${improvement > 0 ? 'text-green-500' : improvement < 0 ? 'text-red-500' : 'text-muted-foreground'}`}>
+                                {improvement > 0 ? '+' : ''}{improvement}%
+                              </p>
+                              {improvement > 0 ? (
+                                <TrendingUp className="w-4 h-4 text-green-500 mt-1" />
+                              ) : improvement < 0 ? (
+                                <TrendingUp className="w-4 h-4 text-red-500 mt-1 rotate-180" />
+                              ) : null}
+                            </div>
+                            
+                            <div className="p-3 rounded-xl bg-primary/10 border border-primary/20">
+                              <p className="text-xs text-muted-foreground mb-1">After</p>
+                              <p className="text-2xl font-bold text-primary">{currentAccuracy}%</p>
+                              <p className="text-xs text-muted-foreground">{exercisesCorrect}/{exercisesAttempted}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Additional practice summary */}
+                          <div className="p-4 rounded-xl bg-muted/20 text-center">
+                            <p className="text-sm text-muted-foreground">
+                              You completed <span className="font-semibold text-foreground">{additionalExercises} more exercises</span> and got{' '}
+                              <span className="font-semibold text-foreground">{additionalCorrect} correct</span>
+                              {improvement > 0 && (
+                                <span className="text-green-500 font-medium"> — great improvement!</span>
+                              )}
+                              {improvement === 0 && additionalCorrect > 0 && (
+                                <span className="text-secondary font-medium"> — steady practice!</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </motion.div>
+                )}
+
                 {/* AI Tutor Summary */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -1201,6 +1270,7 @@ export default function Practice() {
                       setExercisesCorrect(0);
                       setPracticePlan(null);
                       setPlanExercisesRemaining(null);
+                      setPreviousSessionStats(null);
                       setSessionStartTime(new Date());
                       loadExercise(selectedSubtopic!.id, 'easy');
                     }}
@@ -1214,6 +1284,12 @@ export default function Practice() {
                     variant="secondary"
                     size="lg"
                     onClick={() => {
+                      // Save current stats for comparison
+                      setPreviousSessionStats({
+                        correct: exercisesCorrect,
+                        total: exercisesAttempted,
+                        accuracy: exercisesAttempted > 0 ? Math.round((exercisesCorrect / exercisesAttempted) * 100) : 0
+                      });
                       // Continue practicing without a plan (adaptive mode)
                       setMode('practicing');
                       setSessionStats(null);
@@ -1240,6 +1316,7 @@ export default function Practice() {
                           setMode('learning');
                           setSessionStats(null);
                           setAiSummary(null);
+                          setPreviousSessionStats(null);
                         }
                       }}
                       className="gap-2"
