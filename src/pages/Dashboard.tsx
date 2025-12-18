@@ -71,6 +71,13 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [showTutorChat, setShowTutorChat] = useState(false);
   const [tutorMood, setTutorMood] = useState<'idle' | 'happy' | 'encouraging'>('happy');
+  const [aiInsights, setAiInsights] = useState<{
+    greeting?: string;
+    mainFocus?: string;
+    insights?: Array<{ type: string; text: string }>;
+    motivationalNote?: string;
+  } | null>(null);
+  const [insightsLoading, setInsightsLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -83,6 +90,17 @@ export default function Dashboard() {
       checkComprehensiveDiagnostic();
     }
   }, [user]);
+
+  // Fetch AI insights when data is loaded
+  useEffect(() => {
+    if (!isLoading && profile && topics.length > 0) {
+      const weakSubs = subtopicProgress
+        .filter(sp => sp.mastery_percentage < 60 && sp.mastery_percentage > 0)
+        .sort((a, b) => a.mastery_percentage - b.mastery_percentage)
+        .slice(0, 3);
+      fetchAiInsights(profile, topics, progress, weakSubs);
+    }
+  }, [isLoading, profile, topics, progress, subtopicProgress, tutorPrefs.tutorName, tutorPrefs.personality]);
 
   const checkComprehensiveDiagnostic = async () => {
     try {
@@ -162,6 +180,50 @@ export default function Dashboard() {
       toast.error('Failed to load your data. Please refresh the page.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // Fetch AI-generated insights
+  const fetchAiInsights = async (
+    profileData: Profile | null,
+    topicsData: Topic[],
+    progressData: TopicProgress[],
+    weakSubtopicsData: SubtopicProgress[]
+  ) => {
+    if (!profileData) return;
+    
+    setInsightsLoading(true);
+    try {
+      const topicProgressForAI = progressData.map(p => {
+        const topic = topicsData.find(t => t.id === p.topic_id);
+        return { name: topic?.name || 'Unknown', mastery: p.mastery_percentage };
+      });
+
+      const { data, error } = await supabase.functions.invoke('generate-daily-insights', {
+        body: {
+          studentName: profileData.display_name || 'Student',
+          tutorName: tutorPrefs.tutorName,
+          tutorPersonality: tutorPrefs.personality,
+          currentStreak: profileData.current_streak || 0,
+          totalXp: profileData.total_xp || 0,
+          topicProgress: topicProgressForAI,
+          weakSubtopics: weakSubtopicsData.slice(0, 3),
+        }
+      });
+
+      if (error) {
+        console.error('Error fetching AI insights:', error);
+        return;
+      }
+
+      if (data && !data.fallback) {
+        setAiInsights(data);
+        setTutorMood('happy');
+      }
+    } catch (error) {
+      console.error('Error fetching AI insights:', error);
+    } finally {
+      setInsightsLoading(false);
     }
   };
 
@@ -343,13 +405,42 @@ export default function Dashboard() {
               <div className="flex items-center gap-2 text-primary">
                 <Sparkles className="w-4 h-4" />
                 <span className="text-sm font-medium uppercase tracking-wider">{tutorName} says</span>
+                {insightsLoading && (
+                  <span className="text-xs text-muted-foreground animate-pulse ml-2">analyzing your progress...</span>
+                )}
               </div>
               <h1 className="text-3xl md:text-4xl font-serif text-foreground leading-tight">
-                {getTimeGreeting()}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-primary">{displayName}</span>! 👋
+                {aiInsights?.greeting || `${getTimeGreeting()}, ${displayName}!`} 👋
               </h1>
               <p className="text-lg text-muted-foreground max-w-2xl">
-                {recommendation.message}
+                {aiInsights?.mainFocus || recommendation.message}
               </p>
+              
+              {/* AI Insights Pills */}
+              {aiInsights?.insights && aiInsights.insights.length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {aiInsights.insights.map((insight, idx) => (
+                    <motion.div
+                      key={idx}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: idx * 0.1 }}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                        insight.type === 'strength' 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                          : insight.type === 'improvement'
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                          : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                      }`}
+                    >
+                      {insight.type === 'strength' && '✓ '}
+                      {insight.type === 'improvement' && '↑ '}
+                      {insight.type === 'tip' && '💡 '}
+                      {insight.text}
+                    </motion.div>
+                  ))}
+                </div>
+              )}
               
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 pt-2">
@@ -377,7 +468,7 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Daily Tips Card */}
+            {/* Daily Tips Card with AI Motivational Note */}
             <div className="lg:w-72 w-full glass rounded-2xl p-5 border border-primary/20 bg-primary/5">
               <div className="flex items-center gap-2 mb-3">
                 <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
@@ -386,10 +477,11 @@ export default function Dashboard() {
                 <span className="text-sm font-semibold text-foreground">{tutorName}'s Tip</span>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
-                {profile?.current_streak && profile.current_streak > 0 
-                  ? `Amazing ${profile.current_streak}-day streak! Consistency is key to mastering math. Keep it up!`
-                  : `Start your streak today! Even 10 minutes of practice makes a big difference.`
-                }
+                {aiInsights?.motivationalNote || (
+                  profile?.current_streak && profile.current_streak > 0 
+                    ? `Amazing ${profile.current_streak}-day streak! Consistency is key to mastering math. Keep it up!`
+                    : `Start your streak today! Even 10 minutes of practice makes a big difference.`
+                )}
               </p>
             </div>
           </div>

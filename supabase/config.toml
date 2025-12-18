@@ -38,3 +38,6 @@ verify_jwt = true
 
 [functions.generate-session-summary]
 verify_jwt = true
+
+[functions.generate-daily-insights]
+verify_jwt = true
