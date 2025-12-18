@@ -7,17 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Calculator,
   User,
   Shield,
   CreditCard,
   Bell,
-  Award,
   Pencil,
-  LogOut,
-  HardDrive,
-  Bot
+  Bot,
+  Sparkles
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -27,6 +25,9 @@ import SubscriptionTab from '@/components/profile/SubscriptionTab';
 import NotificationsTab from '@/components/profile/NotificationsTab';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import { TutorCustomizationModal } from '@/components/tutor/TutorCustomizationModal';
+import { TutorWardrobe } from '@/components/tutor/TutorWardrobe';
+import { useUnlockableItems } from '@/hooks/useUnlockableItems';
+import { UnlockNotification } from '@/components/tutor/UnlockNotification';
 
 type ProfileTab = 'general' | 'security' | 'subscription' | 'notifications' | 'tutor';
 
@@ -41,11 +42,13 @@ export default function Profile() {
   const { user, loading: authLoading, signOut } = useAuth();
   const { preferences: tutorPreferences, updatePreferences } = useTutor();
   const navigate = useNavigate();
+  const { newlyUnlocked, clearNewlyUnlocked, equipItem, getEquippedItem } = useUnlockableItems();
   
   const [activeTab, setActiveTab] = useState<ProfileTab>('general');
   const [isLoading, setIsLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [showTutorModal, setShowTutorModal] = useState(false);
+  const [tutorSubTab, setTutorSubTab] = useState<'customize' | 'wardrobe'>('customize');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -116,6 +119,11 @@ export default function Profile() {
       case 'general':
         return <GeneralInfoTab user={user} displayName={profile?.display_name || null} />;
       case 'tutor':
+        const equippedAccessory = getEquippedItem('accessory');
+        const equippedOutfit = getEquippedItem('outfit');
+        const equippedBackground = getEquippedItem('background');
+        const equippedEffect = getEquippedItem('effect');
+        
         return (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -127,44 +135,71 @@ export default function Profile() {
               <p className="text-muted-foreground">Customize how your personal tutor looks and teaches</p>
             </div>
             
-            <div className="bg-card rounded-xl border border-border p-6">
-              <div className="flex items-center gap-6">
-                <TutorAvatar style={tutorPreferences.avatarStyle} mood="happy" size="xl" />
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-foreground">{tutorPreferences.tutorName}</h3>
-                  <p className="text-muted-foreground capitalize">{tutorPreferences.personality} teaching style</p>
-                  <p className="text-sm text-muted-foreground mt-1 capitalize">{tutorPreferences.chatTheme} theme</p>
-                  <Button 
-                    onClick={() => setShowTutorModal(true)} 
-                    className="mt-4 gap-2"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Customize Tutor
-                  </Button>
+            <Tabs value={tutorSubTab} onValueChange={(v) => setTutorSubTab(v as 'customize' | 'wardrobe')}>
+              <TabsList className="w-full grid grid-cols-2 h-auto p-1 mb-6">
+                <TabsTrigger value="customize" className="flex items-center gap-2 py-3">
+                  <Pencil className="w-4 h-4" />
+                  Customize
+                </TabsTrigger>
+                <TabsTrigger value="wardrobe" className="flex items-center gap-2 py-3">
+                  <Sparkles className="w-4 h-4" />
+                  Wardrobe
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="customize" className="space-y-6">
+                <div className="bg-card rounded-xl border border-border p-6">
+                  <div className="flex items-center gap-6">
+                    <TutorAvatar 
+                      style={tutorPreferences.avatarStyle} 
+                      mood="happy" 
+                      size="xl"
+                      equippedAccessory={equippedAccessory?.item.icon_key}
+                      equippedOutfit={equippedOutfit?.item.icon_key}
+                      equippedBackground={equippedBackground?.item.icon_key}
+                      equippedEffect={equippedEffect?.item.icon_key}
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-foreground">{tutorPreferences.tutorName}</h3>
+                      <p className="text-muted-foreground capitalize">{tutorPreferences.personality} teaching style</p>
+                      <p className="text-sm text-muted-foreground mt-1 capitalize">{tutorPreferences.chatTheme} theme</p>
+                      <Button 
+                        onClick={() => setShowTutorModal(true)} 
+                        className="mt-4 gap-2"
+                      >
+                        <Pencil className="w-4 h-4" />
+                        Change Style
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="bg-card rounded-xl border border-border p-4">
-                <h4 className="font-semibold text-foreground mb-2">Teaching Style</h4>
-                <p className="text-sm text-muted-foreground">
-                  {tutorPreferences.personality === 'patient' && 'Takes time to explain concepts carefully with small steps'}
-                  {tutorPreferences.personality === 'encouraging' && 'Celebrates every win and keeps you motivated'}
-                  {tutorPreferences.personality === 'challenging' && 'Pushes you to think deeper and challenges assumptions'}
-                  {tutorPreferences.personality === 'humorous' && 'Makes learning fun with light jokes and casual language'}
-                </p>
-              </div>
-              <div className="bg-card rounded-xl border border-border p-4">
-                <h4 className="font-semibold text-foreground mb-2">Chat Theme</h4>
-                <div className={`h-8 rounded-lg bg-gradient-to-r ${
-                  tutorPreferences.chatTheme === 'default' ? 'from-primary/20 to-primary/10' :
-                  tutorPreferences.chatTheme === 'warm' ? 'from-orange-500/20 to-amber-500/10' :
-                  tutorPreferences.chatTheme === 'cool' ? 'from-blue-500/20 to-cyan-500/10' :
-                  'from-emerald-500/20 to-green-500/10'
-                }`} />
-              </div>
-            </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-card rounded-xl border border-border p-4">
+                    <h4 className="font-semibold text-foreground mb-2">Teaching Style</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {tutorPreferences.personality === 'patient' && 'Takes time to explain concepts carefully with small steps'}
+                      {tutorPreferences.personality === 'encouraging' && 'Celebrates every win and keeps you motivated'}
+                      {tutorPreferences.personality === 'challenging' && 'Pushes you to think deeper and challenges assumptions'}
+                      {tutorPreferences.personality === 'humorous' && 'Makes learning fun with light jokes and casual language'}
+                    </p>
+                  </div>
+                  <div className="bg-card rounded-xl border border-border p-4">
+                    <h4 className="font-semibold text-foreground mb-2">Chat Theme</h4>
+                    <div className={`h-8 rounded-lg bg-gradient-to-r ${
+                      tutorPreferences.chatTheme === 'default' ? 'from-primary/20 to-primary/10' :
+                      tutorPreferences.chatTheme === 'warm' ? 'from-orange-500/20 to-amber-500/10' :
+                      tutorPreferences.chatTheme === 'cool' ? 'from-blue-500/20 to-cyan-500/10' :
+                      'from-emerald-500/20 to-green-500/10'
+                    }`} />
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="wardrobe">
+                <TutorWardrobe />
+              </TabsContent>
+            </Tabs>
           </motion.div>
         );
       case 'security':
@@ -287,6 +322,26 @@ export default function Profile() {
         initialPreferences={tutorPreferences}
         onSave={(prefs) => updatePreferences(prefs)}
       />
+
+      {/* Unlock Notification */}
+      {newlyUnlocked.length > 0 && (
+        <UnlockNotification
+          items={newlyUnlocked}
+          onClose={clearNewlyUnlocked}
+          onEquip={(itemId) => {
+            const item = newlyUnlocked.find(i => i.id === itemId);
+            if (item) {
+              equipItem(itemId, item.category);
+            }
+            clearNewlyUnlocked();
+          }}
+          onViewWardrobe={() => {
+            setActiveTab('tutor');
+            setTutorSubTab('wardrobe');
+            clearNewlyUnlocked();
+          }}
+        />
+      )}
     </div>
   );
 }
