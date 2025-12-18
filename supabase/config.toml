@@ -35,3 +35,6 @@ verify_jwt = true
 
 [functions.generate-practice-plan]
 verify_jwt = true
+
+[functions.generate-session-summary]
+verify_jwt = true

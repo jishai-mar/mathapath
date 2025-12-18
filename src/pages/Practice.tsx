@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, BookOpen, Sparkles, Trophy, ChevronRight, Moon, Sun, Clock, TrendingUp, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, BookOpen, Sparkles, Trophy, ChevronRight, Moon, Sun, Clock, TrendingUp, CheckCircle2, RotateCcw, Target, Lightbulb, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import ExerciseView from '@/components/ExerciseView';
 import ConversationalLearnView from '@/components/learning/ConversationalLearnView';
@@ -61,6 +61,15 @@ interface SessionStats {
   totalQuestions: number;
   timeSpent: number;
   xpGained: number;
+}
+
+interface AISessionSummary {
+  overallFeedback: string;
+  strengths: string[];
+  areasToImprove: string[];
+  nextSteps: string;
+  encouragement: string;
+  recommendedAction: 'retry' | 'next-topic' | 'review-theory' | 'take-break';
 }
 
 type PracticeMode = 'browsing' | 'learning' | 'practicing' | 'completed';
@@ -155,6 +164,8 @@ export default function Practice() {
   const [sessionStats, setSessionStats] = useState<SessionStats | null>(null);
   const [practicePlan, setPracticePlan] = useState<PracticePlan | null>(null);
   const [planExercisesRemaining, setPlanExercisesRemaining] = useState<{ easy: number; medium: number; hard: number } | null>(null);
+  const [aiSummary, setAiSummary] = useState<AISessionSummary | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -537,7 +548,7 @@ export default function Practice() {
     await loadExercise(selectedSubtopic.id, nextDifficulty);
   };
 
-  const finishPractice = () => {
+  const finishPractice = async () => {
     const timeSpent = sessionStartTime 
       ? Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000)
       : 0;
@@ -551,6 +562,32 @@ export default function Practice() {
       xpGained,
     });
     setMode('completed');
+    
+    // Fetch AI summary asynchronously
+    setIsSummaryLoading(true);
+    setAiSummary(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-session-summary', {
+        body: {
+          userId: user?.id,
+          subtopicId: selectedSubtopic?.id,
+          subtopicName: selectedSubtopic?.name,
+          topicName: topic?.name,
+          correctAnswers: exercisesCorrect,
+          totalQuestions: exercisesAttempted,
+          timeSpentSeconds: timeSpent,
+        }
+      });
+      
+      if (!error && data) {
+        setAiSummary(data as AISessionSummary);
+      }
+    } catch (error) {
+      console.error('Error fetching AI summary:', error);
+    } finally {
+      setIsSummaryLoading(false);
+    }
   };
 
   const updateStreak = async () => {
@@ -1070,6 +1107,86 @@ export default function Practice() {
                     </div>
                   </div>
                 </div>
+
+                {/* AI Tutor Summary */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="p-6 rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 border border-primary/20"
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-primary" />
+                    <h3 className="font-semibold text-foreground">Your Tutor's Feedback</h3>
+                  </div>
+                  
+                  {isSummaryLoading ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-4 w-5/6" />
+                    </div>
+                  ) : aiSummary ? (
+                    <div className="space-y-4">
+                      {/* Overall feedback */}
+                      <p className="text-foreground leading-relaxed">
+                        {aiSummary.overallFeedback}
+                      </p>
+                      
+                      <div className="grid md:grid-cols-2 gap-4">
+                        {/* Strengths */}
+                        <div className="p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                            <span className="text-sm font-medium text-green-500">Strengths</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {aiSummary.strengths.map((strength, idx) => (
+                              <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                                <span className="text-green-500 mt-1">•</span>
+                                {strength}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        
+                        {/* Areas to improve */}
+                        <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Target className="w-4 h-4 text-orange-500" />
+                            <span className="text-sm font-medium text-orange-500">Focus Areas</span>
+                          </div>
+                          <ul className="space-y-1">
+                            {aiSummary.areasToImprove.map((area, idx) => (
+                              <li key={idx} className="text-sm text-foreground/80 flex items-start gap-2">
+                                <span className="text-orange-500 mt-1">•</span>
+                                {area}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      
+                      {/* Next steps */}
+                      <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Lightbulb className="w-4 h-4 text-primary" />
+                          <span className="text-sm font-medium text-primary">Recommended Next Step</span>
+                        </div>
+                        <p className="text-sm text-foreground/80">{aiSummary.nextSteps}</p>
+                      </div>
+                      
+                      {/* Encouragement */}
+                      <p className="text-center text-sm text-muted-foreground italic">
+                        ✨ {aiSummary.encouragement}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground text-sm">
+                      Great work completing this session! Keep practicing to improve your skills.
+                    </p>
+                  )}
+                </motion.div>
 
                 {/* Actions */}
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
