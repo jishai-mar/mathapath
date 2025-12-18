@@ -6,13 +6,19 @@ const corsHeaders = {
 };
 
 interface ConversationalStep {
-  type: 'greeting' | 'question' | 'explanation' | 'formula' | 'example' | 'understanding-check' | 'hint' | 'encouragement' | 'transition';
+  type: 'greeting' | 'question' | 'explanation' | 'formula' | 'example' | 'understanding-check' | 'hint' | 'encouragement' | 'transition' | 'practice-recommendation';
   content: string;
   checkQuestion?: string;
   checkAnswer?: string;
   checkHint?: string;
   options?: string[];
   formula?: string;
+  practicePlan?: {
+    totalExercises: number;
+    breakdown: { easy: number; medium: number; hard: number };
+    estimatedMinutes: number;
+    focusAreas: string[];
+  };
 }
 
 serve(async (req) => {
@@ -83,6 +89,7 @@ STEP TYPES:
 - "hint": Helpful tip or alternative explanation
 - "encouragement": Positive reinforcement
 - "transition": Bridge between sections
+- "practice-recommendation": AI's recommendation for practice (ALWAYS include as LAST step)
 
 STRUCTURE YOUR LESSON:
 1. Greeting - hook their interest with a real-world connection or intriguing question
@@ -93,7 +100,7 @@ STRUCTURE YOUR LESSON:
 6. Formula (if applicable) - present key formula with intuition
 7. Example - work through a problem together
 8. Understanding Check 2 - another mini-exercise
-9. Encouragement - celebrate progress, preview practice
+9. Practice Recommendation - ALWAYS end with type "practice-recommendation" that includes a personalized recommendation for how many exercises to do
 
 For understanding-check steps:
 - checkQuestion: A specific, answerable question
