@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { TutorProvider } from "@/contexts/TutorContext";
+import { TutorProvider, useTutor } from "@/contexts/TutorContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,6 +17,7 @@ import DiagnosticTest from "./pages/DiagnosticTest";
 import ComprehensiveDiagnostic from "./pages/ComprehensiveDiagnostic";
 import LearningProfile from "./pages/LearningProfile";
 import Profile from "./pages/Profile";
+import MeetYourTutor from "./pages/MeetYourTutor";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const queryClient = new QueryClient();
 // Smart router that handles auth state and redirects
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const { isFirstTime, isLoading: tutorLoading } = useTutor();
   const [diagnosticCompleted, setDiagnosticCompleted] = useState<boolean | null>(null);
   const [checkingDiagnostic, setCheckingDiagnostic] = useState(true);
 
@@ -54,7 +56,7 @@ function AppRoutes() {
   }, [user]);
 
   // Show nothing while loading to prevent flash
-  if (loading || checkingDiagnostic) {
+  if (loading || checkingDiagnostic || tutorLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -72,6 +74,8 @@ function AppRoutes() {
             <Landing />
           ) : !diagnosticCompleted ? (
             <ComprehensiveDiagnostic />
+          ) : isFirstTime ? (
+            <MeetYourTutor />
           ) : (
             <Dashboard />
           )
@@ -83,6 +87,7 @@ function AppRoutes() {
       <Route path="/practice/:topicId" element={<Practice />} />
       <Route path="/profile" element={<Profile />} />
       <Route path="/learning-profile" element={<LearningProfile />} />
+      <Route path="/meet-tutor" element={<MeetYourTutor />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
