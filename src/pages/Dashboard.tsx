@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTutor } from '@/contexts/TutorContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import TopicGrid from '@/components/TopicGrid';
+import { TutorAvatar } from '@/components/tutor/TutorAvatar';
+import TutorChat from '@/components/TutorChat';
 import { 
   Sparkles, 
   Star, 
@@ -15,9 +18,10 @@ import {
   AlertTriangle, 
   ArrowRight,
   Play,
-  Calculator,
-  Sigma,
-  Pentagon
+  MessageCircle,
+  Pentagon,
+  Lightbulb,
+  BookOpen
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -56,6 +60,7 @@ interface DiagnosticStatus {
 
 export default function Dashboard() {
   const { user, signOut, loading: authLoading } = useAuth();
+  const { preferences: tutorPrefs, isLoading: tutorLoading } = useTutor();
   const navigate = useNavigate();
   
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -64,6 +69,8 @@ export default function Dashboard() {
   const [subtopicProgress, setSubtopicProgress] = useState<SubtopicProgress[]>([]);
   const [diagnosticStatuses, setDiagnosticStatuses] = useState<DiagnosticStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showTutorChat, setShowTutorChat] = useState(false);
+  const [tutorMood, setTutorMood] = useState<'idle' | 'happy' | 'encouraging'>('happy');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -212,9 +219,49 @@ export default function Dashboard() {
   }
 
   const displayName = profile?.display_name || user?.email?.split('@')[0] || 'Student';
+  const tutorName = tutorPrefs.tutorName;
 
   // XP chart data (mock for visual)
   const xpBars = [40, 60, 50, 75, 55, 90, 100];
+
+  // Generate personalized greeting based on time of day and progress
+  const getTimeGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  // Generate personalized recommendation
+  const getPersonalizedRecommendation = () => {
+    if (weakSubtopics.length > 0) {
+      return {
+        type: 'weakness',
+        message: `I noticed you're still working on ${weakSubtopics[0].subtopic_name}. Let's tackle that together today!`,
+        action: 'Practice Now',
+        topic: weakSubtopics[0]
+      };
+    }
+    if (currentTopic) {
+      const prog = getTopicProgress(currentTopic.id);
+      if (prog.masteryPercentage > 0 && prog.masteryPercentage < 80) {
+        return {
+          type: 'continue',
+          message: `You're ${prog.masteryPercentage}% through ${currentTopic.name}. Let's keep that momentum going!`,
+          action: 'Continue Learning',
+          topic: currentTopic
+        };
+      }
+    }
+    return {
+      type: 'new',
+      message: `Ready to explore something new? I've got some great topics lined up for you!`,
+      action: 'Start Learning',
+      topic: topics[0]
+    };
+  };
+
+  const recommendation = getPersonalizedRecommendation();
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -271,29 +318,80 @@ export default function Dashboard() {
 
       {/* Main content */}
       <main className="max-w-7xl mx-auto px-6 lg:px-10 py-8 lg:py-10 space-y-10">
-        {/* Welcome section */}
+        {/* Tutor Greeting Section */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6"
+          className="glass rounded-3xl p-8 relative overflow-hidden"
         >
-          <div>
-            <div className="flex items-center gap-2 text-primary mb-2">
-              <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-medium uppercase tracking-wider">Welcome back</span>
+          <div className="absolute -right-20 -top-20 w-60 h-60 bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-secondary/10 rounded-full blur-3xl" />
+          
+          <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8 relative z-10">
+            {/* Tutor Avatar */}
+            <div className="flex-shrink-0">
+              <TutorAvatar 
+                style={tutorPrefs.avatarStyle}
+                mood={tutorMood}
+                size="lg"
+              />
             </div>
-            <h1 className="text-4xl md:text-5xl font-serif text-foreground leading-tight">
-              Ready to continue<br />your journey, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-primary">{displayName}</span>?
-            </h1>
-          </div>
-          <div className="flex gap-3">
-            <Button variant="outline" className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight">
-              View History
-            </Button>
-            <Button className="px-6 py-3 h-auto rounded-xl bg-foreground text-background hover:bg-foreground/90 font-bold shadow-lg shadow-white/5">
-              Resume {currentTopic?.name || 'Learning'}
-            </Button>
+            
+            {/* Greeting Content */}
+            <div className="flex-1 space-y-4">
+              <div className="flex items-center gap-2 text-primary">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-sm font-medium uppercase tracking-wider">{tutorName} says</span>
+              </div>
+              <h1 className="text-3xl md:text-4xl font-serif text-foreground leading-tight">
+                {getTimeGreeting()}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-primary">{displayName}</span>! 👋
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl">
+                {recommendation.message}
+              </p>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3 pt-2">
+                <Button 
+                  onClick={() => {
+                    if (recommendation.type === 'weakness') {
+                      navigate('/practice');
+                    } else if (recommendation.topic && 'id' in recommendation.topic) {
+                      handleTopicClick(recommendation.topic.id);
+                    }
+                  }}
+                  className="px-6 py-3 h-auto rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-lg shadow-primary/20"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  {recommendation.action}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowTutorChat(true)}
+                  className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Ask {tutorName}
+                </Button>
+              </div>
+            </div>
+
+            {/* Daily Tips Card */}
+            <div className="lg:w-72 w-full glass rounded-2xl p-5 border border-primary/20 bg-primary/5">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Lightbulb className="w-4 h-4 text-primary" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">{tutorName}'s Tip</span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                {profile?.current_streak && profile.current_streak > 0 
+                  ? `Amazing ${profile.current_streak}-day streak! Consistency is key to mastering math. Keep it up!`
+                  : `Start your streak today! Even 10 minutes of practice makes a big difference.`
+                }
+              </p>
+            </div>
           </div>
         </motion.div>
 
@@ -503,6 +601,26 @@ export default function Dashboard() {
           />
         </motion.div>
       </main>
+
+      {/* Floating Ask Tutor Button */}
+      <motion.button
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.5, type: 'spring', stiffness: 200 }}
+        onClick={() => setShowTutorChat(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 transition-all"
+      >
+        <TutorAvatar style={tutorPrefs.avatarStyle} mood="happy" size="sm" />
+        <span className="font-semibold">Ask {tutorName}</span>
+      </motion.button>
+
+      {/* Tutor Chat Panel */}
+      {showTutorChat && (
+        <TutorChat 
+          subtopicName="General Help"
+          onClose={() => setShowTutorChat(false)}
+        />
+      )}
     </div>
   );
 }
