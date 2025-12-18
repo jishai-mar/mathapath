@@ -269,14 +269,14 @@ export default function MeetYourTutor() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="text-center max-w-2xl w-full"
+              className="text-center max-w-3xl w-full"
             >
               <TutorAvatar style={avatarStyle} mood="explaining" size="lg" className="mb-6 mx-auto" />
               
               <h2 className="text-3xl font-serif text-foreground mb-2">How should I teach?</h2>
-              <p className="text-muted-foreground mb-8">Choose a teaching style that motivates you best!</p>
+              <p className="text-muted-foreground mb-6">Choose a teaching style that motivates you best!</p>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {PERSONALITY_OPTIONS.map((option) => (
                   <button
                     key={option.value}
@@ -299,6 +299,49 @@ export default function MeetYourTutor() {
                   </button>
                 ))}
               </div>
+
+              {/* Preview Section */}
+              <motion.div
+                key={personality}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass rounded-2xl p-6 mb-8 text-left border border-primary/20"
+              >
+                <div className="flex items-center gap-2 text-primary mb-3">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="text-xs font-medium uppercase tracking-wider">Preview: How {tutorName} responds</span>
+                </div>
+                
+                <div className="space-y-4">
+                  {/* Correct Answer Response */}
+                  <div className="flex gap-3">
+                    <TutorAvatar style={avatarStyle} mood="happy" size="sm" className="flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">When you get it right:</p>
+                      <div className="bg-card rounded-xl p-3 text-sm text-foreground">
+                        {personality === 'patient' && `"That's correct! You took your time and worked through it step by step. That's exactly how you build solid understanding."`}
+                        {personality === 'encouraging' && `"YES! 🎉 You absolutely crushed it! I knew you could do it! Your hard work is really paying off!"`}
+                        {personality === 'challenging' && `"Correct. Good. Now let's see if you can handle something more complex. Ready to level up?"`}
+                        {personality === 'humorous' && `"Boom! 💥 You just solved that like a math ninja! High five! ✋ (I'd actually high five you but... digital tutor problems.)"`}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Wrong Answer Response */}
+                  <div className="flex gap-3">
+                    <TutorAvatar style={avatarStyle} mood="encouraging" size="sm" className="flex-shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">When you make a mistake:</p>
+                      <div className="bg-card rounded-xl p-3 text-sm text-foreground">
+                        {personality === 'patient' && `"Not quite, but that's okay! Let's slow down and look at this together. Which part feels confusing? We'll work through it one piece at a time."`}
+                        {personality === 'encouraging' && `"Oops! But hey, mistakes are just learning in disguise! You're so close - let me give you a hint and I bet you'll get it!"`}
+                        {personality === 'challenging' && `"Not quite. Think about what you just did. Where did your approach go wrong? I want you to figure out the mistake yourself."`}
+                        {personality === 'humorous' && `"Hmm, that answer is playing hide and seek with the right one! 🙈 Let's retrace our steps - I'll be your math detective partner!"`}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
               
               <div className="flex gap-3 justify-center">
                 <Button variant="outline" onClick={handleBack} className="px-6 py-3 rounded-xl">
