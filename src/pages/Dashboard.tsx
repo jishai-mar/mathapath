@@ -21,7 +21,8 @@ import {
   MessageCircle,
   Pentagon,
   Lightbulb,
-  BookOpen
+  BookOpen,
+  Mic
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -470,6 +471,14 @@ export default function Dashboard() {
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Ask {tutorName}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/voice-tutor')}
+                  className="px-6 py-3 h-auto rounded-xl bg-secondary/10 border-secondary/30 text-secondary hover:bg-secondary/20"
+                >
+                  <Mic className="w-4 h-4 mr-2" />
+                  Voice Mode
                 </Button>
               </div>
             </div>
