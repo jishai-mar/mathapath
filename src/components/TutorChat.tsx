@@ -5,20 +5,24 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from './MathRenderer';
 import { supabase } from '@/integrations/supabase/client';
-import { Send, User, Loader2, Calculator, LineChart, Ruler, X, MessageCircle, Target, Sparkles } from 'lucide-react';
+import { Send, User, Loader2, Calculator, LineChart, Ruler, X, MessageCircle, Target, Sparkles, Image as ImageIcon } from 'lucide-react';
 import ToolPanel, { ToolSuggestion, detectToolsFromTopic } from './tools/ToolPanel';
 import { useTutor } from '@/contexts/TutorContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { TutorAvatar } from './tutor/TutorAvatar';
 import { cn } from '@/lib/utils';
-import { useTutorSession, SessionPhase, EmotionalState } from '@/contexts/TutorSessionContext';
+import { useTutorSession, SessionPhase, EmotionalState, TutoringMode } from '@/contexts/TutorSessionContext';
 import { useSessionNotes } from '@/hooks/useSessionNotes';
+import { TutoringModeSelector } from './chat/TutoringModeSelector';
+import { QuickCheckInput } from './chat/QuickCheckInput';
+import { ChatImageUpload } from './chat/ChatImageUpload';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   toolSuggestion?: ToolSuggestion;
   phase?: SessionPhase;
+  hasImage?: boolean;
 }
 
 interface TutorChatProps {
@@ -58,12 +62,15 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
     addTopicCovered,
     startSession,
     isSessionActive,
+    tutoringMode,
+    setTutoringMode,
   } = useTutorSession();
   const { analyzeAndSaveFromResponse } = useSessionNotes();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [currentToolSuggestion, setCurrentToolSuggestion] = useState<ToolSuggestion | undefined>();
   const [isGeneratingGreeting, setIsGeneratingGreeting] = useState(false);
   const [studentName, setStudentName] = useState<string | undefined>();
@@ -198,13 +205,13 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
     return goalIndicators.some(indicator => message.toLowerCase().includes(indicator));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
-
-    const userMessage = input.trim();
-    setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage, phase }]);
+  const sendMessage = async (userMessage: string, imageData?: string) => {
+    setMessages(prev => [...prev, { 
+      role: 'user', 
+      content: userMessage, 
+      phase,
+      hasImage: !!imageData 
+    }]);
     setIsLoading(true);
 
     // If in goal-setting phase and user specifies a goal, extract and transition
@@ -227,6 +234,8 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
           studentName,
           detectedEmotionalState: emotionalState,
           userId: user?.id,
+          tutoringMode,
+          imageData,
         }
       });
 
@@ -264,6 +273,57 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userMessage = input.trim();
+    setInput('');
+    await sendMessage(userMessage);
+  };
+
+  const handleImageSubmit = async (imageData: string, file: File) => {
+    setIsUploadingImage(true);
+    const userMessage = `[Uploaded image: ${file.name}] Please check my work.`;
+    await sendMessage(userMessage, imageData);
+    setIsUploadingImage(false);
+  };
+
+  const handleQuickCheck = async (answer: string): Promise<{ isCorrect: boolean; feedback: string }> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('ask-tutor', {
+        body: {
+          question: `Quick check: Is this answer correct? "${answer}" - Just tell me yes/no and briefly why.`,
+          subtopicName,
+          theoryContext,
+          conversationHistory: messages.map(m => ({ role: m.role, content: m.content })),
+          tutorName: preferences.tutorName,
+          personality: preferences.personality,
+          sessionPhase: 'learning',
+          tutoringMode: 'quick-check',
+          userId: user?.id,
+        }
+      });
+
+      if (error) throw error;
+
+      const response = data.answer || '';
+      const isCorrect = response.toLowerCase().includes('correct') && 
+                        !response.toLowerCase().includes('incorrect') &&
+                        !response.toLowerCase().includes('not correct');
+      
+      return { isCorrect, feedback: response };
+    } catch (error) {
+      console.error('Quick check error:', error);
+      return { isCorrect: false, feedback: 'Could not verify your answer. Try asking the tutor directly.' };
+    }
+  };
+
+  const handleRequestHelp = () => {
+    setTutoringMode('hint');
+    setInput("I got it wrong - can you help me understand where I went wrong?");
   };
 
   const handleToolUsed = (tool: string) => {
@@ -365,6 +425,15 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
             </div>
           </div>
 
+          {/* Tutoring mode selector - only show during learning phase */}
+          {phase === 'learning' && (
+            <TutoringModeSelector
+              mode={tutoringMode}
+              onModeChange={setTutoringMode}
+              disabled={isLoading}
+            />
+          )}
+
           {/* Session goal indicator */}
           {sessionGoal && phase === 'learning' && (
             <div className="px-3 py-2 bg-primary/5 rounded-lg border border-primary/10">
@@ -412,6 +481,12 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
                           : `bg-gradient-to-br ${chatThemeStyles[preferences.chatTheme]}`
                       )}
                     >
+                      {message.hasImage && (
+                        <div className="flex items-center gap-1.5 mb-2 text-xs opacity-80">
+                          <ImageIcon className="w-3.5 h-3.5" />
+                          <span>Uploaded work</span>
+                        </div>
+                      )}
                       <MathRenderer latex={message.content} />
                     </div>
                     
@@ -455,39 +530,57 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
             </div>
           </ScrollArea>
 
+          {/* Quick Check Input - only show in quick-check mode */}
+          {tutoringMode === 'quick-check' && phase === 'learning' && (
+            <QuickCheckInput
+              onCheck={handleQuickCheck}
+              onRequestHelp={handleRequestHelp}
+              disabled={isLoading}
+            />
+          )}
+
           {/* Input and controls */}
-          <div className="space-y-2">
-            <form onSubmit={handleSubmit} className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={
-                  phase === 'greeting' ? "Share how you're feeling..." :
-                  phase === 'goal-setting' ? "What would you like to work on?" :
-                  phase === 'wrap-up' ? "Any final questions?" :
-                  "Ask a question about this topic..."
-                }
-                className="flex-1 bg-secondary/30 border-border/50"
-                disabled={isLoading || isGeneratingGreeting}
-              />
-              <Button type="submit" size="icon" disabled={!input.trim() || isLoading || isGeneratingGreeting}>
-                <Send className="w-4 h-4" />
-              </Button>
-            </form>
-            
-            {/* End session button - only show during learning phase */}
-            {phase === 'learning' && messages.length > 4 && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full text-xs"
-                onClick={handleEndSession}
-                disabled={isLoading}
-              >
-                End Session & Get Summary
-              </Button>
-            )}
-          </div>
+          {tutoringMode !== 'quick-check' && (
+            <div className="space-y-2">
+              <form onSubmit={handleSubmit} className="flex gap-2">
+                <ChatImageUpload
+                  onImageSubmit={handleImageSubmit}
+                  isUploading={isUploadingImage}
+                  disabled={isLoading || isGeneratingGreeting}
+                />
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder={
+                    phase === 'greeting' ? "Share how you're feeling..." :
+                    phase === 'goal-setting' ? "What would you like to work on?" :
+                    phase === 'wrap-up' ? "Any final questions?" :
+                    tutoringMode === 'hint' ? "Ask for a hint..." :
+                    tutoringMode === 'solution' ? "Ask to see the solution..." :
+                    "Ask a question about this topic..."
+                  }
+                  className="flex-1 bg-secondary/30 border-border/50"
+                  disabled={isLoading || isGeneratingGreeting}
+                />
+                <Button type="submit" size="icon" disabled={!input.trim() || isLoading || isGeneratingGreeting}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+              
+              {/* End session button - only show during learning phase */}
+              {phase === 'learning' && messages.length > 4 && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full text-xs"
+                  onClick={handleEndSession}
+                  disabled={isLoading}
+                >
+                  End Session & Get Summary
+                </Button>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

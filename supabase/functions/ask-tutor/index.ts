@@ -21,6 +21,7 @@ interface SessionNote {
 type Personality = 'patient' | 'encouraging' | 'challenging' | 'humorous';
 type SessionPhase = 'greeting' | 'goal-setting' | 'learning' | 'wrap-up';
 type EmotionalState = 'neutral' | 'engaged' | 'struggling' | 'frustrated' | 'confident' | 'anxious';
+type TutoringMode = 'hint' | 'solution' | 'quick-check';
 
 interface RequestBody {
   question: string;
@@ -34,6 +35,8 @@ interface RequestBody {
   studentName?: string;
   detectedEmotionalState?: EmotionalState;
   userId?: string;
+  tutoringMode?: TutoringMode;
+  imageData?: string;
 }
 
 serve(async (req) => {
@@ -54,6 +57,8 @@ serve(async (req) => {
       studentName,
       detectedEmotionalState = 'neutral',
       userId,
+      tutoringMode = 'hint',
+      imageData,
     } = await req.json() as RequestBody;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -141,6 +146,32 @@ serve(async (req) => {
 - End with warmth and encouragement to return`,
     };
 
+    // Tutoring mode specific instructions
+    const modeInstructions: Record<TutoringMode, string> = {
+      hint: `=== TUTORING MODE: HINT ===
+The student has selected HINT mode. They want to figure things out themselves with minimal guidance.
+- ONLY provide hints, nudges, and guiding questions
+- NEVER show the full solution or work through all steps
+- Ask "What have you tried?" or "What's your instinct?"
+- If they're stuck, give ONE small hint at a time
+- Wait for them to attempt before giving more help
+- Celebrate their thinking process, not just answers`,
+      solution: `=== TUTORING MODE: FULL SOLUTION ===
+The student has requested a complete step-by-step explanation.
+- Walk through the ENTIRE solution with detailed steps
+- Explain the "why" behind each step, not just the "what"
+- Use clear formatting with numbered steps
+- Include relevant formulas and show all work
+- After showing solution, ask them to try a similar problem`,
+      'quick-check': `=== TUTORING MODE: QUICK CHECK ===
+The student wants to verify their answer quickly.
+- Be brief and direct
+- Tell them if their answer is correct or incorrect
+- If incorrect, point out WHERE the error likely is (not the full solution)
+- Ask if they want hints to fix it or see the full solution
+- Keep response very short - this is meant to be fast`,
+    };
+
 const systemPrompt = `You are ${tutorName}, a ${personality} math tutor for Reichman University Mechina students. You are a WARM, FRIENDLY, and EXPERT guide - like a skilled human tutor in a one-on-one session.
 
 ${personalityInstructions[personality]}
@@ -151,6 +182,9 @@ ${sessionGoal ? `Session Goal: ${sessionGoal}` : ''}
 ${studentName ? `Student Name: ${studentName}` : ''}
 Current Topic: "${subtopicName}"
 Detected Emotional State: ${detectedEmotionalState}
+Tutoring Mode: ${tutoringMode}
+
+${modeInstructions[tutoringMode]}
 
 ${sessionMemory ? `=== MEMORY FROM PAST SESSIONS ===
 ${sessionMemory}
@@ -246,13 +280,32 @@ FORMAT RULES:
 
 Remember: You're not just teaching math - you're building confidence, creating a safe learning space, and making the student feel supported. Every interaction should leave them feeling capable and motivated.`;
 
+    // Build messages array with possible image content
+    let userContent: any = question;
+    
+    // If there's image data, create multimodal content
+    if (imageData) {
+      userContent = [
+        { 
+          type: "text", 
+          text: question || "Please analyze my handwritten work in this image. Check if my solution is correct and provide feedback based on the current tutoring mode." 
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: imageData
+          }
+        }
+      ];
+    }
+
     const messages = [
       { role: "system", content: systemPrompt },
       ...conversationHistory.map(m => ({ role: m.role, content: m.content })),
-      { role: "user", content: question }
+      { role: "user", content: userContent }
     ];
 
-    console.log(`Tutor query [${sessionPhase}] for "${subtopicName}": ${question.substring(0, 100)}...`);
+    console.log(`Tutor query [${sessionPhase}][${tutoringMode}] for "${subtopicName}": ${question.substring(0, 100)}${imageData ? ' [with image]' : ''}...`);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

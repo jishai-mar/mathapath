@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useCallback, ReactNode } from 'rea
 
 export type SessionPhase = 'greeting' | 'goal-setting' | 'learning' | 'wrap-up';
 export type EmotionalState = 'neutral' | 'engaged' | 'struggling' | 'frustrated' | 'confident' | 'anxious';
+export type TutoringMode = 'hint' | 'solution' | 'quick-check';
 
 interface SessionGoal {
   description: string;
@@ -25,6 +26,7 @@ interface TutorSessionState {
   sessionStartTime: Date | null;
   isSessionActive: boolean;
   studentName?: string;
+  tutoringMode: TutoringMode;
 }
 
 interface TutorSessionContextType extends TutorSessionState {
@@ -36,6 +38,7 @@ interface TutorSessionContextType extends TutorSessionState {
   addTopicCovered: (topic: string) => void;
   endSession: () => void;
   resetSession: () => void;
+  setTutoringMode: (mode: TutoringMode) => void;
 }
 
 const defaultProgress: SessionProgress = {
@@ -54,6 +57,7 @@ const defaultState: TutorSessionState = {
   sessionStartTime: null,
   isSessionActive: false,
   studentName: undefined,
+  tutoringMode: 'hint',
 };
 
 const TutorSessionContext = createContext<TutorSessionContextType | undefined>(undefined);
@@ -110,6 +114,10 @@ export function TutorSessionProvider({ children }: { children: ReactNode }) {
     setState(defaultState);
   }, []);
 
+  const setTutoringMode = useCallback((tutoringMode: TutoringMode) => {
+    setState(prev => ({ ...prev, tutoringMode }));
+  }, []);
+
   return (
     <TutorSessionContext.Provider
       value={{
@@ -122,6 +130,7 @@ export function TutorSessionProvider({ children }: { children: ReactNode }) {
         addTopicCovered,
         endSession,
         resetSession,
+        setTutoringMode,
       }}
     >
       {children}
