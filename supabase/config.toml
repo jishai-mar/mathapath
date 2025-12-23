@@ -50,3 +50,9 @@ verify_jwt = true
 
 [functions.notebook-tutor]
 verify_jwt = true
+
+[functions.tutor-tts]
+verify_jwt = false
+
+[functions.tutor-stt]
+verify_jwt = false
