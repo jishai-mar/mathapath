@@ -383,11 +383,13 @@ export type Database = {
           comprehensive_diagnostic_completed_at: string | null
           created_at: string
           current_streak: number
+          detected_learning_style: string | null
           display_name: string | null
           first_name: string | null
           id: string
           last_name: string | null
           last_practice_date: string | null
+          last_session_mood: string | null
           longest_streak: number
           notify_achievements: boolean | null
           notify_community_mentions: boolean | null
@@ -397,6 +399,7 @@ export type Database = {
           privacy_marketing_emails: boolean | null
           privacy_public_profile: boolean | null
           privacy_usage_analytics: boolean | null
+          session_count: number | null
           total_xp: number
           updated_at: string
           username: string | null
@@ -409,11 +412,13 @@ export type Database = {
           comprehensive_diagnostic_completed_at?: string | null
           created_at?: string
           current_streak?: number
+          detected_learning_style?: string | null
           display_name?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
           last_practice_date?: string | null
+          last_session_mood?: string | null
           longest_streak?: number
           notify_achievements?: boolean | null
           notify_community_mentions?: boolean | null
@@ -423,6 +428,7 @@ export type Database = {
           privacy_marketing_emails?: boolean | null
           privacy_public_profile?: boolean | null
           privacy_usage_analytics?: boolean | null
+          session_count?: number | null
           total_xp?: number
           updated_at?: string
           username?: string | null
@@ -435,11 +441,13 @@ export type Database = {
           comprehensive_diagnostic_completed_at?: string | null
           created_at?: string
           current_streak?: number
+          detected_learning_style?: string | null
           display_name?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
           last_practice_date?: string | null
+          last_session_mood?: string | null
           longest_streak?: number
           notify_achievements?: boolean | null
           notify_community_mentions?: boolean | null
@@ -449,9 +457,37 @@ export type Database = {
           privacy_marketing_emails?: boolean | null
           privacy_public_profile?: boolean | null
           privacy_usage_analytics?: boolean | null
+          session_count?: number | null
           total_xp?: number
           updated_at?: string
           username?: string | null
+        }
+        Relationships: []
+      }
+      student_session_notes: {
+        Row: {
+          content: string
+          detected_at: string
+          id: string
+          note_type: string
+          subtopic_name: string | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          detected_at?: string
+          id?: string
+          note_type: string
+          subtopic_name?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string
+          detected_at?: string
+          id?: string
+          note_type?: string
+          subtopic_name?: string | null
+          user_id?: string
         }
         Relationships: []
       }
