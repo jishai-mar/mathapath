@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useNotebook, NotebookEntry } from '@/hooks/useNotebook';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
 import { 
   BookOpen, 
   Sparkles, 
@@ -15,30 +16,39 @@ import {
   ArrowLeft,
   TrendingUp,
   PanelRightOpen,
-  PanelRightClose
+  PanelRightClose,
+  Trophy,
+  Target
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NotebookSearch } from '@/components/notebook/NotebookSearch';
 import { NotebookEntryCard } from '@/components/notebook/NotebookEntryCard';
 import { NotebookTutor } from '@/components/notebook/NotebookTutor';
 
-type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'learning_style' | 'emotional';
+type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'mastered';
 
 export default function Notebook() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { entries, stats, isLoading, deleteEntry } = useNotebook();
+  const { entries, stats, isLoading, deleteEntry, markAsMastered, getRelatedEntry } = useNotebook();
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEntry, setSelectedEntry] = useState<NotebookEntry | null>(null);
   const [showTutor, setShowTutor] = useState(true);
+
+  // Calculate mastery progress percentage
+  const masteryProgress = stats.struggles > 0 
+    ? Math.round((stats.masteredStruggles / stats.struggles) * 100) 
+    : 0;
 
   // Filter and search entries
   const filteredEntries = useMemo(() => {
     let result = entries;
     
     // Apply type filter
-    if (filter !== 'all') {
+    if (filter === 'mastered') {
+      result = result.filter(e => e.note_type === 'struggle' && e.mastered_at !== null);
+    } else if (filter !== 'all') {
       result = result.filter(e => e.note_type === filter);
     }
     
@@ -80,10 +90,20 @@ export default function Notebook() {
     }
   };
 
+  const handleMarkMastered = async (entry: NotebookEntry) => {
+    const success = await markAsMastered(entry.id, true);
+    if (success) {
+      toast.success('Congratulations! Challenge mastered! 🎉', {
+        description: 'A breakthrough entry has been created.',
+      });
+    } else {
+      toast.error('Failed to mark as mastered');
+    }
+  };
+
   const handlePractice = (entry: NotebookEntry) => {
     setSelectedEntry(entry);
     setShowTutor(true);
-    // The tutor will automatically offer practice when entry is selected
   };
 
   const handleAskTutor = (entry: NotebookEntry) => {
@@ -91,11 +111,12 @@ export default function Notebook() {
     setShowTutor(true);
   };
 
-  const filterOptions: { value: FilterType; label: string; count: number }[] = [
+  const filterOptions: { value: FilterType; label: string; count: number; icon?: typeof Sparkles }[] = [
     { value: 'all', label: 'All', count: stats.totalEntries },
-    { value: 'breakthrough', label: 'Breakthroughs', count: stats.breakthroughs },
-    { value: 'struggle', label: 'Challenges', count: stats.struggles },
-    { value: 'interest', label: 'Interests', count: stats.interests },
+    { value: 'breakthrough', label: 'Breakthroughs', count: stats.breakthroughs, icon: Sparkles },
+    { value: 'struggle', label: 'Challenges', count: stats.struggles, icon: AlertTriangle },
+    { value: 'mastered', label: 'Mastered', count: stats.masteredStruggles, icon: Trophy },
+    { value: 'interest', label: 'Interests', count: stats.interests, icon: Heart },
   ];
 
   return (
@@ -147,10 +168,52 @@ export default function Notebook() {
       <div className="max-w-7xl mx-auto flex">
         {/* Main Content - Entries */}
         <main className={`flex-1 px-4 sm:px-6 py-6 space-y-6 transition-all ${showTutor ? 'lg:pr-0' : ''}`}>
+          {/* Progress Card - Struggle to Breakthrough */}
+          {stats.struggles > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="glass rounded-xl p-5 border border-border/50"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500/20 to-emerald-500/20 flex items-center justify-center">
+                    <Target className="w-5 h-5 text-emerald-400" />
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-foreground">Struggle → Breakthrough Progress</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.masteredStruggles} of {stats.struggles} challenges mastered
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-emerald-400">{masteryProgress}%</div>
+                  <div className="text-xs text-muted-foreground">Mastery Rate</div>
+                </div>
+              </div>
+              <Progress 
+                value={masteryProgress} 
+                className="h-3 bg-amber-500/20" 
+              />
+              <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3 text-amber-400" />
+                  {stats.activeStruggles} active
+                </span>
+                <span className="flex items-center gap-1">
+                  <Trophy className="w-3 h-3 text-emerald-400" />
+                  {stats.masteredStruggles} mastered
+                </span>
+              </div>
+            </motion.div>
+          )}
+
           {/* Stats Cards */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
             className="grid grid-cols-2 md:grid-cols-4 gap-3"
           >
             <div className="glass rounded-xl p-4 text-center">
@@ -164,7 +227,12 @@ export default function Notebook() {
               </div>
             </div>
             <div className="glass rounded-xl p-4 text-center border-amber-500/20">
-              <div className="text-2xl font-bold text-amber-400">{stats.struggles}</div>
+              <div className="flex items-center justify-center gap-2">
+                <div className="text-2xl font-bold text-amber-400">{stats.activeStruggles}</div>
+                {stats.masteredStruggles > 0 && (
+                  <div className="text-sm text-emerald-400">+{stats.masteredStruggles} ✓</div>
+                )}
+              </div>
               <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
                 <TrendingUp className="w-3 h-3" /> Challenges
               </div>
@@ -188,11 +256,16 @@ export default function Notebook() {
                 key={option.value}
                 variant={filter === option.value ? 'default' : 'outline'}
                 size="sm"
-                className="rounded-full whitespace-nowrap text-xs"
+                className={`rounded-full whitespace-nowrap text-xs gap-1.5 ${
+                  option.value === 'mastered' && filter !== 'mastered' 
+                    ? 'border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10' 
+                    : ''
+                }`}
                 onClick={() => setFilter(option.value)}
               >
+                {option.icon && <option.icon className="w-3 h-3" />}
                 {option.label}
-                <span className="ml-1 opacity-70">({option.count})</span>
+                <span className="opacity-70">({option.count})</span>
               </Button>
             ))}
           </div>
@@ -214,14 +287,16 @@ export default function Notebook() {
                 <BookOpen className="w-8 h-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-medium text-foreground">
-                {searchQuery ? 'No matching entries' : 'No entries yet'}
+                {searchQuery ? 'No matching entries' : filter === 'mastered' ? 'No mastered challenges yet' : 'No entries yet'}
               </h3>
               <p className="text-muted-foreground text-sm max-w-md mx-auto">
                 {searchQuery 
                   ? 'Try a different search term or clear your filters.'
+                  : filter === 'mastered'
+                  ? 'Practice your challenges and mark them as mastered when you\'ve conquered them!'
                   : 'Your learning insights will appear here as you practice with your tutor.'}
               </p>
-              {!searchQuery && (
+              {!searchQuery && filter === 'all' && (
                 <Button onClick={() => navigate('/')} className="mt-4">
                   Start Learning
                 </Button>
@@ -235,10 +310,12 @@ export default function Notebook() {
                     key={entry.id} 
                     entry={entry}
                     isSelected={selectedEntry?.id === entry.id}
+                    relatedEntry={getRelatedEntry(entry.id)}
                     onSelect={setSelectedEntry}
                     onDelete={handleDelete}
                     onPractice={handlePractice}
                     onAskTutor={handleAskTutor}
+                    onMarkMastered={handleMarkMastered}
                   />
                 ))}
               </div>

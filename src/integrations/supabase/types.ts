@@ -523,7 +523,9 @@ export type Database = {
           content: string
           detected_at: string
           id: string
+          mastered_at: string | null
           note_type: string
+          related_entry_id: string | null
           subtopic_name: string | null
           user_id: string
         }
@@ -531,7 +533,9 @@ export type Database = {
           content: string
           detected_at?: string
           id?: string
+          mastered_at?: string | null
           note_type: string
+          related_entry_id?: string | null
           subtopic_name?: string | null
           user_id: string
         }
@@ -539,11 +543,21 @@ export type Database = {
           content?: string
           detected_at?: string
           id?: string
+          mastered_at?: string | null
           note_type?: string
+          related_entry_id?: string | null
           subtopic_name?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "student_session_notes_related_entry_id_fkey"
+            columns: ["related_entry_id"]
+            isOneToOne: false
+            referencedRelation: "student_session_notes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subtopics: {
         Row: {
