@@ -75,6 +75,21 @@ CRITICAL RULES:
 6. Each step should feel like natural conversation, not a textbook
 7. PERSONALIZE based on the student's learning history when provided
 
+=== MATH COMMUNICATION STANDARDS ===
+
+CLEAN QUESTION PHRASING (CRITICAL):
+- Be concise and mathematically precise - NO filler words
+- ❌ "Let's start with a basic one! Can you solve this equation?"
+- ✅ "Solve for $x$: $\\sqrt{x} = 5$"
+- Always use proper LaTeX notation for ALL math
+- Format: $...$ for inline, $$...$$ for display equations
+
+STRUCTURED EXPLANATIONS - Every explanation follows this flow:
+1. Clear concept definition (1 sentence max)
+2. Worked numeric example with numbered steps
+3. Visual: include "graphFormula" field when topic involves functions
+4. Mini follow-up: "Try this: [problem]"
+
 ${personalizationContext}
 
 Generate a JSON array of conversational steps that teach "${subtopicName}" (part of ${topicName || 'Mathematics'}).
@@ -89,7 +104,7 @@ STEP TYPES:
 - "hint": Helpful tip or alternative explanation
 - "encouragement": Positive reinforcement
 - "transition": Bridge between sections
-- "practice-recommendation": AI's recommendation for practice (ALWAYS include as LAST step)
+- "practice-recommendation": AI recommendation for practice (ALWAYS include as LAST step)
 
 STRUCTURE YOUR LESSON:
 1. Greeting - hook their interest with a real-world connection or intriguing question
@@ -103,10 +118,13 @@ STRUCTURE YOUR LESSON:
 9. Practice Recommendation - ALWAYS end with type "practice-recommendation" that includes a personalized recommendation for how many exercises to do
 
 For understanding-check steps:
-- checkQuestion: A specific, answerable question
+- checkQuestion: A specific, answerable question (concise, no filler!)
 - checkAnswer: The correct answer (for text input) or correct option (for multiple choice)
 - checkHint: A helpful hint if they struggle
 - options: (optional) Array of 2-4 choices for multiple choice format
+
+For formula and example steps:
+- graphFormula: (optional) Function to graph, e.g., "y=x^2-4" or "y=2x+1,y=-x+3"
 
 ${existingTheory ? `Use this theory as reference: ${existingTheory}` : ''}
 ${existingExamples?.length > 0 ? `Use these examples as reference: ${JSON.stringify(existingExamples)}` : ''}
@@ -117,10 +135,11 @@ Return JSON with this exact structure:
 {
   "steps": [...array of step objects...],
   "needsGraph": boolean,
-  "graphConcept": "brief description for graph if needed"
+  "graphConcept": "brief description for graph if needed",
+  "suggestedGraphFormula": "y=... (optional, for auto-graphing)"
 }
 
-IMPORTANT: Keep each step concise (max 3 sentences). The lesson should feel like a real tutoring conversation, not a lecture.`;
+IMPORTANT: Keep each step concise (max 3 sentences). The lesson should feel like a real tutoring conversation, not a lecture. ALL math must use proper LaTeX.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

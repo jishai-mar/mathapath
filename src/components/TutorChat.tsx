@@ -16,6 +16,7 @@ import { useSessionNotes } from '@/hooks/useSessionNotes';
 import { TutoringModeSelector } from './chat/TutoringModeSelector';
 import { QuickCheckInput } from './chat/QuickCheckInput';
 import { ChatImageUpload } from './chat/ChatImageUpload';
+import { parseGraphDirectives, detectGraphableContent } from '@/lib/mathContentParser';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -175,21 +176,40 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
     }
   };
 
-  // Parse AI response for tool suggestions
+  // Parse AI response for tool suggestions and auto-graph directives
   const parseToolSuggestions = (content: string): ToolSuggestion => {
     const suggestion: ToolSuggestion = {};
     
+    // Check for explicit graph directives [GRAPH: y=x^2]
+    const graphDirectives = parseGraphDirectives(content);
+    if (graphDirectives.length > 0) {
+      suggestion.graph = true;
+      suggestion.graphFunctions = graphDirectives.flatMap(d => d.functions);
+      suggestion.message = 'View the graph';
+    }
+    
+    // Also detect graphable content even without explicit directives
+    if (!suggestion.graph) {
+      const detectedFunctions = detectGraphableContent(content);
+      if (detectedFunctions.length > 0) {
+        suggestion.graph = true;
+        suggestion.graphFunctions = detectedFunctions;
+        suggestion.message = 'Visualize this function';
+      }
+    }
+    
+    // Check for other tool suggestions
     if (content.includes('📈') || content.toLowerCase().includes('try graphing') || content.toLowerCase().includes('plot')) {
       suggestion.graph = true;
-      suggestion.message = 'Try graphing to visualize';
+      if (!suggestion.message) suggestion.message = 'Try graphing to visualize';
     }
     if (content.includes('🖩') || content.toLowerCase().includes('calculator') || content.toLowerCase().includes('compute')) {
       suggestion.calculator = true;
-      suggestion.message = 'Use calculator to verify';
+      suggestion.message = suggestion.message || 'Use calculator to verify';
     }
     if (content.includes('📏') || content.toLowerCase().includes('measure') || content.toLowerCase().includes('protractor')) {
       suggestion.geometry = true;
-      suggestion.message = 'Use measurement tools';
+      suggestion.message = suggestion.message || 'Use measurement tools';
     }
     
     return suggestion;
