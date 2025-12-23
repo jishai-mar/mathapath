@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import MathRenderer from './MathRenderer';
 import TutorChat from './TutorChat';
 import InteractiveMathGraph from './InteractiveMathGraph';
+import { WatchVideoButton } from './learning/TheoryVideoView';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
@@ -13,7 +14,6 @@ import {
   MessageCircle,
   AlertTriangle,
   Lightbulb,
-  HelpCircle
 } from 'lucide-react';
 
 interface WorkedExample {
@@ -346,12 +346,21 @@ export default function LearnView({
         </AnimatePresence>
       </motion.div>
 
-      {/* Start Practice */}
+      {/* Actions */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.45 }}
+        className="space-y-3"
       >
+        <WatchVideoButton
+          subtopicName={subtopicName}
+          topicName={topicName}
+          content={content}
+          variant="secondary"
+          className="w-full py-5"
+        />
+        
         <Button onClick={onStartPractice} size="lg" className="w-full py-6 text-lg gap-2">
           <PlayCircle className="w-5 h-5" />
           Start Practice
