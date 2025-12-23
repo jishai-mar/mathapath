@@ -1,0 +1,527 @@
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useTutorTTS } from '@/hooks/useTutorTTS';
+import MathRenderer from '@/components/MathRenderer';
+import TutorCharacter from '@/components/tutor/TutorCharacter';
+import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
+import { 
+  Mic, 
+  MicOff, 
+  Send, 
+  Volume2, 
+  VolumeX,
+  CheckCircle2,
+  XCircle,
+  Lightbulb,
+  ArrowRight,
+  Home,
+  PlayCircle
+} from 'lucide-react';
+
+type SessionPhase = 'greeting' | 'exercise' | 'feedback' | 'wrap-up' | 'completed';
+
+interface Exercise {
+  id: string;
+  question: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  hints: string[] | null;
+}
+
+interface SessionStats {
+  correct: number;
+  total: number;
+  xpEarned: number;
+}
+
+interface GuidedTutoringSessionProps {
+  subtopicId: string;
+  subtopicName: string;
+  onEndSession: () => void;
+}
+
+export function GuidedTutoringSession({
+  subtopicId,
+  subtopicName,
+  onEndSession,
+}: GuidedTutoringSessionProps) {
+  const { user } = useAuth();
+  const [phase, setPhase] = useState<SessionPhase>('greeting');
+  const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
+  const [answer, setAnswer] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [lastCorrectAnswer, setLastCorrectAnswer] = useState<string | undefined>();
+  const [stats, setStats] = useState<SessionStats>({ correct: 0, total: 0, xpEarned: 0 });
+  const [currentFeedback, setCurrentFeedback] = useState<{
+    isCorrect: boolean;
+    message: string;
+    tutorFeedback?: any;
+  } | null>(null);
+  const [greetingMessage, setGreetingMessage] = useState('');
+  const [wrapUpMessage, setWrapUpMessage] = useState('');
+  const [exerciseGoal] = useState(5); // Session goal: 5 exercises
+  const [tutorMood, setTutorMood] = useState<'idle' | 'explaining' | 'celebrating' | 'thinking' | 'encouraging'>('idle');
+
+  const { speak, stopSpeaking, isSpeaking } = useTutorTTS({
+    personality: 'friendly',
+    defaultContext: 'default',
+    onSpeakStart: () => {
+      if (phase === 'greeting' || phase === 'wrap-up') {
+        setTutorMood('explaining');
+      }
+    },
+    onSpeakEnd: () => {
+      if (phase === 'greeting') {
+        // Auto-advance to exercise after greeting
+        setTimeout(() => loadNextExercise(), 500);
+      } else if (phase === 'wrap-up') {
+        setPhase('completed');
+      }
+    },
+  });
+
+  // Start session with a greeting
+  useEffect(() => {
+    startSession();
+  }, []);
+
+  const startSession = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-session-greeting', {
+        body: { 
+          subtopicName, 
+          userId: user?.id,
+          exerciseGoal 
+        },
+      });
+
+      if (error) throw error;
+
+      const greeting = data?.greeting || `Hallo! Vandaag gaan we samen werken aan ${subtopicName}. We doen ${exerciseGoal} oefeningen. Ben je er klaar voor?`;
+      setGreetingMessage(greeting);
+      setTutorMood('explaining');
+
+      if (!isMuted) {
+        speak(greeting, 'encouraging');
+      } else {
+        setTimeout(() => loadNextExercise(), 2000);
+      }
+    } catch (error) {
+      console.error('Error starting session:', error);
+      const fallbackGreeting = `Hallo! Laten we beginnen met ${subtopicName}. We doen ${exerciseGoal} oefeningen samen.`;
+      setGreetingMessage(fallbackGreeting);
+      if (!isMuted) {
+        speak(fallbackGreeting, 'encouraging');
+      } else {
+        setTimeout(() => loadNextExercise(), 2000);
+      }
+    }
+  };
+
+  const loadNextExercise = async () => {
+    if (stats.total >= exerciseGoal) {
+      generateWrapUp();
+      return;
+    }
+
+    setPhase('exercise');
+    setAnswer('');
+    setCurrentFeedback(null);
+    setTutorMood('idle');
+
+    try {
+      // Determine difficulty based on performance
+      let difficulty: 'easy' | 'medium' | 'hard' = 'easy';
+      if (stats.total >= 2) {
+        const accuracy = stats.correct / stats.total;
+        if (accuracy >= 0.8) difficulty = 'hard';
+        else if (accuracy >= 0.5) difficulty = 'medium';
+      }
+
+      const { data: exercises } = await supabase
+        .from('exercises_public')
+        .select('*')
+        .eq('subtopic_id', subtopicId)
+        .eq('difficulty', difficulty)
+        .limit(5);
+
+      if (exercises && exercises.length > 0) {
+        const randomExercise = exercises[Math.floor(Math.random() * exercises.length)];
+        setCurrentExercise(randomExercise as Exercise);
+        
+        // Announce exercise
+        if (!isMuted) {
+          const intro = stats.total === 0 
+            ? 'Hier is je eerste opgave.' 
+            : `Goed, hier is opgave ${stats.total + 1}.`;
+          speak(intro, 'explaining');
+        }
+      } else {
+        // Generate new exercise
+        const { data } = await supabase.functions.invoke('generate-exercise', {
+          body: { subtopicId, difficulty, userId: user?.id }
+        });
+        
+        if (data && !data.error) {
+          setCurrentExercise({
+            id: data.id,
+            question: data.question,
+            difficulty: data.difficulty,
+            hints: data.hints,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading exercise:', error);
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!answer.trim() || !currentExercise || !user) return;
+
+    setIsSubmitting(true);
+    setTutorMood('thinking');
+
+    try {
+      const { data, error } = await supabase.functions.invoke('check-exercise-answer', {
+        body: {
+          exerciseId: currentExercise.id,
+          userAnswer: answer,
+          userId: user.id,
+          subtopicName,
+        },
+      });
+
+      if (error) throw error;
+
+      const { isCorrect, correctAnswer, tutorFeedback } = data;
+      
+      setLastCorrectAnswer(correctAnswer);
+      setStats(prev => ({
+        correct: prev.correct + (isCorrect ? 1 : 0),
+        total: prev.total + 1,
+        xpEarned: prev.xpEarned + (isCorrect ? 10 : 0),
+      }));
+
+      setPhase('feedback');
+
+      if (isCorrect) {
+        setTutorMood('celebrating');
+        const celebrationMessages = [
+          'Uitstekend! Helemaal goed!',
+          'Perfect! Je snapt het helemaal!',
+          'Geweldig gedaan!',
+          'Precies goed! Knap werk!',
+        ];
+        const message = celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
+        setCurrentFeedback({ isCorrect: true, message });
+        
+        if (!isMuted) {
+          speak(message, 'celebrating');
+        }
+      } else {
+        setTutorMood('encouraging');
+        setCurrentFeedback({ 
+          isCorrect: false, 
+          message: 'Dat klopt niet helemaal, maar geen zorgen.',
+          tutorFeedback 
+        });
+        
+        if (!isMuted) {
+          speak('Dat klopt niet helemaal. Laten we kijken wat er gebeurde.', 'correcting');
+        }
+      }
+    } catch (error) {
+      console.error('Error checking answer:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleContinue = () => {
+    stopSpeaking();
+    loadNextExercise();
+  };
+
+  const generateWrapUp = async () => {
+    setPhase('wrap-up');
+    setTutorMood('explaining');
+
+    try {
+      const { data } = await supabase.functions.invoke('generate-session-wrapup', {
+        body: { 
+          subtopicName, 
+          correct: stats.correct,
+          total: stats.total,
+          xpEarned: stats.xpEarned,
+        },
+      });
+
+      const wrapUp = data?.wrapUp || `Goed gedaan! Je hebt ${stats.correct} van de ${stats.total} oefeningen goed. Je hebt ${stats.xpEarned} XP verdiend. Tot de volgende keer!`;
+      setWrapUpMessage(wrapUp);
+
+      if (!isMuted) {
+        speak(wrapUp, 'celebrating');
+      } else {
+        setTimeout(() => setPhase('completed'), 3000);
+      }
+    } catch (error) {
+      const fallback = `Goed gedaan! Je hebt ${stats.correct} van de ${stats.total} oefeningen goed. Tot de volgende keer!`;
+      setWrapUpMessage(fallback);
+      if (!isMuted) {
+        speak(fallback, 'celebrating');
+      }
+    }
+  };
+
+  const toggleMute = () => {
+    if (!isMuted) {
+      stopSpeaking();
+    }
+    setIsMuted(!isMuted);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-warm flex flex-col">
+      {/* Header */}
+      <header className="flex items-center justify-between p-4 border-b border-border/30">
+        <Button variant="ghost" size="sm" onClick={onEndSession} className="gap-2">
+          <Home className="w-4 h-4" />
+          Terug
+        </Button>
+        
+        <div className="text-center">
+          <p className="text-sm text-muted-foreground">{subtopicName}</p>
+          <p className="text-xs text-muted-foreground/70">
+            Oefening {Math.min(stats.total + 1, exerciseGoal)} van {exerciseGoal}
+          </p>
+        </div>
+
+        <Button variant="ghost" size="icon" onClick={toggleMute}>
+          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+        </Button>
+      </header>
+
+      {/* Progress */}
+      <div className="px-4 pt-4">
+        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+          <motion.div 
+            className="h-full bg-primary rounded-full"
+            initial={{ width: 0 }}
+            animate={{ width: `${(stats.total / exerciseGoal) * 100}%` }}
+            transition={{ duration: 0.5 }}
+          />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col items-center justify-center p-6 max-w-2xl mx-auto w-full">
+        <AnimatePresence mode="wait">
+          {/* Greeting Phase */}
+          {phase === 'greeting' && (
+            <motion.div
+              key="greeting"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="text-center space-y-8"
+            >
+              <TutorCharacter mood={tutorMood} size="lg" showSpeechBubble />
+              <div className="p-6 rounded-2xl bg-card/50 border border-border/30 max-w-md">
+                <p className="text-lg leading-relaxed">{greetingMessage || 'Welkom! We gaan zo beginnen...'}</p>
+              </div>
+              {isMuted && (
+                <Button onClick={() => loadNextExercise()} className="gap-2">
+                  Beginnen
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
+            </motion.div>
+          )}
+
+          {/* Exercise Phase */}
+          {phase === 'exercise' && currentExercise && (
+            <motion.div
+              key="exercise"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="w-full space-y-8"
+            >
+              <div className="flex justify-center">
+                <TutorCharacter mood={tutorMood} size="md" />
+              </div>
+
+              {/* Question Card */}
+              <div className="p-8 rounded-3xl bg-card/60 border border-border/30 shadow-soft">
+                <div className="text-center text-2xl md:text-3xl leading-relaxed">
+                  <MathRenderer latex={currentExercise.question} displayMode />
+                </div>
+              </div>
+
+              {/* Answer Input */}
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="flex gap-3">
+                  <Input
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                    placeholder="Typ je antwoord..."
+                    className="flex-1 h-14 text-lg bg-card/50 border-border/30 rounded-2xl"
+                    disabled={isSubmitting}
+                    autoFocus
+                  />
+                  <Button 
+                    type="submit" 
+                    size="lg"
+                    disabled={!answer.trim() || isSubmitting}
+                    className="h-14 px-6 rounded-2xl"
+                  >
+                    <Send className="w-5 h-5" />
+                  </Button>
+                </div>
+
+                {currentExercise.hints && currentExercise.hints.length > 0 && (
+                  <button
+                    type="button"
+                    className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    onClick={() => {
+                      if (!isMuted) {
+                        speak(currentExercise.hints![0], 'thinking');
+                      }
+                    }}
+                  >
+                    <Lightbulb className="w-4 h-4 inline mr-2" />
+                    Hint nodig?
+                  </button>
+                )}
+              </form>
+            </motion.div>
+          )}
+
+          {/* Feedback Phase */}
+          {phase === 'feedback' && currentFeedback && (
+            <motion.div
+              key="feedback"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full space-y-6"
+            >
+              <div className="flex justify-center">
+                <TutorCharacter mood={tutorMood} size="lg" showSpeechBubble />
+              </div>
+
+              <div className={`p-6 rounded-3xl border-2 ${
+                currentFeedback.isCorrect 
+                  ? 'bg-secondary/10 border-secondary/30' 
+                  : 'bg-primary/10 border-primary/30'
+              }`}>
+                <div className="flex items-center gap-3 mb-4">
+                  {currentFeedback.isCorrect ? (
+                    <CheckCircle2 className="w-8 h-8 text-secondary" />
+                  ) : (
+                    <XCircle className="w-8 h-8 text-primary" />
+                  )}
+                  <span className="text-xl font-semibold">
+                    {currentFeedback.isCorrect ? 'Goed gedaan!' : 'Niet helemaal'}
+                  </span>
+                </div>
+                <p className="text-muted-foreground">{currentFeedback.message}</p>
+                
+                {!currentFeedback.isCorrect && currentFeedback.tutorFeedback && (
+                  <div className="mt-4 space-y-3">
+                    <div className="p-3 rounded-xl bg-background/50">
+                      <p className="text-sm">
+                        <strong>Tip:</strong> {currentFeedback.tutorFeedback.what_to_focus_on_next}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                {!currentFeedback.isCorrect && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowWalkthrough(true)}
+                    className="flex-1 gap-2 h-12 rounded-2xl"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                    Bekijk uitwerking
+                  </Button>
+                )}
+                <Button 
+                  onClick={handleContinue}
+                  className={`gap-2 h-12 rounded-2xl ${currentFeedback.isCorrect ? 'flex-1' : ''}`}
+                >
+                  Volgende
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Wrap-up Phase */}
+          {(phase === 'wrap-up' || phase === 'completed') && (
+            <motion.div
+              key="wrapup"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="text-center space-y-8"
+            >
+              <TutorCharacter mood="celebrating" size="lg" showSpeechBubble />
+              
+              <div className="p-8 rounded-3xl bg-card/60 border border-border/30 space-y-6">
+                <h2 className="text-2xl font-semibold">Sessie voltooid!</h2>
+                
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div className="p-4 rounded-2xl bg-secondary/10">
+                    <p className="text-3xl font-bold text-secondary">{stats.correct}</p>
+                    <p className="text-sm text-muted-foreground">Goed</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-muted/30">
+                    <p className="text-3xl font-bold">{stats.total}</p>
+                    <p className="text-sm text-muted-foreground">Totaal</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-accent/10">
+                    <p className="text-3xl font-bold text-accent">{stats.xpEarned}</p>
+                    <p className="text-sm text-muted-foreground">XP</p>
+                  </div>
+                </div>
+
+                {wrapUpMessage && (
+                  <p className="text-muted-foreground leading-relaxed">{wrapUpMessage}</p>
+                )}
+
+                {phase === 'completed' && (
+                  <Button onClick={onEndSession} size="lg" className="gap-2 rounded-2xl">
+                    <Home className="w-4 h-4" />
+                    Terug naar overzicht
+                  </Button>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Solution Walkthrough */}
+      {currentExercise && (
+        <SolutionWalkthrough
+          isOpen={showWalkthrough}
+          onClose={() => setShowWalkthrough(false)}
+          question={currentExercise.question}
+          subtopicName={subtopicName}
+          correctAnswer={lastCorrectAnswer}
+        />
+      )}
+    </div>
+  );
+}

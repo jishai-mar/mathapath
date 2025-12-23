@@ -14,9 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ['Lexend', 'sans-serif'],
-        serif: ['Playfair Display', 'serif'],
-        body: ['Noto Sans', 'sans-serif'],
+        sans: ['Nunito', 'sans-serif'],
+        display: ['Quicksand', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
       },
       colors: {
