@@ -355,6 +355,9 @@ export default function Dashboard() {
             <Link to="/practice" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Practice
             </Link>
+            <Link to="/session-history" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              History
+            </Link>
           </nav>
 
           <div className="flex items-center gap-6">
