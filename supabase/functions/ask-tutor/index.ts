@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,6 +9,13 @@ const corsHeaders = {
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+}
+
+interface SessionNote {
+  note_type: string;
+  content: string;
+  subtopic_name?: string;
+  detected_at: string;
 }
 
 type Personality = 'patient' | 'encouraging' | 'challenging' | 'humorous';
@@ -25,6 +33,7 @@ interface RequestBody {
   sessionGoal?: string;
   studentName?: string;
   detectedEmotionalState?: EmotionalState;
+  userId?: string;
 }
 
 serve(async (req) => {
@@ -44,11 +53,49 @@ serve(async (req) => {
       sessionGoal,
       studentName,
       detectedEmotionalState = 'neutral',
+      userId,
     } = await req.json() as RequestBody;
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Fetch past session notes for memory/recall
+    let sessionMemory = '';
+    if (userId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { data: notes } = await supabase
+        .from('student_session_notes')
+        .select('note_type, content, subtopic_name, detected_at')
+        .eq('user_id', userId)
+        .order('detected_at', { ascending: false })
+        .limit(20);
+
+      if (notes && notes.length > 0) {
+        const interests = notes.filter((n: SessionNote) => n.note_type === 'interest').slice(0, 3);
+        const breakthroughs = notes.filter((n: SessionNote) => n.note_type === 'breakthrough').slice(0, 3);
+        const struggles = notes.filter((n: SessionNote) => n.note_type === 'struggle').slice(0, 3);
+        const learningStyles = notes.filter((n: SessionNote) => n.note_type === 'learning_style').slice(0, 2);
+
+        const memoryParts = [];
+        if (interests.length > 0) {
+          memoryParts.push(`Student interests/personal details: ${interests.map((n: SessionNote) => n.content).join('; ')}`);
+        }
+        if (breakthroughs.length > 0) {
+          memoryParts.push(`Recent breakthroughs: ${breakthroughs.map((n: SessionNote) => `${n.content}${n.subtopic_name ? ` (${n.subtopic_name})` : ''}`).join('; ')}`);
+        }
+        if (struggles.length > 0) {
+          memoryParts.push(`Past struggles to be aware of: ${struggles.map((n: SessionNote) => `${n.content}${n.subtopic_name ? ` (${n.subtopic_name})` : ''}`).join('; ')}`);
+        }
+        if (learningStyles.length > 0) {
+          memoryParts.push(`Learning preferences: ${learningStyles.map((n: SessionNote) => n.content).join('; ')}`);
+        }
+        sessionMemory = memoryParts.join('\n');
+      }
     }
 
     // Personality-specific instructions
@@ -104,6 +151,16 @@ ${sessionGoal ? `Session Goal: ${sessionGoal}` : ''}
 ${studentName ? `Student Name: ${studentName}` : ''}
 Current Topic: "${subtopicName}"
 Detected Emotional State: ${detectedEmotionalState}
+
+${sessionMemory ? `=== MEMORY FROM PAST SESSIONS ===
+${sessionMemory}
+
+Use this memory NATURALLY during conversation:
+- Reference past struggles gently when relevant: "I remember you found X tricky before - let's make sure we nail it this time"
+- Celebrate past breakthroughs: "You crushed this last time - let's build on that"
+- Connect to their interests when possible to make examples relatable
+- NEVER mention you have "notes" or a "database" - just naturally recall like a human would
+` : ''}
 
 ${phaseInstructions[sessionPhase]}
 
