@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,11 @@ import {
   Calendar,
   Sparkles,
   Brain,
-  Timer
+  Timer,
+  BarChart3
 } from 'lucide-react';
-import { format, formatDistanceToNow, isToday, isYesterday, isThisWeek } from 'date-fns';
+import { format, formatDistanceToNow, isToday, isYesterday, isThisWeek, subDays, startOfDay, eachDayOfInterval } from 'date-fns';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 interface LearningSession {
   id: string;
@@ -115,6 +117,41 @@ export default function SessionHistory() {
 
   const sessionGroups = groupSessionsByDate(sessions);
 
+  // Generate weekly chart data
+  const weeklyChartData = useMemo(() => {
+    const today = new Date();
+    const sevenDaysAgo = subDays(today, 6);
+    const days = eachDayOfInterval({ start: sevenDaysAgo, end: today });
+
+    return days.map(day => {
+      const dayStart = startOfDay(day);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const daySessions = sessions.filter(s => {
+        const sessionDate = new Date(s.started_at);
+        return sessionDate >= dayStart && sessionDate <= dayEnd;
+      });
+
+      const minutes = daySessions.reduce((sum, s) => sum + (s.duration_minutes || 0), 0);
+      const problems = daySessions.reduce((sum, s) => sum + (s.problems_solved || 0), 0);
+      const correct = daySessions.reduce((sum, s) => sum + (s.correct_answers || 0), 0);
+      const attempts = daySessions.reduce((sum, s) => sum + (s.total_attempts || 0), 0);
+      const xp = daySessions.reduce((sum, s) => sum + (s.xp_earned || 0), 0);
+      const accuracy = attempts > 0 ? Math.round((correct / attempts) * 100) : 0;
+
+      return {
+        date: format(day, 'EEE'),
+        fullDate: format(day, 'MMM d'),
+        minutes,
+        problems,
+        xp,
+        accuracy,
+        sessions: daySessions.length,
+      };
+    });
+  }, [sessions]);
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -207,7 +244,93 @@ export default function SessionHistory() {
               </div>
             )}
 
-            {/* Progress Summary */}
+            {/* Weekly Progress Chart */}
+            {sessions.length > 0 && (
+              <Card className="mb-8">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-primary" />
+                    Weekly Activity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
+                        <XAxis 
+                          dataKey="date" 
+                          tick={{ fontSize: 12 }}
+                          className="text-muted-foreground"
+                          axisLine={{ className: 'stroke-border' }}
+                          tickLine={{ className: 'stroke-border' }}
+                        />
+                        <YAxis 
+                          tick={{ fontSize: 12 }}
+                          className="text-muted-foreground"
+                          axisLine={{ className: 'stroke-border' }}
+                          tickLine={{ className: 'stroke-border' }}
+                        />
+                        <Tooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload;
+                              return (
+                                <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                                  <p className="font-medium text-foreground mb-2">{data.fullDate}</p>
+                                  <div className="space-y-1 text-sm">
+                                    <p className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-primary" />
+                                      <span className="text-muted-foreground">Minutes:</span>
+                                      <span className="font-medium">{data.minutes}</span>
+                                    </p>
+                                    <p className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                                      <span className="text-muted-foreground">XP Earned:</span>
+                                      <span className="font-medium">{data.xp}</span>
+                                    </p>
+                                    <p className="flex items-center gap-2">
+                                      <span className="w-2 h-2 rounded-full bg-amber-500" />
+                                      <span className="text-muted-foreground">Sessions:</span>
+                                      <span className="font-medium">{data.sessions}</span>
+                                    </p>
+                                  </div>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar 
+                          dataKey="minutes" 
+                          fill="hsl(var(--primary))" 
+                          radius={[4, 4, 0, 0]}
+                          name="Minutes"
+                        />
+                        <Bar 
+                          dataKey="xp" 
+                          fill="hsl(142, 76%, 36%)" 
+                          radius={[4, 4, 0, 0]}
+                          name="XP"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex justify-center gap-6 mt-4 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded bg-primary" />
+                      <span className="text-muted-foreground">Minutes Studied</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded bg-emerald-500" />
+                      <span className="text-muted-foreground">XP Earned</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Topics Summary */}
             {stats && stats.uniqueTopics.length > 0 && (
               <Card className="mb-8">
                 <CardHeader className="pb-3">
