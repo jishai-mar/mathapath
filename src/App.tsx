@@ -19,6 +19,7 @@ import LearningProfile from "./pages/LearningProfile";
 import Profile from "./pages/Profile";
 import MeetYourTutor from "./pages/MeetYourTutor";
 import SessionHistory from "./pages/SessionHistory";
+import Notebook from "./pages/Notebook";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -90,6 +91,7 @@ function AppRoutes() {
       <Route path="/learning-profile" element={<LearningProfile />} />
       <Route path="/meet-tutor" element={<MeetYourTutor />} />
       <Route path="/session-history" element={<SessionHistory />} />
+      <Route path="/notebook" element={<Notebook />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
