@@ -7,10 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
+import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 
 interface DiagnosticQuestion {
   id: string;
@@ -67,6 +68,8 @@ export default function DiagnosticTest() {
   const [currentFeedback, setCurrentFeedback] = useState<TutorFeedback | null>(null);
   const [showingFeedback, setShowingFeedback] = useState(false);
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
+  const [showSolutionWalkthrough, setShowSolutionWalkthrough] = useState(false);
+  const [currentCorrectAnswer, setCurrentCorrectAnswer] = useState<string | undefined>();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -177,8 +180,11 @@ export default function DiagnosticTest() {
 
       const isCorrect = data.isCorrect;
       setLastAnswerCorrect(isCorrect);
-
-      // Update local state
+      
+      // Store correct answer for solution walkthrough
+      if (data.correctAnswer) {
+        setCurrentCorrectAnswer(data.correctAnswer);
+      }
       setAnswers(prev => new Map(prev).set(question.id, currentAnswer));
 
       // Update test progress
@@ -213,6 +219,8 @@ export default function DiagnosticTest() {
     setShowingFeedback(false);
     setCurrentFeedback(null);
     setLastAnswerCorrect(null);
+    setShowSolutionWalkthrough(false);
+    setCurrentCorrectAnswer(undefined);
     
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -473,10 +481,20 @@ export default function DiagnosticTest() {
                         </div>
                       </div>
 
-                      <Button onClick={proceedToNextQuestion} className="w-full" size="lg">
-                        I understand, continue
-                        <ArrowRight className="w-4 h-4 ml-2" />
-                      </Button>
+                      <div className="flex gap-3">
+                        <Button 
+                          variant="secondary" 
+                          onClick={() => setShowSolutionWalkthrough(true)} 
+                          className="flex-1 gap-2"
+                        >
+                          <PlayCircle className="w-4 h-4" />
+                          Toon Uitwerking
+                        </Button>
+                        <Button onClick={proceedToNextQuestion} className="flex-1" size="lg">
+                          Ik snap het, verder
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </div>
                     </div>
                   ) : null}
                 </div>
@@ -555,6 +573,15 @@ export default function DiagnosticTest() {
               )}
             </CardContent>
           </Card>
+
+          {/* Solution Walkthrough Modal */}
+          <SolutionWalkthrough
+            isOpen={showSolutionWalkthrough}
+            onClose={() => setShowSolutionWalkthrough(false)}
+            question={currentQuestion.question}
+            subtopicName={topicName}
+            correctAnswer={currentCorrectAnswer}
+          />
         </div>
       </div>
     );

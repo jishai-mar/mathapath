@@ -7,6 +7,7 @@ import ImageUploader from './ImageUploader';
 import FeedbackCard from './FeedbackCard';
 import ToolPanel from './tools/ToolPanel';
 import { ExerciseTutor } from './exercise/ExerciseTutor';
+import { SolutionWalkthrough } from './exercise/SolutionWalkthrough';
 import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { 
   Lightbulb, 
@@ -17,7 +18,8 @@ import {
   Camera,
   Sparkles,
   HelpCircle,
-  MessageCircle
+  MessageCircle,
+  PlayCircle
 } from 'lucide-react';
 
 interface Exercise {
@@ -89,6 +91,8 @@ export default function ExerciseView({
   const [revealedHints, setRevealedHints] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
   const [showTutor, setShowTutor] = useState(false);
+  const [showSolutionWalkthrough, setShowSolutionWalkthrough] = useState(false);
+  const [lastCorrectAnswer, setLastCorrectAnswer] = useState<string | undefined>();
   const [feedback, setFeedback] = useState<{
     type: 'text' | 'ai';
     isCorrect: boolean;
@@ -116,6 +120,11 @@ export default function ExerciseView({
       playCorrect();
     } else {
       playIncorrect();
+    }
+    
+    // Store correct answer for solution walkthrough
+    if (result.correctAnswer) {
+      setLastCorrectAnswer(result.correctAnswer);
     }
     
     setFeedback({
@@ -152,12 +161,18 @@ export default function ExerciseView({
     setFeedback(null);
     setRevealedHints(0);
     setShowUpload(false);
+    setShowSolutionWalkthrough(false);
+    setLastCorrectAnswer(undefined);
   };
 
   const handleRetry = () => {
     setAnswer('');
     setFeedback(null);
     setShowTutor(false);
+  };
+
+  const handleShowWalkthrough = () => {
+    setShowSolutionWalkthrough(true);
   };
 
   const handleShowSolution = () => {
@@ -405,14 +420,24 @@ export default function ExerciseView({
             {/* Action Buttons */}
             <div className="flex gap-3">
               {!feedback.isCorrect && (
-                <Button
-                  variant="outline"
-                  onClick={handleRetry}
-                  className="flex-1 gap-2"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  Try Again
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleRetry}
+                    className="flex-1 gap-2"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Try Again
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={handleShowWalkthrough}
+                    className="flex-1 gap-2"
+                  >
+                    <PlayCircle className="w-4 h-4" />
+                    Toon Uitwerking
+                  </Button>
+                </>
               )}
               <Button
                 onClick={handleNext}
@@ -483,6 +508,15 @@ export default function ExerciseView({
           />
         )}
       </AnimatePresence>
+
+      {/* Solution Walkthrough Modal */}
+      <SolutionWalkthrough
+        isOpen={showSolutionWalkthrough}
+        onClose={() => setShowSolutionWalkthrough(false)}
+        question={exercise.question}
+        subtopicName={subtopicName}
+        correctAnswer={lastCorrectAnswer || feedback?.correctAnswer}
+      />
     </div>
   );
 }

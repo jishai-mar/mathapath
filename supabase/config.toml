@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.tutor-music]
 verify_jwt = false
+
+[functions.solve-exercise]
+verify_jwt = false
