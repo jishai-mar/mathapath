@@ -12,6 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { TutorAvatar } from './tutor/TutorAvatar';
 import { cn } from '@/lib/utils';
 import { useTutorSession, SessionPhase, EmotionalState } from '@/contexts/TutorSessionContext';
+import { useSessionNotes } from '@/hooks/useSessionNotes';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -58,6 +59,7 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
     startSession,
     isSessionActive,
   } = useTutorSession();
+  const { analyzeAndSaveFromResponse } = useSessionNotes();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -136,6 +138,7 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
           currentStreak,
           totalXp,
           weakestSubtopic: subtopicName,
+          userId: user?.id,
         }
       });
 
@@ -223,6 +226,7 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
           sessionGoal: sessionGoal?.description,
           studentName,
           detectedEmotionalState: emotionalState,
+          userId: user?.id,
         }
       });
 
@@ -247,6 +251,9 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
 
       // Track interaction
       updateProgress({ totalAttempts: progress.totalAttempts + 1 });
+      
+      // Analyze conversation for things worth remembering
+      analyzeAndSaveFromResponse(answer, userMessage, subtopicName);
     } catch (error) {
       console.error('Error asking tutor:', error);
       setMessages(prev => [...prev, { 

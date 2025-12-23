@@ -1,9 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+interface SessionNote {
+  note_type: string;
+  content: string;
+  subtopic_name?: string;
+  detected_at: string;
+}
 
 interface RequestBody {
   studentName?: string;
@@ -14,6 +22,7 @@ interface RequestBody {
   recentAchievements?: string[];
   weakestSubtopic?: string;
   lastSessionMood?: string;
+  userId?: string;
 }
 
 serve(async (req) => {
@@ -32,11 +41,45 @@ serve(async (req) => {
       recentAchievements = [],
       weakestSubtopic,
       lastSessionMood,
+      userId,
     } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    // Fetch past session notes for memory/recall
+    let sessionMemory = '';
+    if (userId) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { data: notes } = await supabase
+        .from('student_session_notes')
+        .select('note_type, content, subtopic_name, detected_at')
+        .eq('user_id', userId)
+        .order('detected_at', { ascending: false })
+        .limit(20);
+
+      if (notes && notes.length > 0) {
+        const interests = notes.filter((n: SessionNote) => n.note_type === 'interest').slice(0, 3);
+        const breakthroughs = notes.filter((n: SessionNote) => n.note_type === 'breakthrough').slice(0, 3);
+        const struggles = notes.filter((n: SessionNote) => n.note_type === 'struggle').slice(0, 3);
+
+        const memoryParts = [];
+        if (interests.length > 0) {
+          memoryParts.push(`Student interests/personal details: ${interests.map((n: SessionNote) => n.content).join('; ')}`);
+        }
+        if (breakthroughs.length > 0) {
+          memoryParts.push(`Recent breakthroughs to celebrate: ${breakthroughs.map((n: SessionNote) => n.content).join('; ')}`);
+        }
+        if (struggles.length > 0) {
+          memoryParts.push(`Past struggles to be aware of: ${struggles.map((n: SessionNote) => n.content).join('; ')}`);
+        }
+        sessionMemory = memoryParts.join('\n');
+      }
     }
 
     const personalityTones: Record<string, string> = {
@@ -54,8 +97,9 @@ Your greeting should:
 1. Be warm and welcoming - make the student feel comfortable
 2. Ask genuinely how they're doing today
 3. Reference their progress if relevant (streak, XP, recent achievements)
-4. Subtly suggest what you could work on based on their weakest area
-5. Feel natural and conversational, NOT scripted
+4. If you have MEMORY of past sessions, reference it naturally (e.g., "How did that soccer game go?" or "Last time you finally cracked completing the square - that was awesome!")
+5. Subtly suggest what you could work on based on their weakest area
+6. Feel natural and conversational, NOT scripted
 
 Student context:
 - Name: ${studentName || 'there'}
@@ -65,6 +109,8 @@ Student context:
 - Suggested focus area: ${weakestSubtopic || 'Not determined yet'}
 - Last session mood: ${lastSessionMood || 'Unknown'}
 
+${sessionMemory ? `=== MEMORY FROM PAST SESSIONS ===\n${sessionMemory}\n\nUse this memory NATURALLY - don't force it. Reference 1-2 things that feel relevant.` : ''}
+
 IMPORTANT RULES:
 - Keep the greeting concise (2-4 sentences max for the greeting part)
 - End with a genuine question about how they're feeling or what they'd like to focus on
@@ -72,6 +118,7 @@ IMPORTANT RULES:
 - If they're new, be extra welcoming
 - Sound human and caring, not robotic
 - Use their name naturally (not forced)
+- If you have memory of past sessions, weave it in naturally (don't mention you have a "database" or "notes")
 
 Format: Return ONLY the greeting message, no JSON or formatting.`;
 
