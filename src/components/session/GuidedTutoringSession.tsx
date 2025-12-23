@@ -9,8 +9,6 @@ import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import { 
-  Mic, 
-  MicOff, 
   Send, 
   Volume2, 
   VolumeX,
@@ -19,7 +17,9 @@ import {
   Lightbulb,
   ArrowRight,
   Home,
-  PlayCircle
+  PlayCircle,
+  Focus,
+  Eye
 } from 'lucide-react';
 
 type SessionPhase = 'greeting' | 'exercise' | 'feedback' | 'wrap-up' | 'completed';
@@ -54,6 +54,7 @@ export function GuidedTutoringSession({
   const [answer, setAnswer] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [focusMode, setFocusMode] = useState(false);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
   const [lastCorrectAnswer, setLastCorrectAnswer] = useState<string | undefined>();
   const [stats, setStats] = useState<SessionStats>({ correct: 0, total: 0, xpEarned: 0 });
@@ -288,28 +289,86 @@ export function GuidedTutoringSession({
   };
 
   return (
-    <div className="min-h-screen bg-gradient-warm flex flex-col">
-      {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-border/30">
-        <Button variant="ghost" size="sm" onClick={onEndSession} className="gap-2">
-          <Home className="w-4 h-4" />
-          Terug
-        </Button>
-        
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">{subtopicName}</p>
-          <p className="text-xs text-muted-foreground/70">
-            Oefening {Math.min(stats.total + 1, exerciseGoal)} van {exerciseGoal}
-          </p>
-        </div>
+    <div className={`min-h-screen flex flex-col transition-all duration-500 ${
+      focusMode 
+        ? 'bg-focus-overlay' 
+        : 'bg-gradient-warm'
+    }`}>
+      {/* Focus Mode Overlay */}
+      <AnimatePresence>
+        {focusMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-background/95 backdrop-blur-sm -z-10"
+          />
+        )}
+      </AnimatePresence>
 
-        <Button variant="ghost" size="icon" onClick={toggleMute}>
-          {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        </Button>
-      </header>
+      {/* Header - Hidden in focus mode during exercises */}
+      <AnimatePresence>
+        {(!focusMode || phase !== 'exercise') && (
+          <motion.header 
+            initial={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="flex items-center justify-between p-4 border-b border-border/30"
+          >
+            <Button variant="ghost" size="sm" onClick={onEndSession} className="gap-2">
+              <Home className="w-4 h-4" />
+              Terug
+            </Button>
+            
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">{subtopicName}</p>
+              <p className="text-xs text-muted-foreground/70">
+                Oefening {Math.min(stats.total + 1, exerciseGoal)} van {exerciseGoal}
+              </p>
+            </div>
 
-      {/* Progress */}
-      <div className="px-4 pt-4">
+            <div className="flex items-center gap-1">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setFocusMode(!focusMode)}
+                className={focusMode ? 'text-primary' : ''}
+                title={focusMode ? 'Focus mode uit' : 'Focus mode aan'}
+              >
+                {focusMode ? <Eye className="w-4 h-4" /> : <Focus className="w-4 h-4" />}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={toggleMute}>
+                {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+              </Button>
+            </div>
+          </motion.header>
+        )}
+      </AnimatePresence>
+
+      {/* Focus Mode Mini Controls - Shown during exercises in focus mode */}
+      <AnimatePresence>
+        {focusMode && phase === 'exercise' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed top-4 right-4 flex items-center gap-2 z-10"
+          >
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setFocusMode(false)}
+              className="bg-card/50 backdrop-blur-sm"
+              title="Focus mode uit"
+            >
+              <Eye className="w-4 h-4" />
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Progress - Minimal in focus mode */}
+      <div className={`px-4 pt-4 transition-opacity duration-300 ${focusMode ? 'opacity-30' : ''}`}>
         <div className="h-1.5 bg-muted rounded-full overflow-hidden">
           <motion.div 
             className="h-full bg-primary rounded-full"

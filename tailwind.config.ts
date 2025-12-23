@@ -124,6 +124,10 @@ export default {
         "gradient-primary": "var(--gradient-primary)",
         "gradient-card": "var(--gradient-card)",
         "hero-gradient": "var(--gradient-hero)",
+        "gradient-warm": "var(--gradient-warm)",
+      },
+      backgroundColor: {
+        "focus-overlay": "hsl(var(--focus-overlay))",
       },
       boxShadow: {
         glow: "var(--shadow-glow)",
