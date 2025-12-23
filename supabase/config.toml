@@ -56,3 +56,12 @@ verify_jwt = false
 
 [functions.tutor-stt]
 verify_jwt = false
+
+[functions.tutor-stt-token]
+verify_jwt = false
+
+[functions.tutor-sfx]
+verify_jwt = false
+
+[functions.tutor-music]
+verify_jwt = false
