@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import MathRenderer from './MathRenderer';
@@ -12,7 +12,8 @@ import {
   PlayCircle, 
   MessageCircle,
   AlertTriangle,
-  Lightbulb
+  Lightbulb,
+  HelpCircle
 } from 'lucide-react';
 
 interface WorkedExample {
@@ -304,33 +305,46 @@ export default function LearnView({
         </motion.section>
       )}
 
-      {/* Ask Tutor */}
-      <motion.section
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
+      {/* Ask Tutor - Always visible floating button */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.4 }}
-        className="mb-8"
+        className="fixed bottom-6 right-6 z-50"
       >
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-2"
-          onClick={() => setShowTutor(!showTutor)}
-        >
-          <MessageCircle className="w-4 h-4" />
-          {showTutor ? 'Hide Tutor' : 'Ask AI Tutor'}
-        </Button>
-        
-        {showTutor && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            className="mt-4"
-          >
-            <TutorChat subtopicName={subtopicName} theoryContext={content?.definition || ''} />
-          </motion.div>
-        )}
-      </motion.section>
+        <AnimatePresence>
+          {!showTutor ? (
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.8 }}
+            >
+              <Button
+                onClick={() => setShowTutor(true)}
+                size="lg"
+                className="rounded-full h-14 px-6 shadow-xl bg-primary hover:bg-primary/90 gap-2"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span>Ask Tutor</span>
+              </Button>
+              <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              className="w-96 max-w-[calc(100vw-2rem)]"
+            >
+              <TutorChat 
+                subtopicName={subtopicName} 
+                theoryContext={content?.definition || theoryExplanation || ''} 
+                onClose={() => setShowTutor(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Start Practice */}
       <motion.div

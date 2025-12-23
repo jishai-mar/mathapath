@@ -6,6 +6,7 @@ import MathRenderer from './MathRenderer';
 import ImageUploader from './ImageUploader';
 import FeedbackCard from './FeedbackCard';
 import ToolPanel from './tools/ToolPanel';
+import { ExerciseTutor } from './exercise/ExerciseTutor';
 import { 
   Lightbulb, 
   ArrowRight, 
@@ -14,7 +15,8 @@ import {
   XCircle,
   Camera,
   Sparkles,
-  HelpCircle
+  HelpCircle,
+  MessageCircle
 } from 'lucide-react';
 
 interface Exercise {
@@ -85,6 +87,7 @@ export default function ExerciseView({
   const [answer, setAnswer] = useState('');
   const [revealedHints, setRevealedHints] = useState(0);
   const [showUpload, setShowUpload] = useState(false);
+  const [showTutor, setShowTutor] = useState(false);
   const [feedback, setFeedback] = useState<{
     type: 'text' | 'ai';
     isCorrect: boolean;
@@ -129,6 +132,7 @@ export default function ExerciseView({
   const handleRetry = () => {
     setAnswer('');
     setFeedback(null);
+    setShowTutor(false);
   };
 
   const handleShowSolution = () => {
@@ -418,6 +422,41 @@ export default function ExerciseView({
 
       {/* Interactive Tools Panel */}
       <ToolPanel subtopicName={subtopicName} />
+
+      {/* Floating Tutor Button */}
+      <AnimatePresence>
+        {!showTutor && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="fixed bottom-6 right-6 z-40"
+          >
+            <Button
+              onClick={() => setShowTutor(true)}
+              size="lg"
+              className="rounded-full h-14 w-14 shadow-xl bg-primary hover:bg-primary/90"
+            >
+              <MessageCircle className="w-6 h-6" />
+            </Button>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Exercise Tutor Modal */}
+      <AnimatePresence>
+        {showTutor && (
+          <ExerciseTutor
+            isOpen={showTutor}
+            onClose={() => setShowTutor(false)}
+            exerciseQuestion={exercise.question}
+            subtopicName={subtopicName}
+            currentAnswer={answer}
+            difficulty={displayDifficulty}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
