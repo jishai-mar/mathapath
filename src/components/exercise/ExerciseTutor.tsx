@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,13 +7,15 @@ import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
 import { useTutor } from '@/contexts/TutorContext';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
+import { VoiceControls } from '@/components/voice/VoiceControls';
 import { 
   X, 
   Send, 
   Lightbulb, 
   HelpCircle, 
   BookOpen,
-  Loader2
+  Loader2,
+  Mic
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -49,6 +51,15 @@ export function ExerciseTutor({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [latestResponse, setLatestResponse] = useState<string>('');
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll on new messages
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
 
   const sendMessage = useCallback(async (userMessage: string) => {
     if (!userMessage.trim() || isLoading) return;
@@ -76,6 +87,7 @@ export function ExerciseTutor({
 
       const answer = data.answer || "I couldn't generate a response. Please try again.";
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
+      setLatestResponse(answer); // Trigger voice playback
     } catch (error) {
       console.error('Error asking tutor:', error);
       setMessages(prev => [...prev, { 
@@ -96,6 +108,12 @@ export function ExerciseTutor({
     sendMessage(input);
   };
 
+  const handleVoiceTranscription = (text: string) => {
+    if (text.trim()) {
+      sendMessage(text);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -110,7 +128,10 @@ export function ExerciseTutor({
         <TutorAvatar style={preferences.avatarStyle} mood="thinking" size="sm" />
         <div className="flex-1">
           <h3 className="font-semibold text-sm">{preferences.tutorName}</h3>
-          <p className="text-xs text-muted-foreground">Here to help with this exercise</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-muted-foreground">Voice-enabled tutor</p>
+            <Mic className="w-3 h-3 text-primary" />
+          </div>
         </div>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
           <X className="w-4 h-4" />
@@ -118,11 +139,11 @@ export function ExerciseTutor({
       </div>
 
       {/* Messages */}
-      <ScrollArea className="h-64 p-4">
+      <ScrollArea className="h-64 p-4" ref={scrollRef}>
         {messages.length === 0 ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground text-center mb-4">
-              Stuck on this problem? I can help without giving away the answer.
+              Stuck? Ask me for help by typing or using voice!
             </p>
             <div className="space-y-2">
               {quickActions.map((action, i) => (
@@ -177,24 +198,33 @@ export function ExerciseTutor({
         )}
       </ScrollArea>
 
-      {/* Input */}
+      {/* Input with Voice Controls */}
       <form onSubmit={handleSubmit} className="p-3 border-t border-border/30 bg-muted/20">
-        <div className="flex gap-2">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask for help..."
-            className="min-h-[40px] max-h-24 resize-none text-sm"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSubmit(e);
-              }
-            }}
-          />
-          <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
-            <Send className="w-4 h-4" />
-          </Button>
+        <div className="flex gap-2 items-end">
+          <div className="flex-1">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Type or use voice..."
+              className="min-h-[40px] max-h-24 resize-none text-sm"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSubmit(e);
+                }
+              }}
+            />
+          </div>
+          <div className="flex gap-1">
+            <VoiceControls 
+              onTranscription={handleVoiceTranscription}
+              textToSpeak={latestResponse}
+              isDisabled={isLoading}
+            />
+            <Button type="submit" size="icon" disabled={!input.trim() || isLoading}>
+              <Send className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </form>
     </motion.div>
