@@ -374,6 +374,60 @@ export type Database = {
           },
         ]
       }
+      learning_sessions: {
+        Row: {
+          correct_answers: number | null
+          created_at: string
+          dominant_emotion: string | null
+          duration_minutes: number | null
+          ended_at: string | null
+          hints_used: number | null
+          id: string
+          problems_solved: number | null
+          session_goal: string | null
+          session_summary: string | null
+          started_at: string
+          topics_covered: string[] | null
+          total_attempts: number | null
+          user_id: string
+          xp_earned: number | null
+        }
+        Insert: {
+          correct_answers?: number | null
+          created_at?: string
+          dominant_emotion?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          hints_used?: number | null
+          id?: string
+          problems_solved?: number | null
+          session_goal?: string | null
+          session_summary?: string | null
+          started_at?: string
+          topics_covered?: string[] | null
+          total_attempts?: number | null
+          user_id: string
+          xp_earned?: number | null
+        }
+        Update: {
+          correct_answers?: number | null
+          created_at?: string
+          dominant_emotion?: string | null
+          duration_minutes?: number | null
+          ended_at?: string | null
+          hints_used?: number | null
+          id?: string
+          problems_solved?: number | null
+          session_goal?: string | null
+          session_summary?: string | null
+          started_at?: string
+          topics_covered?: string[] | null
+          total_attempts?: number | null
+          user_id?: string
+          xp_earned?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           about_me: string | null
