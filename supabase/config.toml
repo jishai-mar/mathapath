@@ -41,3 +41,9 @@ verify_jwt = true
 
 [functions.generate-daily-insights]
 verify_jwt = true
+
+[functions.generate-session-greeting]
+verify_jwt = true
+
+[functions.generate-session-wrapup]
+verify_jwt = true

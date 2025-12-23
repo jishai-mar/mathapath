@@ -5,9 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TutorProvider, useTutor } from "@/contexts/TutorContext";
+import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
 // Pages
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -98,11 +98,13 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <TutorProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
+          <TutorSessionProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </TutorSessionProvider>
         </TutorProvider>
       </AuthProvider>
     </TooltipProvider>
