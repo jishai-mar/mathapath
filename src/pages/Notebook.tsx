@@ -1,118 +1,59 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNotebook, NotebookEntry } from '@/hooks/useNotebook';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
 import { 
   BookOpen, 
-  Lightbulb, 
-  AlertTriangle, 
   Sparkles, 
+  AlertTriangle,
   Heart,
-  Brain,
-  Trash2,
   Filter,
   Pentagon,
   ArrowLeft,
-  Calendar,
-  TrendingUp
+  TrendingUp,
+  PanelRightOpen,
+  PanelRightClose
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { format, formatDistanceToNow } from 'date-fns';
+import { NotebookSearch } from '@/components/notebook/NotebookSearch';
+import { NotebookEntryCard } from '@/components/notebook/NotebookEntryCard';
+import { NotebookTutor } from '@/components/notebook/NotebookTutor';
 
 type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'learning_style' | 'emotional';
-
-const noteTypeConfig: Record<string, { icon: typeof Lightbulb; label: string; color: string; bgColor: string }> = {
-  breakthrough: {
-    icon: Sparkles,
-    label: 'Breakthrough',
-    color: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/10 border-emerald-500/20',
-  },
-  struggle: {
-    icon: AlertTriangle,
-    label: 'Challenge',
-    color: 'text-amber-400',
-    bgColor: 'bg-amber-500/10 border-amber-500/20',
-  },
-  interest: {
-    icon: Heart,
-    label: 'Interest',
-    color: 'text-pink-400',
-    bgColor: 'bg-pink-500/10 border-pink-500/20',
-  },
-  learning_style: {
-    icon: Brain,
-    label: 'Learning Style',
-    color: 'text-blue-400',
-    bgColor: 'bg-blue-500/10 border-blue-500/20',
-  },
-  emotional: {
-    icon: Lightbulb,
-    label: 'Insight',
-    color: 'text-purple-400',
-    bgColor: 'bg-purple-500/10 border-purple-500/20',
-  },
-};
-
-function NotebookEntryCard({ entry, onDelete }: { entry: NotebookEntry; onDelete: (id: string) => void }) {
-  const config = noteTypeConfig[entry.note_type] || noteTypeConfig.emotional;
-  const Icon = config.icon;
-
-  return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      className={`group relative p-5 rounded-2xl border ${config.bgColor} backdrop-blur-sm transition-all hover:scale-[1.01]`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4 flex-1">
-          <div className={`p-2.5 rounded-xl ${config.bgColor} ${config.color}`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="outline" className={`${config.color} border-current/20`}>
-                {config.label}
-              </Badge>
-              {entry.subtopic_name && (
-                <Badge variant="secondary" className="text-xs">
-                  {entry.subtopic_name}
-                </Badge>
-              )}
-            </div>
-            <p className="text-foreground leading-relaxed">{entry.content}</p>
-            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-              <Calendar className="w-3 h-3" />
-              {formatDistanceToNow(new Date(entry.detected_at), { addSuffix: true })}
-              <span className="text-muted-foreground/50">•</span>
-              {format(new Date(entry.detected_at), 'MMM d, yyyy')}
-            </p>
-          </div>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-          onClick={() => onDelete(entry.id)}
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
-      </div>
-    </motion.div>
-  );
-}
 
 export default function Notebook() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { entries, stats, isLoading, deleteEntry } = useNotebook();
   const [filter, setFilter] = useState<FilterType>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedEntry, setSelectedEntry] = useState<NotebookEntry | null>(null);
+  const [showTutor, setShowTutor] = useState(true);
+
+  // Filter and search entries
+  const filteredEntries = useMemo(() => {
+    let result = entries;
+    
+    // Apply type filter
+    if (filter !== 'all') {
+      result = result.filter(e => e.note_type === filter);
+    }
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(e => 
+        e.content.toLowerCase().includes(query) ||
+        (e.subtopic_name && e.subtopic_name.toLowerCase().includes(query)) ||
+        e.note_type.toLowerCase().includes(query)
+      );
+    }
+    
+    return result;
+  }, [entries, filter, searchQuery]);
 
   if (authLoading) {
     return (
@@ -131,14 +72,24 @@ export default function Notebook() {
     const success = await deleteEntry(id);
     if (success) {
       toast.success('Entry deleted');
+      if (selectedEntry?.id === id) {
+        setSelectedEntry(null);
+      }
     } else {
       toast.error('Failed to delete entry');
     }
   };
 
-  const filteredEntries = filter === 'all' 
-    ? entries 
-    : entries.filter(e => e.note_type === filter);
+  const handlePractice = (entry: NotebookEntry) => {
+    setSelectedEntry(entry);
+    setShowTutor(true);
+    // The tutor will automatically offer practice when entry is selected
+  };
+
+  const handleAskTutor = (entry: NotebookEntry) => {
+    setSelectedEntry(entry);
+    setShowTutor(true);
+  };
 
   const filterOptions: { value: FilterType; label: string; count: number }[] = [
     { value: 'all', label: 'All', count: stats.totalEntries },
@@ -159,7 +110,7 @@ export default function Notebook() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
               <ArrowLeft className="w-5 h-5" />
@@ -170,104 +121,169 @@ export default function Notebook() {
               </div>
               <div>
                 <h1 className="text-lg font-serif font-medium text-foreground">My Notebook</h1>
-                <p className="text-xs text-muted-foreground">Learning journey insights</p>
+                <p className="text-xs text-muted-foreground">Interactive learning hub</p>
               </div>
             </div>
           </div>
           
-          <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
-            <Pentagon className="w-5 h-5" />
-            <span className="text-sm font-medium hidden sm:inline">MathMastery</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => setShowTutor(!showTutor)}
+            >
+              {showTutor ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+              <span className="hidden sm:inline">{showTutor ? 'Hide' : 'Show'} Tutor</span>
+            </Button>
+            <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <Pentagon className="w-5 h-5" />
+              <span className="text-sm font-medium hidden sm:inline">MathMastery</span>
+            </Link>
+          </div>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8 space-y-8">
-        {/* Stats Cards */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-2 md:grid-cols-4 gap-4"
-        >
-          <div className="glass rounded-2xl p-5 text-center">
-            <div className="text-3xl font-bold text-foreground">{stats.totalEntries}</div>
-            <div className="text-sm text-muted-foreground">Total Insights</div>
-          </div>
-          <div className="glass rounded-2xl p-5 text-center border-emerald-500/20">
-            <div className="text-3xl font-bold text-emerald-400">{stats.breakthroughs}</div>
-            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <Sparkles className="w-3 h-3" /> Breakthroughs
+      <div className="max-w-7xl mx-auto flex">
+        {/* Main Content - Entries */}
+        <main className={`flex-1 px-4 sm:px-6 py-6 space-y-6 transition-all ${showTutor ? 'lg:pr-0' : ''}`}>
+          {/* Stats Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="grid grid-cols-2 md:grid-cols-4 gap-3"
+          >
+            <div className="glass rounded-xl p-4 text-center">
+              <div className="text-2xl font-bold text-foreground">{stats.totalEntries}</div>
+              <div className="text-xs text-muted-foreground">Total Insights</div>
             </div>
-          </div>
-          <div className="glass rounded-2xl p-5 text-center border-amber-500/20">
-            <div className="text-3xl font-bold text-amber-400">{stats.struggles}</div>
-            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <TrendingUp className="w-3 h-3" /> Challenges
+            <div className="glass rounded-xl p-4 text-center border-emerald-500/20">
+              <div className="text-2xl font-bold text-emerald-400">{stats.breakthroughs}</div>
+              <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                <Sparkles className="w-3 h-3" /> Breakthroughs
+              </div>
             </div>
-          </div>
-          <div className="glass rounded-2xl p-5 text-center border-pink-500/20">
-            <div className="text-3xl font-bold text-pink-400">{stats.interests}</div>
-            <div className="text-sm text-muted-foreground flex items-center justify-center gap-1">
-              <Heart className="w-3 h-3" /> Interests
+            <div className="glass rounded-xl p-4 text-center border-amber-500/20">
+              <div className="text-2xl font-bold text-amber-400">{stats.struggles}</div>
+              <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                <TrendingUp className="w-3 h-3" /> Challenges
+              </div>
             </div>
-          </div>
-        </motion.div>
+            <div className="glass rounded-xl p-4 text-center border-pink-500/20">
+              <div className="text-2xl font-bold text-pink-400">{stats.interests}</div>
+              <div className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+                <Heart className="w-3 h-3" /> Interests
+              </div>
+            </div>
+          </motion.div>
 
-        {/* Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2">
-          <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-          {filterOptions.map(option => (
-            <Button
-              key={option.value}
-              variant={filter === option.value ? 'default' : 'outline'}
-              size="sm"
-              className="rounded-full whitespace-nowrap"
-              onClick={() => setFilter(option.value)}
-            >
-              {option.label}
-              <span className="ml-1.5 text-xs opacity-70">({option.count})</span>
-            </Button>
-          ))}
-        </div>
+          {/* Search Bar */}
+          <NotebookSearch value={searchQuery} onChange={setSearchQuery} />
 
-        {/* Entries List */}
-        {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-32 rounded-2xl" />
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <Filter className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            {filterOptions.map(option => (
+              <Button
+                key={option.value}
+                variant={filter === option.value ? 'default' : 'outline'}
+                size="sm"
+                className="rounded-full whitespace-nowrap text-xs"
+                onClick={() => setFilter(option.value)}
+              >
+                {option.label}
+                <span className="ml-1 opacity-70">({option.count})</span>
+              </Button>
             ))}
           </div>
-        ) : filteredEntries.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 space-y-4"
-          >
-            <div className="w-20 h-20 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
-              <BookOpen className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <h3 className="text-xl font-medium text-foreground">No entries yet</h3>
-            <p className="text-muted-foreground max-w-md mx-auto">
-              Your learning insights, breakthroughs, and discoveries will appear here as you practice with your tutor.
-            </p>
-            <Button onClick={() => navigate('/')} className="mt-4">
-              Start Learning
-            </Button>
-          </motion.div>
-        ) : (
-          <AnimatePresence mode="popLayout">
-            <div className="space-y-4">
-              {filteredEntries.map(entry => (
-                <NotebookEntryCard 
-                  key={entry.id} 
-                  entry={entry} 
-                  onDelete={handleDelete}
-                />
+
+          {/* Entries List */}
+          {isLoading ? (
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-28 rounded-xl" />
               ))}
             </div>
-          </AnimatePresence>
+          ) : filteredEntries.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center py-12 space-y-4"
+            >
+              <div className="w-16 h-16 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
+                <BookOpen className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground">
+                {searchQuery ? 'No matching entries' : 'No entries yet'}
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                {searchQuery 
+                  ? 'Try a different search term or clear your filters.'
+                  : 'Your learning insights will appear here as you practice with your tutor.'}
+              </p>
+              {!searchQuery && (
+                <Button onClick={() => navigate('/')} className="mt-4">
+                  Start Learning
+                </Button>
+              )}
+            </motion.div>
+          ) : (
+            <AnimatePresence mode="popLayout">
+              <div className="space-y-3">
+                {filteredEntries.map(entry => (
+                  <NotebookEntryCard 
+                    key={entry.id} 
+                    entry={entry}
+                    isSelected={selectedEntry?.id === entry.id}
+                    onSelect={setSelectedEntry}
+                    onDelete={handleDelete}
+                    onPractice={handlePractice}
+                    onAskTutor={handleAskTutor}
+                  />
+                ))}
+              </div>
+            </AnimatePresence>
+          )}
+        </main>
+
+        {/* Tutor Panel - Right Side */}
+        <AnimatePresence>
+          {showTutor && (
+            <motion.aside
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: 400, opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="hidden lg:block sticky top-[73px] h-[calc(100vh-73px)] border-l border-border/50 overflow-hidden"
+            >
+              <div className="h-full p-4">
+                <NotebookTutor 
+                  selectedEntry={selectedEntry}
+                  allEntries={entries}
+                />
+              </div>
+            </motion.aside>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Mobile Tutor - Bottom Sheet */}
+      <AnimatePresence>
+        {showTutor && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="lg:hidden fixed bottom-0 left-0 right-0 h-[50vh] border-t border-border bg-background z-50"
+          >
+            <NotebookTutor 
+              selectedEntry={selectedEntry}
+              allEntries={entries}
+            />
+          </motion.div>
         )}
-      </main>
+      </AnimatePresence>
     </div>
   );
 }

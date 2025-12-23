@@ -47,3 +47,6 @@ verify_jwt = true
 
 [functions.generate-session-wrapup]
 verify_jwt = true
+
+[functions.notebook-tutor]
+verify_jwt = true
