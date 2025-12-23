@@ -11,6 +11,7 @@ export interface ToolSuggestion {
   graph?: boolean;
   geometry?: boolean;
   message?: string;
+  graphFunctions?: string[]; // Auto-load these functions into graph
 }
 
 interface ToolPanelProps {
@@ -39,11 +40,22 @@ export default function ToolPanel({ subtopicName, suggestion, onToolUsed }: Tool
   const [showGeometry, setShowGeometry] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [minimizedTools, setMinimizedTools] = useState<Record<string, boolean>>({});
+  const [graphFunctions, setGraphFunctions] = useState<string[]>([]);
 
   const detectedTools = detectToolsFromTopic(subtopicName);
   const tools = suggestion || detectedTools;
   
   const hasTools = tools.calculator || tools.graph || tools.geometry;
+
+  // Auto-expand and show graph when functions are provided
+  useEffect(() => {
+    if (suggestion?.graphFunctions && suggestion.graphFunctions.length > 0) {
+      setGraphFunctions(suggestion.graphFunctions);
+      setShowGraph(true);
+      setIsExpanded(true);
+      onToolUsed?.('graph');
+    }
+  }, [suggestion?.graphFunctions]);
 
   useEffect(() => {
     if (suggestion?.message) {
@@ -104,7 +116,7 @@ export default function ToolPanel({ subtopicName, suggestion, onToolUsed }: Tool
                 )}
                 {tools.graph && (
                   <Button
-                    variant="ghost"
+                    variant={showGraph ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => handleOpenTool('graph')}
                     className="gap-1 h-8"
@@ -192,6 +204,7 @@ export default function ToolPanel({ subtopicName, suggestion, onToolUsed }: Tool
           onClose={() => setShowGraph(false)}
           isMinimized={minimizedTools.graph}
           onToggleMinimize={() => setMinimizedTools(m => ({ ...m, graph: !m.graph }))}
+          initialFunctions={graphFunctions}
         />
         <GeometryTools
           isOpen={showGeometry}

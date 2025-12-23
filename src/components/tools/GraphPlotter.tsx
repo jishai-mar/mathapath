@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ interface GraphPlotterProps {
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
   initialFunction?: string;
+  initialFunctions?: string[];
 }
 
 interface FunctionEntry {
@@ -25,15 +26,33 @@ export default function GraphPlotter({
   onClose, 
   isMinimized, 
   onToggleMinimize,
-  initialFunction 
+  initialFunction,
+  initialFunctions = []
 }: GraphPlotterProps) {
-  const [functions, setFunctions] = useState<FunctionEntry[]>([
-    { id: '1', expression: initialFunction || 'x^2', color: COLORS[0] }
-  ]);
+  // Build initial functions list
+  const buildInitialFunctions = useCallback((): FunctionEntry[] => {
+    if (initialFunctions.length > 0) {
+      return initialFunctions.map((expr, i) => ({
+        id: `init-${i}`,
+        expression: expr.replace(/^y\s*=\s*/i, '').trim(),
+        color: COLORS[i % COLORS.length]
+      }));
+    }
+    return [{ id: '1', expression: initialFunction || 'x^2', color: COLORS[0] }];
+  }, [initialFunctions, initialFunction]);
+
+  const [functions, setFunctions] = useState<FunctionEntry[]>(buildInitialFunctions);
   const [newFunc, setNewFunc] = useState('');
   const [xRange, setXRange] = useState({ min: -10, max: 10 });
   const [yRange, setYRange] = useState({ min: -10, max: 10 });
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
+
+  // Update functions when initialFunctions changes
+  useEffect(() => {
+    if (initialFunctions.length > 0) {
+      setFunctions(buildInitialFunctions());
+    }
+  }, [initialFunctions, buildInitialFunctions]);
 
   const width = 320;
   const height = 240;
