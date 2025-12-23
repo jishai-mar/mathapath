@@ -22,7 +22,8 @@ import {
   Pentagon,
   Lightbulb,
   BookOpen,
-  Mic
+  Mic,
+  Bookmark
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -479,6 +480,14 @@ export default function Dashboard() {
                 >
                   <Mic className="w-4 h-4 mr-2" />
                   Voice Mode
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate('/bookmarks')}
+                  className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground"
+                >
+                  <Bookmark className="w-4 h-4 mr-2" />
+                  Bookmarks
                 </Button>
               </div>
             </div>
