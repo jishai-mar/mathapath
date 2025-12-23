@@ -6,6 +6,7 @@ import MathRenderer from './MathRenderer';
 import TutorChat from './TutorChat';
 import InteractiveMathGraph from './InteractiveMathGraph';
 import { WatchVideoButton } from './learning/TheoryVideoView';
+import { BookmarkButton } from './bookmark/BookmarkButton';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
@@ -127,7 +128,14 @@ export default function LearnView({
           transition={{ delay: 0.05 }}
           className="mb-8"
         >
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Definition</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Definition</span>
+            <BookmarkButton
+              subtopicName={subtopicName}
+              bookmarkType="definition"
+              content={content.definition}
+            />
+          </div>
           <p className="mt-2 text-xl font-semibold text-foreground leading-relaxed">
             <MathRenderer latex={content.definition} />
           </p>
@@ -143,7 +151,7 @@ export default function LearnView({
           className="mb-8"
         >
           <motion.div 
-            className="flex items-center gap-3 p-5 rounded-xl bg-primary/10 border border-primary/20"
+            className="relative flex items-center gap-3 p-5 rounded-xl bg-primary/10 border border-primary/20"
             animate={{ 
               boxShadow: [
                 "0 0 0 0 hsl(var(--primary) / 0)",
@@ -159,9 +167,15 @@ export default function LearnView({
             >
               <Lightbulb className="w-6 h-6 text-primary flex-shrink-0" />
             </motion.div>
-            <p className="text-xl font-semibold text-primary">
+            <p className="text-xl font-semibold text-primary flex-1">
               <MathRenderer latex={content.key_rule} />
             </p>
+            <BookmarkButton
+              subtopicName={subtopicName}
+              bookmarkType="rule"
+              content={content.key_rule}
+              variant="ghost"
+            />
           </motion.div>
         </motion.section>
       )}
@@ -186,6 +200,15 @@ export default function LearnView({
             }}
             transition={{ delay: 0.4, duration: 1.5, ease: "easeOut" }}
           >
+            {/* Bookmark button */}
+            <div className="absolute top-2 right-2">
+              <BookmarkButton
+                subtopicName={subtopicName}
+                bookmarkType="formula"
+                content={content.formula}
+              />
+            </div>
+            
             {/* Subtle gradient overlay */}
             <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/5 pointer-events-none" />
             
@@ -231,7 +254,14 @@ export default function LearnView({
           transition={{ delay: 0.25 }}
           className="mb-8"
         >
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Example</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Example</span>
+            <BookmarkButton
+              subtopicName={subtopicName}
+              bookmarkType="example"
+              content={`${content.worked_example.problem} → ${content.worked_example.answer}`}
+            />
+          </div>
           
           <div className="mt-3 bg-card border border-border rounded-xl p-6">
             {/* Problem */}

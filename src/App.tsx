@@ -20,6 +20,7 @@ import Profile from "./pages/Profile";
 import MeetYourTutor from "./pages/MeetYourTutor";
 import SessionHistory from "./pages/SessionHistory";
 import Notebook from "./pages/Notebook";
+import Bookmarks from "./pages/Bookmarks";
 import VoiceFirstTutoring from "./pages/VoiceFirstTutoring";
 import NotFound from "./pages/NotFound";
 
@@ -93,6 +94,7 @@ function AppRoutes() {
       <Route path="/meet-tutor" element={<MeetYourTutor />} />
       <Route path="/session-history" element={<SessionHistory />} />
       <Route path="/notebook" element={<Notebook />} />
+      <Route path="/bookmarks" element={<Bookmarks />} />
       <Route path="/voice-tutor" element={<VoiceFirstTutoring />} />
       <Route path="*" element={<NotFound />} />
     </Routes>

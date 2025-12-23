@@ -597,6 +597,47 @@ export type Database = {
           },
         ]
       }
+      theory_bookmarks: {
+        Row: {
+          bookmark_type: string
+          content: string
+          created_at: string
+          id: string
+          note: string | null
+          subtopic_id: string | null
+          subtopic_name: string
+          user_id: string
+        }
+        Insert: {
+          bookmark_type?: string
+          content: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          subtopic_id?: string | null
+          subtopic_name: string
+          user_id: string
+        }
+        Update: {
+          bookmark_type?: string
+          content?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          subtopic_id?: string | null
+          subtopic_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theory_bookmarks_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topics: {
         Row: {
           created_at: string
