@@ -3,19 +3,53 @@
 export interface GraphDirective {
   functions: string[];
   type: 'function' | 'inequality' | 'system' | 'derivative';
+  highlight?: string[];
+}
+
+export interface CalculateDirective {
+  expression: string;
+}
+
+export interface GeometryDirective {
+  shape: string;
+  description?: string;
+}
+
+export interface DiagramDirective {
+  type: string;
+  description?: string;
+}
+
+export interface NumberLineDirective {
+  min: number;
+  max: number;
+  points: number[];
+  labels?: string[];
+}
+
+export interface FormulaTableDirective {
+  topic: string;
 }
 
 export interface MathDetectionResult {
   hasGraph: boolean;
   graphDirectives: GraphDirective[];
   hasCalculation: boolean;
+  calculateDirectives: CalculateDirective[];
   hasGeometry: boolean;
+  geometryDirectives: GeometryDirective[];
+  hasDiagram: boolean;
+  diagramDirectives: DiagramDirective[];
+  hasNumberLine: boolean;
+  numberLineDirectives: NumberLineDirective[];
+  hasFormulaTable: boolean;
+  formulaTableDirectives: FormulaTableDirective[];
   formulas: string[];
 }
 
 /**
  * Detects graph directives in AI response content
- * Format: [GRAPH: y=x^2-4] or [GRAPH: y=sin(x), y=cos(x)]
+ * Format: [GRAPH: y=x^2-4] or [GRAPH: y=x^2-4, highlight: vertex, roots]
  */
 export function parseGraphDirectives(content: string): GraphDirective[] {
   const graphRegex = /\[GRAPH:\s*([^\]]+)\]/gi;
@@ -23,8 +57,20 @@ export function parseGraphDirectives(content: string): GraphDirective[] {
   
   let match;
   while ((match = graphRegex.exec(content)) !== null) {
-    const functionsStr = match[1];
-    const functions = functionsStr.split(',').map(f => f.trim());
+    const fullMatch = match[1];
+    
+    // Check for highlight parameter
+    const highlightMatch = fullMatch.match(/highlight:\s*([^,\]]+(?:,\s*[^,\]]+)*)/i);
+    const highlight = highlightMatch 
+      ? highlightMatch[1].split(',').map(h => h.trim())
+      : undefined;
+    
+    // Extract functions (everything before "highlight:" or all if no highlight)
+    const functionsStr = highlightMatch 
+      ? fullMatch.substring(0, fullMatch.toLowerCase().indexOf('highlight:')).trim().replace(/,\s*$/, '')
+      : fullMatch;
+    
+    const functions = functionsStr.split(',').map(f => f.trim()).filter(f => f && !f.toLowerCase().startsWith('highlight'));
     
     // Determine type based on content
     let type: GraphDirective['type'] = 'function';
@@ -32,9 +78,110 @@ export function parseGraphDirectives(content: string): GraphDirective[] {
       type = 'inequality';
     } else if (functions.length > 1) {
       type = 'system';
+    } else if (functionsStr.includes("'") || functionsStr.toLowerCase().includes('derivative')) {
+      type = 'derivative';
     }
     
-    directives.push({ functions, type });
+    if (functions.length > 0) {
+      directives.push({ functions, type, highlight });
+    }
+  }
+  
+  return directives;
+}
+
+/**
+ * Parses [CALCULATE: expression] directives
+ */
+export function parseCalculateDirectives(content: string): CalculateDirective[] {
+  const calcRegex = /\[CALCULATE:\s*([^\]]+)\]/gi;
+  const directives: CalculateDirective[] = [];
+  
+  let match;
+  while ((match = calcRegex.exec(content)) !== null) {
+    directives.push({ expression: match[1].trim() });
+  }
+  
+  return directives;
+}
+
+/**
+ * Parses [GEOMETRY: shape] directives
+ */
+export function parseGeometryDirectives(content: string): GeometryDirective[] {
+  const geoRegex = /\[GEOMETRY:\s*([^\]]+)\]/gi;
+  const directives: GeometryDirective[] = [];
+  
+  let match;
+  while ((match = geoRegex.exec(content)) !== null) {
+    const value = match[1].trim();
+    directives.push({ 
+      shape: value.split(',')[0].trim(),
+      description: value.includes(',') ? value.split(',').slice(1).join(',').trim() : undefined
+    });
+  }
+  
+  return directives;
+}
+
+/**
+ * Parses [DIAGRAM: type] directives
+ */
+export function parseDiagramDirectives(content: string): DiagramDirective[] {
+  const diagRegex = /\[DIAGRAM:\s*([^\]]+)\]/gi;
+  const directives: DiagramDirective[] = [];
+  
+  let match;
+  while ((match = diagRegex.exec(content)) !== null) {
+    const value = match[1].trim();
+    directives.push({ 
+      type: value.split(',')[0].trim(),
+      description: value.includes(',') ? value.split(',').slice(1).join(',').trim() : undefined
+    });
+  }
+  
+  return directives;
+}
+
+/**
+ * Parses [NUMBER-LINE: min=-5, max=5, points=[2, -1]] directives
+ */
+export function parseNumberLineDirectives(content: string): NumberLineDirective[] {
+  const nlRegex = /\[NUMBER-LINE:\s*([^\]]+)\]/gi;
+  const directives: NumberLineDirective[] = [];
+  
+  let match;
+  while ((match = nlRegex.exec(content)) !== null) {
+    const value = match[1];
+    
+    const minMatch = value.match(/min\s*=\s*(-?\d+(?:\.\d+)?)/i);
+    const maxMatch = value.match(/max\s*=\s*(-?\d+(?:\.\d+)?)/i);
+    const pointsMatch = value.match(/points\s*=\s*\[([^\]]+)\]/i);
+    const labelsMatch = value.match(/labels\s*=\s*\[([^\]]+)\]/i);
+    
+    if (minMatch && maxMatch && pointsMatch) {
+      directives.push({
+        min: parseFloat(minMatch[1]),
+        max: parseFloat(maxMatch[1]),
+        points: pointsMatch[1].split(',').map(p => parseFloat(p.trim())),
+        labels: labelsMatch ? labelsMatch[1].split(',').map(l => l.trim().replace(/['"]/g, '')) : undefined
+      });
+    }
+  }
+  
+  return directives;
+}
+
+/**
+ * Parses [FORMULA-TABLE: topic] directives
+ */
+export function parseFormulaTableDirectives(content: string): FormulaTableDirective[] {
+  const ftRegex = /\[FORMULA-TABLE:\s*([^\]]+)\]/gi;
+  const directives: FormulaTableDirective[] = [];
+  
+  let match;
+  while ((match = ftRegex.exec(content)) !== null) {
+    directives.push({ topic: match[1].trim().toLowerCase() });
   }
   
   return directives;
@@ -89,21 +236,26 @@ export function detectGraphableContent(content: string): string[] {
  */
 export function analyzeMathContent(content: string): MathDetectionResult {
   const graphDirectives = parseGraphDirectives(content);
+  const calculateDirectives = parseCalculateDirectives(content);
+  const geometryDirectives = parseGeometryDirectives(content);
+  const diagramDirectives = parseDiagramDirectives(content);
+  const numberLineDirectives = parseNumberLineDirectives(content);
+  const formulaTableDirectives = parseFormulaTableDirectives(content);
   const detectedFunctions = detectGraphableContent(content);
   
   // Check for calculation needs
-  const hasCalculation = /\$\$?[^$]*[+\-*/=][^$]*\$\$?/.test(content) ||
+  const hasCalculation = calculateDirectives.length > 0 ||
+    /\$\$?[^$]*[+\-*/=][^$]*\$\$?/.test(content) ||
     content.toLowerCase().includes('calculate') ||
     content.toLowerCase().includes('compute') ||
     content.toLowerCase().includes('evaluate');
   
   // Check for geometry
-  const hasGeometry = 
+  const hasGeometry = geometryDirectives.length > 0 ||
     content.toLowerCase().includes('triangle') ||
     content.toLowerCase().includes('angle') ||
     content.toLowerCase().includes('polygon') ||
-    content.toLowerCase().includes('circle') ||
-    /\[DIAGRAM:/.test(content);
+    content.toLowerCase().includes('circle');
   
   // Extract formulas
   const formulaRegex = /\$\$([^$]+)\$\$/g;
@@ -117,7 +269,15 @@ export function analyzeMathContent(content: string): MathDetectionResult {
     hasGraph: graphDirectives.length > 0 || detectedFunctions.length > 0,
     graphDirectives,
     hasCalculation,
+    calculateDirectives,
     hasGeometry,
+    geometryDirectives,
+    hasDiagram: diagramDirectives.length > 0,
+    diagramDirectives,
+    hasNumberLine: numberLineDirectives.length > 0,
+    numberLineDirectives,
+    hasFormulaTable: formulaTableDirectives.length > 0,
+    formulaTableDirectives,
     formulas,
   };
 }
@@ -148,9 +308,6 @@ export function validateLatexSyntax(content: string): { valid: boolean; issues: 
     issues.push('\\sqrt should be followed by {content} or [n]{content}');
   }
   
-  // Check for ambiguous minus signs (e.g., x-2 vs x - 2)
-  // This is more of a style suggestion
-  
   return {
     valid: issues.length === 0,
     issues,
@@ -173,4 +330,19 @@ export function normalizeMathContent(content: string): string {
     // Fix common typos
     .replace(/\\squrt/g, '\\sqrt')
     .replace(/\\frac\s+/g, '\\frac');
+}
+
+/**
+ * Strips all visual directives from content for clean text display
+ */
+export function stripDirectives(content: string): string {
+  return content
+    .replace(/\[GRAPH:[^\]]+\]/gi, '')
+    .replace(/\[CALCULATE:[^\]]+\]/gi, '')
+    .replace(/\[GEOMETRY:[^\]]+\]/gi, '')
+    .replace(/\[DIAGRAM:[^\]]+\]/gi, '')
+    .replace(/\[NUMBER-LINE:[^\]]+\]/gi, '')
+    .replace(/\[FORMULA-TABLE:[^\]]+\]/gi, '')
+    .replace(/\n\s*\n/g, '\n')
+    .trim();
 }
