@@ -101,12 +101,19 @@ export function useNotebook() {
     }
   }, [user, calculateStats]);
 
-  const markAsMastered = useCallback(async (id: string, createBreakthrough = true) => {
-    if (!user) return false;
+  const markAsMastered = useCallback(async (id: string, createBreakthrough = true): Promise<{ success: boolean; xpEarned: number }> => {
+    if (!user) return { success: false, xpEarned: 0 };
 
     try {
       const entry = entries.find(e => e.id === id);
-      if (!entry || entry.note_type !== 'struggle') return false;
+      if (!entry || entry.note_type !== 'struggle') return { success: false, xpEarned: 0 };
+
+      // Calculate XP based on how long the struggle existed
+      const daysStruggling = Math.ceil(
+        (Date.now() - new Date(entry.detected_at).getTime()) / (1000 * 60 * 60 * 24)
+      );
+      // Base XP: 50, bonus for older struggles (max 100 bonus)
+      const xpEarned = 50 + Math.min(daysStruggling * 10, 100);
 
       // Update the struggle as mastered
       const { error: updateError } = await supabase
@@ -117,8 +124,21 @@ export function useNotebook() {
 
       if (updateError) {
         console.error('Error marking as mastered:', updateError);
-        return false;
+        return { success: false, xpEarned: 0 };
       }
+
+      // Award XP to user's profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('total_xp')
+        .eq('id', user.id)
+        .single();
+
+      const currentXp = profileData?.total_xp || 0;
+      await supabase
+        .from('profiles')
+        .update({ total_xp: currentXp + xpEarned })
+        .eq('id', user.id);
 
       // Optionally create a related breakthrough entry
       if (createBreakthrough) {
@@ -161,10 +181,10 @@ export function useNotebook() {
         await fetchEntries();
       }
 
-      return true;
+      return { success: true, xpEarned };
     } catch (err) {
       console.error('Error in markAsMastered:', err);
-      return false;
+      return { success: false, xpEarned: 0 };
     }
   }, [user, entries, calculateStats, fetchEntries]);
 

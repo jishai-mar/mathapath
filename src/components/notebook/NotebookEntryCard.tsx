@@ -12,12 +12,21 @@ import {
   MessageSquare,
   CheckCircle2,
   Trophy,
-  Link2
+  Link2,
+  Zap
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MathRenderer from '@/components/MathRenderer';
 import { NotebookEntry } from '@/hooks/useNotebook';
+
+// Calculate potential XP for mastering a struggle
+function calculatePotentialXP(detectedAt: string): number {
+  const daysStruggling = Math.ceil(
+    (Date.now() - new Date(detectedAt).getTime()) / (1000 * 60 * 60 * 24)
+  );
+  return 50 + Math.min(daysStruggling * 10, 100);
+}
 
 const noteTypeConfig: Record<string, { icon: typeof Lightbulb; label: string; color: string; bgColor: string }> = {
   breakthrough: {
@@ -198,7 +207,7 @@ export function NotebookEntryCard({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-7 text-xs gap-1.5 text-emerald-400 border-emerald-400/30 hover:bg-emerald-400/10"
+                    className="h-7 text-xs gap-1.5 text-amber-400 border-amber-400/30 hover:bg-amber-400/10"
                     onClick={(e) => {
                       e.stopPropagation();
                       onMarkMastered(entry);
@@ -206,6 +215,10 @@ export function NotebookEntryCard({
                   >
                     <Trophy className="w-3 h-3" />
                     Mark Mastered
+                    <span className="flex items-center gap-0.5 ml-1 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                      <Zap className="w-2.5 h-2.5" />
+                      +{calculatePotentialXP(entry.detected_at)}
+                    </span>
                   </Button>
                 )}
               </>

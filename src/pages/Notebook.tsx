@@ -18,12 +18,14 @@ import {
   PanelRightOpen,
   PanelRightClose,
   Trophy,
-  Target
+  Target,
+  Zap
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NotebookSearch } from '@/components/notebook/NotebookSearch';
 import { NotebookEntryCard } from '@/components/notebook/NotebookEntryCard';
 import { NotebookTutor } from '@/components/notebook/NotebookTutor';
+import { XPDisplay } from '@/components/notebook/XPDisplay';
 
 type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'mastered';
 
@@ -91,10 +93,10 @@ export default function Notebook() {
   };
 
   const handleMarkMastered = async (entry: NotebookEntry) => {
-    const success = await markAsMastered(entry.id, true);
-    if (success) {
-      toast.success('Congratulations! Challenge mastered! 🎉', {
-        description: 'A breakthrough entry has been created.',
+    const result = await markAsMastered(entry.id, true);
+    if (result.success) {
+      toast.success(`Challenge mastered! +${result.xpEarned} XP 🎉`, {
+        description: 'Keep conquering your challenges to earn more XP!',
       });
     } else {
       toast.error('Failed to mark as mastered');
@@ -147,7 +149,8 @@ export default function Notebook() {
             </div>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <XPDisplay compact />
             <Button
               variant="outline"
               size="sm"
