@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +16,8 @@ import {
   HelpCircle, 
   BookOpen,
   Loader2,
-  Mic
+  Mic,
+  Maximize2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +49,7 @@ export function ExerciseTutor({
   currentAnswer,
   difficulty,
 }: ExerciseTutorProps) {
+  const navigate = useNavigate();
   const { preferences } = useTutor();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -133,6 +136,15 @@ export function ExerciseTutor({
             <Mic className="w-3 h-3 text-primary" />
           </div>
         </div>
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className="h-8 w-8" 
+          onClick={() => navigate('/voice-tutor')}
+          title="Fullscreen voice mode"
+        >
+          <Maximize2 className="w-4 h-4" />
+        </Button>
         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
           <X className="w-4 h-4" />
         </Button>
