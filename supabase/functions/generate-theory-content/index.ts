@@ -27,7 +27,7 @@ serve(async (req) => {
       subtopicName.toLowerCase().includes(t) || topicName.toLowerCase().includes(t)
     );
 
-    const systemPrompt = `You are an expert math tutor. Generate ULTRA-CLEAN theory content.
+    const systemPrompt = `You are an expert math tutor. Generate ULTRA-CLEAN theory content with voiceover scripts.
 
 OUTPUT STRUCTURE (JSON only, no markdown):
 {
@@ -44,7 +44,15 @@ OUTPUT STRUCTURE (JSON only, no markdown):
     "wrong": "What students do wrong (under 10 words)",
     "right": "Correct approach (under 10 words)"
   },
-  "needs_graph": ${needsGraph}
+  "needs_graph": ${needsGraph},
+  "voiceover_scripts": {
+    "intro": "A warm, engaging 1-2 sentence welcome to this topic. Spoken naturally.",
+    "definition": "The definition rephrased for speaking. No LaTeX symbols, use plain English.",
+    "key_rule": "The key rule explained conversationally. Add emphasis on the important part.",
+    "formula": "Describe the formula verbally for someone listening. E.g. 'x squared plus y squared equals r squared'",
+    "example_intro": "A brief intro to the example problem. Make it sound like a teacher about to demonstrate.",
+    "summary": "A congratulatory wrap-up. 1-2 sentences celebrating what they learned."
+  }
 }
 
 RULES:
@@ -53,8 +61,9 @@ RULES:
 - Formula: Pure LaTeX. No "where x is..." explanations.
 - Example: MAX 3 steps. Each step shows action → result.
 - Common Mistake: Brief and actionable.
-- NO motivational text. NO "Let's learn". NO chatbot language.
-- Write like a professional textbook.`;
+- Voiceover Scripts: Written for TEXT-TO-SPEECH. No LaTeX, no special symbols. Natural spoken English.
+- NO motivational text in main content. Voiceovers can be warm and encouraging.
+- Write like a professional textbook with a friendly voice.`;
 
     const userPrompt = `Generate clean theory for: "${subtopicName}" (Topic: ${topicName}). Return ONLY valid JSON.`;
 
