@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,6 +7,7 @@ import ImageUploader from './ImageUploader';
 import FeedbackCard from './FeedbackCard';
 import ToolPanel from './tools/ToolPanel';
 import { ExerciseTutor } from './exercise/ExerciseTutor';
+import { useSoundEffects } from '@/hooks/useSoundEffects';
 import { 
   Lightbulb, 
   ArrowRight, 
@@ -97,11 +98,26 @@ export default function ExerciseView({
     tutorFeedback?: TutorFeedback | null;
   } | null>(null);
 
+  const { playCorrect, playIncorrect, playHint, playNewExercise, preload } = useSoundEffects();
+
+  // Preload common sounds on mount
+  useEffect(() => {
+    preload(['correct', 'incorrect', 'hint', 'newExercise']);
+  }, [preload]);
+
   const handleTextSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!answer.trim() || isSubmitting) return;
     
     const result = await onSubmitAnswer(answer.trim());
+    
+    // Play sound effect based on result
+    if (result.isCorrect) {
+      playCorrect();
+    } else {
+      playIncorrect();
+    }
+    
     setFeedback({
       type: 'text',
       isCorrect: result.isCorrect,
@@ -113,6 +129,14 @@ export default function ExerciseView({
 
   const handleImageSubmit = async (file: File) => {
     const result = await onSubmitImage(file);
+    
+    // Play sound effect based on result
+    if (result.is_correct) {
+      playCorrect();
+    } else {
+      playIncorrect();
+    }
+    
     setFeedback({
       type: 'ai',
       isCorrect: result.is_correct,
@@ -122,6 +146,7 @@ export default function ExerciseView({
 
   const handleNext = () => {
     const suggestedDifficulty = feedback?.aiFeedback?.suggested_difficulty;
+    playNewExercise();
     onNextExercise(suggestedDifficulty);
     setAnswer('');
     setFeedback(null);
@@ -138,6 +163,7 @@ export default function ExerciseView({
   const handleShowSolution = () => {
     // Reveal all hints first, then show solution on next click
     if (exercise.hints && revealedHints < exercise.hints.length) {
+      playHint();
       setRevealedHints(exercise.hints.length);
       onHintReveal?.();
     }
