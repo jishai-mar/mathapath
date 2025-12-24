@@ -6,7 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTutorTTS } from '@/hooks/useTutorTTS';
 import MathRenderer from '@/components/MathRenderer';
-import TutorCharacter from '@/components/tutor/TutorCharacter';
+import { ElevenLabsAgent } from '@/components/tutor/ElevenLabsAgent';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import { 
   Send, 
@@ -391,7 +391,7 @@ export function GuidedTutoringSession({
               exit={{ opacity: 0, y: -20 }}
               className="text-center space-y-8"
             >
-              <TutorCharacter mood={tutorMood} size="lg" showSpeechBubble />
+              <ElevenLabsAgent size="lg" />
               <div className="p-6 rounded-2xl bg-card/50 border border-border/30 max-w-md">
                 <p className="text-lg leading-relaxed">{greetingMessage || 'Welkom! We gaan zo beginnen...'}</p>
               </div>
@@ -414,7 +414,7 @@ export function GuidedTutoringSession({
               className="w-full space-y-8"
             >
               <div className="flex justify-center">
-                <TutorCharacter mood={tutorMood} size="md" />
+                <ElevenLabsAgent size="md" />
               </div>
 
               {/* Question Card */}
@@ -473,7 +473,7 @@ export function GuidedTutoringSession({
               className="w-full space-y-6"
             >
               <div className="flex justify-center">
-                <TutorCharacter mood={tutorMood} size="lg" showSpeechBubble />
+                <ElevenLabsAgent size="lg" />
               </div>
 
               <div className={`p-6 rounded-3xl border-2 ${
@@ -535,7 +535,7 @@ export function GuidedTutoringSession({
               exit={{ opacity: 0, y: -20 }}
               className="text-center space-y-8"
             >
-              <TutorCharacter mood="celebrating" size="lg" showSpeechBubble />
+              <ElevenLabsAgent size="lg" />
               
               <div className="p-8 rounded-3xl bg-card/60 border border-border/30 space-y-6">
                 <h2 className="text-2xl font-semibold">Sessie voltooid!</h2>
