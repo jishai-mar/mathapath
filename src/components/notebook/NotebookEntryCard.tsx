@@ -17,12 +17,18 @@ import {
   Zap,
   FileText,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  StickyNote,
+  Edit3,
+  Check,
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
 import MathRenderer from '@/components/MathRenderer';
 import { NotebookEntry } from '@/hooks/useNotebook';
+import { toast } from 'sonner';
 
 // Calculate potential XP for mastering a struggle
 function calculatePotentialXP(detectedAt: string): number {
@@ -80,6 +86,7 @@ interface NotebookEntryCardProps {
   onPractice: (entry: NotebookEntry) => void;
   onAskTutor: (entry: NotebookEntry) => void;
   onMarkMastered?: (entry: NotebookEntry) => void;
+  onUpdatePersonalNote?: (id: string, note: string) => Promise<boolean>;
 }
 
 export function NotebookEntryCard({ 
@@ -90,9 +97,13 @@ export function NotebookEntryCard({
   onDelete, 
   onPractice,
   onAskTutor,
-  onMarkMastered
+  onMarkMastered,
+  onUpdatePersonalNote
 }: NotebookEntryCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [noteText, setNoteText] = useState(entry.personal_note || '');
+  const [isSavingNote, setIsSavingNote] = useState(false);
   const config = noteTypeConfig[entry.note_type] || noteTypeConfig.emotional;
   const Icon = config.icon;
   const isStruggle = entry.note_type === 'struggle';
@@ -295,6 +306,102 @@ export function NotebookEntryCard({
                 {isStruggle ? 'Led to breakthrough: ' : 'Overcame: '}
                 {relatedEntry.content.substring(0, 50)}...
               </span>
+            </div>
+          )}
+
+          {/* Personal note section for worked examples */}
+          {isWorkedExample && onUpdatePersonalNote && (
+            <div className="mt-2">
+              {isEditingNote ? (
+                <motion.div
+                  initial={{ opacity: 0, y: -5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="space-y-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder="Add your personal notes here... (e.g., reminders, tips, or things to remember)"
+                    className="min-h-[80px] text-sm bg-muted/30 border-muted-foreground/20 focus:border-blue-500/50"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-7 text-xs gap-1.5"
+                      disabled={isSavingNote}
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        setIsSavingNote(true);
+                        const success = await onUpdatePersonalNote(entry.id, noteText);
+                        setIsSavingNote(false);
+                        if (success) {
+                          setIsEditingNote(false);
+                          toast.success('Note saved');
+                        } else {
+                          toast.error('Failed to save note');
+                        }
+                      }}
+                    >
+                      <Check className="w-3 h-3" />
+                      {isSavingNote ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs gap-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNoteText(entry.personal_note || '');
+                        setIsEditingNote(false);
+                      }}
+                    >
+                      <X className="w-3 h-3" />
+                      Cancel
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : entry.personal_note ? (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 group/note"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-start gap-2">
+                    <StickyNote className="w-3.5 h-3.5 text-amber-400 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-amber-400 mb-1">My Note</div>
+                      <p className="text-sm text-foreground/80 whitespace-pre-wrap">{entry.personal_note}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 opacity-0 group-hover/note:opacity-100 transition-opacity text-muted-foreground hover:text-amber-400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingNote(true);
+                      }}
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1.5 text-muted-foreground hover:text-amber-400"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsEditingNote(true);
+                  }}
+                >
+                  <StickyNote className="w-3 h-3" />
+                  Add personal note
+                </Button>
+              )}
             </div>
           )}
           

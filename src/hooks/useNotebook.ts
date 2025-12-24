@@ -10,6 +10,7 @@ export interface NotebookEntry {
   detected_at: string;
   mastered_at: string | null;
   related_entry_id: string | null;
+  personal_note: string | null;
 }
 
 export interface NotebookStats {
@@ -225,6 +226,33 @@ export function useNotebook() {
     return entries.find(e => e.id === entry.related_entry_id) || null;
   }, [entries]);
 
+  // Update personal note for an entry
+  const updatePersonalNote = useCallback(async (id: string, personalNote: string): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const { error } = await supabase
+        .from('student_session_notes')
+        .update({ personal_note: personalNote || null })
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating personal note:', error);
+        return false;
+      }
+
+      setEntries(prev => prev.map(e => 
+        e.id === id ? { ...e, personal_note: personalNote || null } : e
+      ));
+
+      return true;
+    } catch (err) {
+      console.error('Error in updatePersonalNote:', err);
+      return false;
+    }
+  }, [user]);
+
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
@@ -238,5 +266,6 @@ export function useNotebook() {
     markAsMastered,
     unmarkMastered,
     getRelatedEntry,
+    updatePersonalNote,
   };
 }

@@ -540,6 +540,7 @@ export type Database = {
           id: string
           mastered_at: string | null
           note_type: string
+          personal_note: string | null
           related_entry_id: string | null
           subtopic_name: string | null
           user_id: string
@@ -550,6 +551,7 @@ export type Database = {
           id?: string
           mastered_at?: string | null
           note_type: string
+          personal_note?: string | null
           related_entry_id?: string | null
           subtopic_name?: string | null
           user_id: string
@@ -560,6 +562,7 @@ export type Database = {
           id?: string
           mastered_at?: string | null
           note_type?: string
+          personal_note?: string | null
           related_entry_id?: string | null
           subtopic_name?: string | null
           user_id?: string
