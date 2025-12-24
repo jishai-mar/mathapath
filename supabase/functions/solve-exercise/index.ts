@@ -46,23 +46,29 @@ BELANGRIJKE REGELS:
 4. Elke stap moet klein en begrijpelijk zijn
 5. De voiceover moet natuurlijk klinken wanneer voorgelezen
 6. Gebruik LaTeX notatie voor wiskundige formules in het "math" veld
-7. Geef 3-6 stappen, afhankelijk van de complexiteit
+7. Geef ALTIJD minimaal 3 stappen en maximaal 6 stappen
 
 BELANGRIJK: Antwoord ALLEEN met geldige JSON (geen Markdown, geen codeblokken).
+
+ELKE OEFENING MOET EEN VOLLEDIGE UITWERKING HEBBEN:
+- Stap 1: Identificeer wat er gevraagd wordt en welke methode je gaat gebruiken
+- Stap 2-4: Werk de berekening stap voor stap uit
+- Laatste stap: Geef het eindantwoord en controleer eventueel
 
 MEERDERE OPLOSSINGEN - ZEER BELANGRIJK:
 Wanneer een vergelijking meerdere oplossingen heeft, moet je ELKE oplossing apart tonen:
 - Gebruik altijd de variabelenaam (bijv. "x =", "y =")
-- Formatteer als: "x = waarde₁  of  x = waarde₂"
-- In LaTeX: "x = 2 \\text{ of } x = -2"
-- Bij kwadratische vergelijkingen: toon beide wortels apart
+- Formatteer het eindantwoord als GESCHEIDEN oplossingen met " of " ertussen
+- Voorbeeld: "x = 2 of x = -2" (niet "x = ±2")
+- Bij kwadratische vergelijkingen: toon BEIDE wortels apart
 - Bij geen reële oplossingen: schrijf "Geen reële oplossingen"
 
-Voorbeelden:
-- x² = 4 → finalAnswer: "x = 2 \\text{ of } x = -2"
-- (x-1)(x+3) = 0 → finalAnswer: "x = 1 \\text{ of } x = -3"
-- x² + 1 = 0 → finalAnswer: "Geen reële oplossingen"
-- 2x + 5 = 9 → finalAnswer: "x = 2"
+Voorbeelden van correcte finalAnswer formatting:
+- x² = 4 → "x = 2 of x = -2"
+- (x-1)(x+3) = 0 → "x = 1 of x = -3"
+- x² - 5x + 6 = 0 → "x = 2 of x = 3"
+- x² + 1 = 0 → "Geen reële oplossingen"
+- 2x + 5 = 9 → "x = 2"
 
 RESPONSE FORMAT (JSON):
 {
@@ -75,10 +81,11 @@ RESPONSE FORMAT (JSON):
       "voiceover": "Dit is de tekst die wordt voorgelezen. Schrijf getallen uit (bijv. 'twee x plus vijf' in plaats van '2x + 5')"
     }
   ],
-  "finalAnswer": "Het uiteindelijke antwoord met alle oplossingen duidelijk geformatteerd",
+  "finalAnswer": "Het uiteindelijke antwoord met alle oplossingen gescheiden door ' of '",
   "tip": "Een handige tip die de leerling kan onthouden voor soortgelijke opgaven"
 }`;
-    const userPrompt = `Werk deze wiskundeoefening volledig uit met stap-voor-stap uitleg:
+    const userPrompt = `Werk deze wiskundeoefening volledig uit met stap-voor-stap uitleg.
+BELANGRIJK: Geef ALTIJD minimaal 3 stappen, ook voor eenvoudige opgaven.
 
 ONDERWERP: ${subtopicName || 'Wiskunde'}
 
@@ -86,7 +93,11 @@ OPGAVE: ${question}
 
 ${correctAnswer ? `CORRECT ANTWOORD: ${correctAnswer}` : ''}
 
-Geef een complete uitwerking die de leerling helpt begrijpen hoe je tot het antwoord komt.`;
+Geef een complete uitwerking met:
+1. Een stap die het probleem identificeert en de aanpak beschrijft
+2. Tussenstappen die de berekening uitwerken
+3. Een eindstap met het antwoord (bij meerdere oplossingen: gescheiden door " of ")`;
+
 
     console.log('Generating solution for:', question);
 
