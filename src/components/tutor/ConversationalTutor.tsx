@@ -162,8 +162,12 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
         }
       }
     },
-    onError: (err) => {
-      console.error('Conversation error:', err);
+    onError: (err: unknown) => {
+      // Safely handle error - ElevenLabs may pass various error formats
+      const errorMessage = err && typeof err === 'object' && 'message' in err 
+        ? String((err as { message?: unknown }).message)
+        : 'Unknown error';
+      console.error('Conversation error:', errorMessage, err);
       setError('Something went wrong with the connection. Please try again.');
       setIsConnecting(false);
     },
