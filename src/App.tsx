@@ -10,6 +10,7 @@ import { ExerciseProvider } from "@/contexts/ExerciseContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GlobalElevenLabsWidget } from "@/components/tutor/GlobalElevenLabsWidget";
+import { VoiceChatCompanion } from "@/components/tutor/VoiceChatCompanion";
 // Pages
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -116,6 +117,7 @@ const App = () => (
                 <AppRoutes />
               </BrowserRouter>
               <GlobalElevenLabsWidget />
+              <VoiceChatCompanion />
             </ExerciseProvider>
           </TutorSessionProvider>
         </TutorProvider>
