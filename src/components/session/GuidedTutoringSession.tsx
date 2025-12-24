@@ -21,8 +21,13 @@ import {
   Home,
   PlayCircle,
   Focus,
-  Eye
+  Eye,
+  Timer,
+  TrendingUp,
+  Zap,
+  BarChart3
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 type SessionPhase = 'greeting' | 'exercise' | 'feedback' | 'wrap-up' | 'completed';
 
@@ -44,6 +49,19 @@ interface PerformanceData {
   incorrectStreak: number;
   accuracy: number;
   exercisesAtCurrentDifficulty: number;
+}
+
+interface ExerciseTimeData {
+  exerciseNumber: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  timeSpentSeconds: number;
+  isCorrect: boolean;
+}
+
+interface DifficultyProgression {
+  fromDifficulty: 'easy' | 'medium' | 'hard';
+  toDifficulty: 'easy' | 'medium' | 'hard';
+  afterExercise: number;
 }
 
 interface GuidedTutoringSessionProps {
@@ -92,6 +110,12 @@ export function GuidedTutoringSession({
   
   // Student's mastery level (fetched at session start)
   const [studentMastery, setStudentMastery] = useState<number>(0);
+  
+  // Time tracking for analytics
+  const [exerciseStartTime, setExerciseStartTime] = useState<number>(Date.now());
+  const [sessionStartTime] = useState<number>(Date.now());
+  const [exerciseTimings, setExerciseTimings] = useState<ExerciseTimeData[]>([]);
+  const [difficultyProgressions, setDifficultyProgressions] = useState<DifficultyProgression[]>([]);
 
   const { speak, stopSpeaking, isSpeaking } = useTutorTTS({
     personality: 'friendly',
@@ -219,6 +243,15 @@ export function GuidedTutoringSession({
 
   // Update difficulty based on performance streaks
   const updateDifficultyAfterAnswer = useCallback((isCorrect: boolean) => {
+    // Record exercise timing
+    const timeSpent = Math.round((Date.now() - exerciseStartTime) / 1000);
+    setExerciseTimings(prev => [...prev, {
+      exerciseNumber: stats.total + 1,
+      difficulty: currentDifficulty,
+      timeSpentSeconds: timeSpent,
+      isCorrect,
+    }]);
+    
     setPerformanceData(prev => {
       const newPerf = {
         ...prev,
@@ -228,13 +261,25 @@ export function GuidedTutoringSession({
         exercisesAtCurrentDifficulty: prev.exercisesAtCurrentDifficulty + 1,
       };
       
+      const prevDifficulty = currentDifficulty;
+      
       // Upgrade difficulty after 2 correct in a row (or 3 at current level)
       if (newPerf.correctStreak >= 2 || (newPerf.exercisesAtCurrentDifficulty >= 3 && newPerf.accuracy >= 0.7)) {
         if (currentDifficulty === 'easy') {
           setCurrentDifficulty('medium');
+          setDifficultyProgressions(p => [...p, {
+            fromDifficulty: 'easy',
+            toDifficulty: 'medium',
+            afterExercise: stats.total + 1,
+          }]);
           return { ...newPerf, exercisesAtCurrentDifficulty: 0 };
         } else if (currentDifficulty === 'medium') {
           setCurrentDifficulty('hard');
+          setDifficultyProgressions(p => [...p, {
+            fromDifficulty: 'medium',
+            toDifficulty: 'hard',
+            afterExercise: stats.total + 1,
+          }]);
           return { ...newPerf, exercisesAtCurrentDifficulty: 0 };
         }
       }
@@ -243,16 +288,26 @@ export function GuidedTutoringSession({
       if (newPerf.incorrectStreak >= 2) {
         if (currentDifficulty === 'hard') {
           setCurrentDifficulty('medium');
+          setDifficultyProgressions(p => [...p, {
+            fromDifficulty: 'hard',
+            toDifficulty: 'medium',
+            afterExercise: stats.total + 1,
+          }]);
           return { ...newPerf, exercisesAtCurrentDifficulty: 0, incorrectStreak: 0 };
         } else if (currentDifficulty === 'medium') {
           setCurrentDifficulty('easy');
+          setDifficultyProgressions(p => [...p, {
+            fromDifficulty: 'medium',
+            toDifficulty: 'easy',
+            afterExercise: stats.total + 1,
+          }]);
           return { ...newPerf, exercisesAtCurrentDifficulty: 0, incorrectStreak: 0 };
         }
       }
       
       return newPerf;
     });
-  }, [currentDifficulty, stats]);
+  }, [currentDifficulty, stats, exerciseStartTime]);
 
   const loadNextExercise = async () => {
     if (stats.total >= exerciseGoal) {
@@ -264,6 +319,7 @@ export function GuidedTutoringSession({
     setAnswer('');
     setCurrentFeedback(null);
     setTutorMood('idle');
+    setExerciseStartTime(Date.now()); // Reset timer for new exercise
 
     try {
       // Use the tracked difficulty level
@@ -614,6 +670,23 @@ export function GuidedTutoringSession({
                 <ElevenLabsAgent size="md" />
               </div>
 
+              {/* Difficulty Badge */}
+              <div className="flex justify-center">
+                <Badge 
+                  variant={
+                    currentDifficulty === 'easy' ? 'secondary' : 
+                    currentDifficulty === 'medium' ? 'default' : 
+                    'destructive'
+                  }
+                  className="gap-1.5 px-3 py-1"
+                >
+                  <Zap className="w-3 h-3" />
+                  {currentDifficulty === 'easy' && 'Makkelijk'}
+                  {currentDifficulty === 'medium' && 'Gemiddeld'}
+                  {currentDifficulty === 'hard' && 'Moeilijk'}
+                </Badge>
+              </div>
+
               {/* Question Card */}
               <div className="p-8 rounded-3xl bg-card/60 border border-border/30 shadow-soft">
                 <div className="text-center text-2xl md:text-3xl leading-relaxed">
@@ -733,34 +806,104 @@ export function GuidedTutoringSession({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="text-center space-y-8"
+              className="text-center space-y-6 w-full max-w-lg"
             >
               <ElevenLabsAgent size="lg" />
               
-              <div className="p-8 rounded-3xl bg-card/60 border border-border/30 space-y-6">
+              <div className="p-6 rounded-3xl bg-card/60 border border-border/30 space-y-6">
                 <h2 className="text-2xl font-semibold">Sessie voltooid!</h2>
                 
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div className="p-4 rounded-2xl bg-secondary/10">
-                    <p className="text-3xl font-bold text-secondary">{stats.correct}</p>
-                    <p className="text-sm text-muted-foreground">Goed</p>
+                {/* Main Stats */}
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 rounded-2xl bg-secondary/10">
+                    <p className="text-2xl font-bold text-secondary">{stats.correct}</p>
+                    <p className="text-xs text-muted-foreground">Goed</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-muted/30">
-                    <p className="text-3xl font-bold">{stats.total}</p>
-                    <p className="text-sm text-muted-foreground">Totaal</p>
+                  <div className="p-3 rounded-2xl bg-muted/30">
+                    <p className="text-2xl font-bold">{stats.total}</p>
+                    <p className="text-xs text-muted-foreground">Totaal</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-accent/10">
-                    <p className="text-3xl font-bold text-accent">{stats.xpEarned}</p>
-                    <p className="text-sm text-muted-foreground">XP</p>
+                  <div className="p-3 rounded-2xl bg-accent/10">
+                    <p className="text-2xl font-bold text-accent">{stats.xpEarned}</p>
+                    <p className="text-xs text-muted-foreground">XP</p>
                   </div>
                 </div>
 
+                {/* Time Analytics */}
+                {exerciseTimings.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-muted/20 space-y-3">
+                    <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                      <Timer className="w-4 h-4 text-primary" />
+                      <span>Tijd per opgave</span>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {exerciseTimings.map((timing, idx) => (
+                        <div 
+                          key={idx} 
+                          className={`px-2 py-1 rounded-lg text-xs font-medium ${
+                            timing.isCorrect 
+                              ? 'bg-secondary/20 text-secondary' 
+                              : 'bg-primary/20 text-primary'
+                          }`}
+                        >
+                          #{timing.exerciseNumber}: {timing.timeSpentSeconds}s
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Gemiddeld: {Math.round(exerciseTimings.reduce((sum, t) => sum + t.timeSpentSeconds, 0) / exerciseTimings.length)}s per opgave
+                    </p>
+                  </div>
+                )}
+
+                {/* Difficulty Progression */}
+                {difficultyProgressions.length > 0 && (
+                  <div className="p-4 rounded-2xl bg-muted/20 space-y-3">
+                    <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                      <TrendingUp className="w-4 h-4 text-secondary" />
+                      <span>Moeilijkheid progressie</span>
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {difficultyProgressions.map((prog, idx) => (
+                        <div key={idx} className="flex items-center gap-1 text-xs">
+                          <Badge variant="outline" className="text-xs px-1.5">
+                            {prog.fromDifficulty === 'easy' ? 'Makkelijk' : prog.fromDifficulty === 'medium' ? 'Gemiddeld' : 'Moeilijk'}
+                          </Badge>
+                          <ArrowRight className="w-3 h-3" />
+                          <Badge 
+                            variant={prog.toDifficulty === 'hard' ? 'destructive' : prog.toDifficulty === 'medium' ? 'default' : 'secondary'}
+                            className="text-xs px-1.5"
+                          >
+                            {prog.toDifficulty === 'easy' ? 'Makkelijk' : prog.toDifficulty === 'medium' ? 'Gemiddeld' : 'Moeilijk'}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Final Difficulty Level */}
+                <div className="flex items-center justify-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Eindniveau:</span>
+                  <Badge 
+                    variant={currentDifficulty === 'hard' ? 'destructive' : currentDifficulty === 'medium' ? 'default' : 'secondary'}
+                  >
+                    {currentDifficulty === 'easy' ? 'Makkelijk' : currentDifficulty === 'medium' ? 'Gemiddeld' : 'Moeilijk'}
+                  </Badge>
+                </div>
+
+                {/* Session Duration */}
+                <p className="text-xs text-muted-foreground">
+                  Totale sessietijd: {Math.round((Date.now() - sessionStartTime) / 60000)} minuten
+                </p>
+
                 {wrapUpMessage && (
-                  <p className="text-muted-foreground leading-relaxed">{wrapUpMessage}</p>
+                  <p className="text-muted-foreground leading-relaxed text-sm">{wrapUpMessage}</p>
                 )}
 
                 {phase === 'completed' && (
-                  <Button onClick={onEndSession} size="lg" className="gap-2 rounded-2xl">
+                  <Button onClick={onEndSession} size="lg" className="gap-2 rounded-2xl w-full">
                     <Home className="w-4 h-4" />
                     Terug naar overzicht
                   </Button>
