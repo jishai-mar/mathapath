@@ -39,6 +39,13 @@ interface SessionStats {
   xpEarned: number;
 }
 
+interface PerformanceData {
+  correctStreak: number;
+  incorrectStreak: number;
+  accuracy: number;
+  exercisesAtCurrentDifficulty: number;
+}
+
 interface GuidedTutoringSessionProps {
   subtopicId: string;
   subtopicName: string;
@@ -70,6 +77,21 @@ export function GuidedTutoringSession({
   const [wrapUpMessage, setWrapUpMessage] = useState('');
   const [exerciseGoal] = useState(5); // Session goal: 5 exercises
   const [tutorMood, setTutorMood] = useState<'idle' | 'explaining' | 'celebrating' | 'thinking' | 'encouraging'>('idle');
+  
+  // Track used exercises to prevent duplicates
+  const [usedExerciseIds, setUsedExerciseIds] = useState<string[]>([]);
+  
+  // Track performance for progressive difficulty
+  const [currentDifficulty, setCurrentDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
+  const [performanceData, setPerformanceData] = useState<PerformanceData>({
+    correctStreak: 0,
+    incorrectStreak: 0,
+    accuracy: 0,
+    exercisesAtCurrentDifficulty: 0,
+  });
+  
+  // Student's mastery level (fetched at session start)
+  const [studentMastery, setStudentMastery] = useState<number>(0);
 
   const { speak, stopSpeaking, isSpeaking } = useTutorTTS({
     personality: 'friendly',
@@ -94,7 +116,75 @@ export function GuidedTutoringSession({
     startSession();
   }, []);
 
+  // Fetch student mastery at session start
+  const fetchStudentMastery = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // Try to get subtopic-specific progress first
+      const { data: subtopicProgress } = await supabase
+        .from('user_subtopic_progress')
+        .select('mastery_percentage')
+        .eq('user_id', user.id)
+        .eq('subtopic_id', subtopicId)
+        .single();
+      
+      if (subtopicProgress) {
+        const mastery = subtopicProgress.mastery_percentage;
+        setStudentMastery(mastery);
+        
+        // Set initial difficulty based on mastery level
+        if (mastery >= 61) {
+          setCurrentDifficulty('hard');
+        } else if (mastery >= 31) {
+          setCurrentDifficulty('medium');
+        } else {
+          setCurrentDifficulty('easy');
+        }
+        return;
+      }
+      
+      // Fallback to learning profile if no subtopic progress
+      const { data: topicData } = await supabase
+        .from('subtopics')
+        .select('topic_id')
+        .eq('id', subtopicId)
+        .single();
+      
+      if (topicData) {
+        const { data: learningProfile } = await supabase
+          .from('learning_profiles')
+          .select('subtopic_levels, overall_level')
+          .eq('user_id', user.id)
+          .eq('topic_id', topicData.topic_id)
+          .single();
+        
+        if (learningProfile) {
+          const subtopicLevels = learningProfile.subtopic_levels as Record<string, number> || {};
+          const subtopicLevel = subtopicLevels[subtopicId] || learningProfile.overall_level || 0;
+          
+          // Convert level (0-5 scale) to difficulty
+          if (subtopicLevel >= 4) {
+            setCurrentDifficulty('hard');
+            setStudentMastery(80);
+          } else if (subtopicLevel >= 2) {
+            setCurrentDifficulty('medium');
+            setStudentMastery(50);
+          } else {
+            setCurrentDifficulty('easy');
+            setStudentMastery(20);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching student mastery:', error);
+    }
+  }, [user, subtopicId]);
+
   const startSession = async () => {
+    // Fetch student mastery first
+    await fetchStudentMastery();
+    
     try {
       const { data, error } = await supabase.functions.invoke('generate-session-greeting', {
         body: { 
@@ -127,6 +217,43 @@ export function GuidedTutoringSession({
     }
   };
 
+  // Update difficulty based on performance streaks
+  const updateDifficultyAfterAnswer = useCallback((isCorrect: boolean) => {
+    setPerformanceData(prev => {
+      const newPerf = {
+        ...prev,
+        correctStreak: isCorrect ? prev.correctStreak + 1 : 0,
+        incorrectStreak: isCorrect ? 0 : prev.incorrectStreak + 1,
+        accuracy: stats.total > 0 ? (stats.correct + (isCorrect ? 1 : 0)) / (stats.total + 1) : isCorrect ? 1 : 0,
+        exercisesAtCurrentDifficulty: prev.exercisesAtCurrentDifficulty + 1,
+      };
+      
+      // Upgrade difficulty after 2 correct in a row (or 3 at current level)
+      if (newPerf.correctStreak >= 2 || (newPerf.exercisesAtCurrentDifficulty >= 3 && newPerf.accuracy >= 0.7)) {
+        if (currentDifficulty === 'easy') {
+          setCurrentDifficulty('medium');
+          return { ...newPerf, exercisesAtCurrentDifficulty: 0 };
+        } else if (currentDifficulty === 'medium') {
+          setCurrentDifficulty('hard');
+          return { ...newPerf, exercisesAtCurrentDifficulty: 0 };
+        }
+      }
+      
+      // Downgrade difficulty after 2 incorrect in a row
+      if (newPerf.incorrectStreak >= 2) {
+        if (currentDifficulty === 'hard') {
+          setCurrentDifficulty('medium');
+          return { ...newPerf, exercisesAtCurrentDifficulty: 0, incorrectStreak: 0 };
+        } else if (currentDifficulty === 'medium') {
+          setCurrentDifficulty('easy');
+          return { ...newPerf, exercisesAtCurrentDifficulty: 0, incorrectStreak: 0 };
+        }
+      }
+      
+      return newPerf;
+    });
+  }, [currentDifficulty, stats]);
+
   const loadNextExercise = async () => {
     if (stats.total >= exerciseGoal) {
       generateWrapUp();
@@ -139,23 +266,33 @@ export function GuidedTutoringSession({
     setTutorMood('idle');
 
     try {
-      // Determine difficulty based on performance
-      let difficulty: 'easy' | 'medium' | 'hard' = 'easy';
-      if (stats.total >= 2) {
-        const accuracy = stats.correct / stats.total;
-        if (accuracy >= 0.8) difficulty = 'hard';
-        else if (accuracy >= 0.5) difficulty = 'medium';
-      }
-
-      const { data: exercises } = await supabase
+      // Use the tracked difficulty level
+      const difficulty = currentDifficulty;
+      
+      // Query for exercises, excluding already used ones
+      let query = supabase
         .from('exercises_public')
         .select('*')
         .eq('subtopic_id', subtopicId)
-        .eq('difficulty', difficulty)
-        .limit(5);
+        .eq('difficulty', difficulty);
+      
+      // Exclude used exercises
+      if (usedExerciseIds.length > 0) {
+        query = query.not('id', 'in', `(${usedExerciseIds.join(',')})`);
+      }
+      
+      const { data: exercises } = await query.limit(10);
 
-      if (exercises && exercises.length > 0) {
-        const randomExercise = exercises[Math.floor(Math.random() * exercises.length)];
+      // Filter out any null IDs and already used (double check)
+      const availableExercises = exercises?.filter(
+        ex => ex.id && !usedExerciseIds.includes(ex.id)
+      ) || [];
+
+      if (availableExercises.length > 0) {
+        const randomExercise = availableExercises[Math.floor(Math.random() * availableExercises.length)];
+        
+        // Track this exercise as used
+        setUsedExerciseIds(prev => [...prev, randomExercise.id!]);
         setCurrentExercise(randomExercise as Exercise);
         
         // Update exercise context for the AI tutor
@@ -175,9 +312,20 @@ export function GuidedTutoringSession({
           speak(intro, 'explaining');
         }
       } else {
-        // Generate new exercise
+        // No available exercises at current difficulty - generate a new one
+        // Pass existing exercise IDs to avoid similar problems
         const { data } = await supabase.functions.invoke('generate-exercise', {
-          body: { subtopicId, difficulty, userId: user?.id }
+          body: { 
+            subtopicId, 
+            difficulty, 
+            userId: user?.id,
+            existingExercises: usedExerciseIds,
+            performanceData: {
+              ...performanceData,
+              sessionStats: stats,
+              studentMastery,
+            }
+          }
         });
         
         if (data && !data.error) {
@@ -187,6 +335,11 @@ export function GuidedTutoringSession({
             difficulty: data.difficulty,
             hints: data.hints,
           };
+          
+          // Track this new exercise as used
+          if (data.id) {
+            setUsedExerciseIds(prev => [...prev, data.id]);
+          }
           setCurrentExercise(newExercise);
           
           // Update exercise context for the AI tutor
@@ -197,6 +350,14 @@ export function GuidedTutoringSession({
             difficulty: data.difficulty,
             hints: data.hints || [],
           });
+          
+          // Announce exercise
+          if (!isMuted) {
+            const intro = stats.total === 0 
+              ? 'Hier is je eerste opgave.' 
+              : `Goed, hier is opgave ${stats.total + 1}.`;
+            speak(intro, 'explaining');
+          }
         }
       }
     } catch (error) {
@@ -235,6 +396,9 @@ export function GuidedTutoringSession({
       if (correctAnswer) {
         exerciseContext?.setCorrectAnswer(correctAnswer);
       }
+      
+      // Update progressive difficulty based on answer
+      updateDifficultyAfterAnswer(isCorrect);
       
       setStats(prev => ({
         correct: prev.correct + (isCorrect ? 1 : 0),
