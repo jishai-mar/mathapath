@@ -370,7 +370,7 @@ For example:
         ).join('\n\n')
       : 'No examples available - create a typical exercise for this topic.';
 
-    const systemPrompt = `You are a mathematics educator creating exercises for the Reichman Mechina curriculum.
+    const systemPrompt = `You are a mathematics educator creating exercises for the Reichman Mechina curriculum, following TOP-QUALITY COURSEBOOK standards.
 
 Topic: ${topicName}
 Subtopic: ${subtopicName}
@@ -386,9 +386,28 @@ ${DIFFICULTY_INSTRUCTIONS[difficulty as keyof typeof DIFFICULTY_INSTRUCTIONS]}
 ${subLevelGuidance}
 ${studentContext}
 
-EXERCISE DESIGN PHILOSOPHY:
-Exercises must reinforce deep understanding, not just test mechanics.
-Each exercise should require the student to apply concepts from the theory, not just follow procedures.
+=== TEXTBOOK-STYLE QUESTION DESIGN PHILOSOPHY ===
+
+You create questions EXACTLY as they would appear in the best mathematics coursebooks:
+
+EASY QUESTIONS:
+- Straightforward, direct language that average students understand on first read
+- Focus on a SINGLE skill or concept with no unnecessary complexity
+- Use clear prompts: "Calculate...", "Solve for x...", "Simplify..."
+- Pattern should be obvious and direct
+- Build confidence with guaranteed success
+
+HARD QUESTIONS:
+- Include more context or require multiple steps
+- Do NOT give away the solution path - student must decide the method
+- May present as word problems without explicitly stating which operation to use
+- Phrasing can hint at the challenge but must remain unambiguous
+- Push critical thinking while maintaining clear goals
+
+FOR ALL QUESTIONS:
+- Use PROPER NOTATION and TERMINOLOGY (say "find the derivative" not "do the derivative")
+- Even tricky problems must have a CLEAR GOAL (what to find or prove)
+- Mirror textbook style: exercises for practice, problems for application
 
 QUESTION FORMATTING - STRICT TEXTBOOK STYLE:
 - Write questions EXACTLY as they would appear in a professional mathematics textbook
@@ -400,10 +419,11 @@ QUESTION FORMATTING - STRICT TEXTBOOK STYLE:
   • "Calculate:"
   • "Factor completely:"
   • "Evaluate:"
+  • "Prove that:"
+  • "Express in terms of:"
 - ABSOLUTELY NO motivational phrases: never use "Let's", "Try", "Can you", "Here's", "Now", "Great", etc.
-- ABSOLUTELY NO commentary or context: just state the mathematical task directly
-- ABSOLUTELY NO styling cues, colors, emphasis markers, or UI hints
-- Questions must be concise, direct, and unambiguous
+- ABSOLUTELY NO commentary or context before the task: state the mathematical task directly
+- Questions must be concise, direct, and mathematically precise
 
 MATHEMATICAL NOTATION - CLEAN UNICODE (CRITICAL):
 - Use ONLY clean Unicode symbols, NEVER LaTeX syntax
@@ -426,15 +446,27 @@ FORBIDDEN PATTERNS (never include these):
 - Explanatory text before the actual question
 - Multiple questions in one exercise
 
-CORRECT EXAMPLES:
+CORRECT EXAMPLES BY DIFFICULTY:
+
+EASY:
+✓ "Solve for x: 2x + 6 = 14"
+✓ "Calculate: 15 × 4"
+✓ "Simplify: 3x + 5x"
+
+MEDIUM:
 ✓ "Solve for x: 3x² − 12 = 0"
 ✓ "Find all real solutions: √(x + 5) = 3"
-✓ "Simplify: (2x³ + 6x²) ÷ 2x"
 ✓ "Factor completely: x² − 9"
+
+HARD:
+✓ "A rectangular garden has an area of 120 m² and a perimeter of 46 m. Find its dimensions."
+✓ "Determine all values of k for which the equation x² + kx + 9 = 0 has exactly one real solution."
+✓ "Solve the system: { 2x − 3y = 7, x² + y² = 25 }"
 
 INCORRECT EXAMPLES (never do this):
 ✗ "Let's solve this equation: $3x^2 - 12 = 0$"
 ✗ "Try to find x in: \\sqrt{x+5} = 3"
+✗ "Here's a fun challenge for you!"
 ✗ "Here's a challenge! Can you simplify (2x^3 + 6x^2) / 2x?"
 
 EXPLANATION - TEACH THE REASONING:

@@ -6,16 +6,22 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Generate tutor-style feedback using AI
+// Emotional state type for personalized feedback
+type StudentEmotionalState = 'neutral' | 'struggling' | 'frustrated' | 'confident' | 'anxious';
+
+// Generate tutor-style feedback using AI with emotional awareness
 async function generateTutorFeedback(
   question: string,
   userAnswer: string,
   correctAnswer: string,
-  subtopicName: string
+  subtopicName: string,
+  consecutiveWrong: number = 0,
+  hintsUsed: number = 0
 ): Promise<{
   what_went_well: string;
   where_it_breaks: string;
   what_to_focus_on_next: string;
+  emotional_support?: string;
 }> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   
@@ -28,32 +34,62 @@ async function generateTutorFeedback(
     };
   }
 
+  // Detect emotional state based on performance
+  let emotionalState: StudentEmotionalState = 'neutral';
+  if (consecutiveWrong >= 3) {
+    emotionalState = 'frustrated';
+  } else if (consecutiveWrong >= 2 || hintsUsed >= 2) {
+    emotionalState = 'struggling';
+  } else if (hintsUsed >= 1) {
+    emotionalState = 'anxious';
+  }
+
+  // Emotional adaptation instructions
+  const emotionalGuidance: Record<StudentEmotionalState, string> = {
+    neutral: 'Provide balanced, encouraging feedback.',
+    struggling: 'Be EXTRA supportive. Emphasize what they did right. Break the hint into smaller pieces. Use phrases like "You are on the right track" and "This part takes practice."',
+    frustrated: 'Be VERY gentle and empathetic. First acknowledge their effort: "This is a challenging problem, and you are showing real persistence." Focus on what went well. Suggest they might benefit from reviewing a simpler example first. Do NOT repeat the same type of hint that has not worked.',
+    confident: 'Provide clear, direct feedback. They can handle constructive criticism.',
+    anxious: 'Be calm and reassuring. Use phrases like "It is okay to make mistakes - that is how we learn" and "You are making progress." Keep the feedback very simple and actionable.',
+  };
+
   const systemPrompt = `You are a patient, supportive math tutor helping a student understand their mistake.
 Your role is to guide them toward understanding WITHOUT revealing the correct answer directly.
 
-Guidelines:
+STUDENT EMOTIONAL STATE: ${emotionalState}
+ADAPTATION: ${emotionalGuidance[emotionalState]}
+
+Core Guidelines:
 - Be encouraging and acknowledge any correct thinking
 - Identify the likely error or misconception without giving away the answer
 - Provide a guiding hint that helps them think through the problem
-- Use simple, clear language
+- Use simple, clear language - like a top-quality coursebook would explain
 - Keep responses concise (1-2 sentences each)
-- If you need to reference math, use plain text notation (e.g., x^2, sqrt(x))`;
+- If you need to reference math, use plain text notation (e.g., x², √x)
+
+IMPORTANT FOR ${emotionalState.toUpperCase()} STATE:
+${emotionalState === 'frustrated' ? '- First validate their effort before any correction\n- Suggest a simpler approach or breaking the problem down\n- Consider if a completely different explanation approach might help' : ''}
+${emotionalState === 'struggling' ? '- Extra encouragement on what they did correctly\n- Make the next step very clear and small\n- Remind them that this concept takes practice' : ''}
+${emotionalState === 'anxious' ? '- Reassure them that mistakes are part of learning\n- Keep feedback very simple and clear\n- Focus on one small thing to fix' : ''}`;
 
   const userPrompt = `Topic: ${subtopicName}
 Question: ${question}
 Student's Answer: ${userAnswer}
 (The correct answer is: ${correctAnswer} - but do NOT reveal this to the student)
+Consecutive wrong attempts: ${consecutiveWrong}
+Hints used: ${hintsUsed}
 
-Analyze the student's answer and provide supportive feedback:
-1. what_went_well: Acknowledge any correct thinking or approach (even partial)
-2. where_it_breaks: Identify where the mistake likely occurred WITHOUT revealing the answer. Give a hint about what to check.
-3. what_to_focus_on_next: A brief, actionable tip for solving this type of problem
+Analyze the student's answer and provide supportive, emotionally-aware feedback:
+1. what_went_well: Acknowledge any correct thinking or approach (even partial). Be specific and genuine.
+2. where_it_breaks: Identify where the mistake likely occurred WITHOUT revealing the answer. Give a gentle hint about what to check.
+3. what_to_focus_on_next: A brief, actionable tip for solving this type of problem.
+${emotionalState === 'frustrated' || emotionalState === 'struggling' ? '4. emotional_support: A brief encouraging message acknowledging their effort and persistence.' : ''}
 
 Return ONLY valid JSON in this exact format:
 {
   "what_went_well": "...",
   "where_it_breaks": "...",
-  "what_to_focus_on_next": "..."
+  "what_to_focus_on_next": "..."${emotionalState === 'frustrated' || emotionalState === 'struggling' ? ',\n  "emotional_support": "..."' : ''}
 }`;
 
   try {
@@ -88,11 +124,38 @@ Return ONLY valid JSON in this exact format:
     throw new Error("No valid JSON in response");
   } catch (error) {
     console.error("Error generating feedback:", error);
-    return {
-      what_went_well: "You attempted the problem.",
-      where_it_breaks: "Check your calculation steps carefully.",
-      what_to_focus_on_next: "Try working through the problem step by step.",
+    // Provide emotionally-aware fallback
+    const fallbacks: Record<StudentEmotionalState, { what_went_well: string; where_it_breaks: string; what_to_focus_on_next: string; emotional_support?: string }> = {
+      neutral: {
+        what_went_well: "You attempted the problem.",
+        where_it_breaks: "Check your calculation steps carefully.",
+        what_to_focus_on_next: "Try working through the problem step by step.",
+      },
+      struggling: {
+        what_went_well: "You are putting in effort, and that matters.",
+        where_it_breaks: "Let's slow down and check each step carefully.",
+        what_to_focus_on_next: "Try breaking this into smaller pieces.",
+        emotional_support: "This concept takes practice - you are making progress.",
+      },
+      frustrated: {
+        what_went_well: "You are showing real persistence by continuing to try.",
+        where_it_breaks: "Sometimes a fresh approach helps - let's try a different angle.",
+        what_to_focus_on_next: "Consider reviewing a simpler example first.",
+        emotional_support: "It is completely okay to find this challenging. Many students do.",
+      },
+      confident: {
+        what_went_well: "You attempted the problem.",
+        where_it_breaks: "Check your calculation steps carefully.",
+        what_to_focus_on_next: "Try working through the problem step by step.",
+      },
+      anxious: {
+        what_went_well: "You are doing well by trying.",
+        where_it_breaks: "Just one small thing to adjust.",
+        what_to_focus_on_next: "Take it one step at a time.",
+        emotional_support: "Mistakes are how we learn - you are on the right track.",
+      },
     };
+    return fallbacks[emotionalState];
   }
 }
 
@@ -144,16 +207,9 @@ serve(async (req) => {
       ? normalize(userAnswer) === normalize(exercise.correct_answer)
       : false;
 
-    // Generate AI tutor feedback for incorrect answers
-    let tutorFeedback = null;
-    if (!isCorrect && userAnswer) {
-      tutorFeedback = await generateTutorFeedback(
-        exercise.question,
-        userAnswer,
-        exercise.correct_answer,
-        subtopicName || "Mathematics"
-      );
-    }
+    // We'll calculate consecutive wrong before generating feedback
+    // First, fetch recent attempts to get the context
+    let consecutiveWrongForFeedback = 0;
 
     // Fetch student's recent performance on this subtopic for personalization
     const { data: recentAttempts } = await supabase
@@ -213,6 +269,19 @@ serve(async (req) => {
     } else {
       consecutiveWrongCurrent++;
       consecutiveCorrectCurrent = 0;
+    }
+
+    // Generate AI tutor feedback for incorrect answers with emotional awareness
+    let tutorFeedback = null;
+    if (!isCorrect && userAnswer) {
+      tutorFeedback = await generateTutorFeedback(
+        exercise.question,
+        userAnswer,
+        exercise.correct_answer,
+        subtopicName || "Mathematics",
+        consecutiveWrongCurrent,
+        hintsUsed || 0
+      );
     }
 
     // Calculate success rates
