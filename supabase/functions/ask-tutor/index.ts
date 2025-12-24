@@ -49,7 +49,7 @@ serve(async (req) => {
       question, 
       subtopicName, 
       theoryContext, 
-      conversationHistory, 
+      conversationHistory = [], 
       tutorName = 'Alex', 
       personality = 'patient',
       sessionPhase = 'learning',
