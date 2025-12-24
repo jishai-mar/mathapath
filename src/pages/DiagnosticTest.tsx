@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
@@ -510,29 +510,42 @@ export default function DiagnosticTest() {
                     className="text-lg"
                   />
 
-                  {/* Hint section */}
-                  {currentQuestion.hints && currentQuestion.hints.length > 0 && (
-                    <div>
-                      {!showHint ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowHint(true)}
-                          className="text-muted-foreground"
-                        >
-                          <Lightbulb className="w-4 h-4 mr-2" />
-                          Need a hint?
-                        </Button>
-                      ) : (
-                        <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
-                          <p className="text-sm text-primary">
-                            <Lightbulb className="w-4 h-4 inline mr-2" />
-                            {currentQuestion.hints[0]}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Hint and Solution section */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {currentQuestion.hints && currentQuestion.hints.length > 0 && (
+                      <>
+                        {!showHint ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowHint(true)}
+                            className="text-muted-foreground"
+                          >
+                            <Lightbulb className="w-4 h-4 mr-2" />
+                            Need a hint?
+                          </Button>
+                        ) : (
+                          <div className="w-full p-3 rounded-lg bg-primary/10 border border-primary/20">
+                            <p className="text-sm text-primary">
+                              <Lightbulb className="w-4 h-4 inline mr-2" />
+                              {currentQuestion.hints[0]}
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    )}
+                    
+                    {/* Show Solution Button - Always visible */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowSolutionWalkthrough(true)}
+                      className="text-muted-foreground gap-2 hover:text-primary hover:border-primary/50 transition-colors"
+                    >
+                      <BookOpen className="w-4 h-4" />
+                      Toon uitwerking
+                    </Button>
+                  </div>
 
                   <div className="flex gap-3">
                     <Button
