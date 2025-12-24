@@ -191,6 +191,12 @@ export default function Dashboard() {
 
       // Handle rate limit/credits/errors gracefully with fallback
       if (error || data?.fallback || data?.error) {
+        if (data?.rate_limited) {
+          toast.message("AI is busy right now. Showing a quick fallback.");
+        } else if (data?.credits_depleted) {
+          toast.error("AI credits are depleted. Showing a fallback.");
+        }
+
         const fallbackInsights = {
           greeting: `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, ${profileData.display_name || 'Student'}!`,
           mainFocus: weakSubtopicsData.length > 0

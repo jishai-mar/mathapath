@@ -102,23 +102,29 @@ Generate personalized daily insights for this student.`;
     );
 
     if (!response.ok) {
+      // IMPORTANT: return 200 with a fallback payload so the client SDK doesn't treat it as a hard error.
       if (response.status === 429) {
         return new Response(
           JSON.stringify({
             error: "Rate limit exceeded. Please try again later.",
             fallback: true,
+            rate_limited: true,
           }),
           {
-            status: 429,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           },
         );
       }
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: "AI credits depleted.", fallback: true }),
+          JSON.stringify({
+            error: "AI credits depleted.",
+            fallback: true,
+            credits_depleted: true,
+          }),
           {
-            status: 402,
+            status: 200,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           },
         );
