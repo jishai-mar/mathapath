@@ -40,7 +40,13 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [currentPartial, setCurrentPartial] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [fallbackRequested, setFallbackRequested] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const lastStartAtRef = useRef(0);
+  const fallbackTriedRef = useRef(false);
+  const manualEndRef = useRef(false);
+  const lastOverridesRef = useRef<{ prompt: string; firstMessage: string } | null>(null);
 
   // Build dynamic context for the agent
   const buildAgentContext = useCallback(() => {
@@ -76,6 +82,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
 
   // ElevenLabs conversation hook
   const conversation = useConversation({
+    preferHeadphonesForIosDevices: true,
     onConnect: () => {
       console.log('Connected to ElevenLabs agent');
       setIsConnecting(false);
@@ -83,10 +90,28 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     },
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs agent');
+
+      // If we disconnect immediately after starting, try a WebSocket fallback once.
+      const msSinceStart = Date.now() - lastStartAtRef.current;
+      const shouldFallback =
+        !manualEndRef.current &&
+        !fallbackTriedRef.current &&
+        msSinceStart > 0 &&
+        msSinceStart < 8000;
+
+      if (shouldFallback) {
+        console.warn('WebRTC disconnected quickly; requesting WebSocket fallback...', { msSinceStart });
+        fallbackTriedRef.current = true;
+        setFallbackRequested(true);
+      }
+    },
+    onDebug: (evt) => {
+      // Useful for diagnosing silent failures in WebRTC/DataChannel setup
+      console.log('[ElevenLabs debug]', evt);
     },
     onMessage: (message: any) => {
       console.log('Agent message:', message);
-      
+
       // Handle user transcripts
       if (message.type === 'user_transcript') {
         const userText = message.user_transcription_event?.user_transcript;
@@ -98,11 +123,11 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
             content: userText,
             timestamp: new Date(),
           };
-          setTranscript(prev => [...prev, newMessage]);
+          setTranscript((prev) => [...prev, newMessage]);
           exerciseContext?.addConversationMessage('student', userText);
         }
       }
-      
+
       // Handle agent responses
       if (message.type === 'agent_response') {
         const agentText = message.agent_response_event?.agent_response;
@@ -113,7 +138,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
             content: agentText,
             timestamp: new Date(),
           };
-          setTranscript(prev => [...prev, newMessage]);
+          setTranscript((prev) => [...prev, newMessage]);
           exerciseContext?.addConversationMessage('tutor', agentText);
         }
       }
@@ -123,13 +148,11 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
         const correctedText = message.agent_response_correction_event?.corrected_agent_response;
         if (correctedText) {
           // Update the last tutor message
-          setTranscript(prev => {
-            const lastTutorIndex = [...prev].reverse().findIndex(m => m.role === 'tutor');
+          setTranscript((prev) => {
+            const lastTutorIndex = [...prev].reverse().findIndex((m) => m.role === 'tutor');
             if (lastTutorIndex >= 0) {
               const actualIndex = prev.length - 1 - lastTutorIndex;
-              return prev.map((m, i) => 
-                i === actualIndex ? { ...m, content: correctedText } : m
-              );
+              return prev.map((m, i) => (i === actualIndex ? { ...m, content: correctedText } : m));
             }
             return prev;
           });
@@ -150,31 +173,11 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     }
   }, [transcript, currentPartial]);
 
-  // Start conversation
-  const startConversation = useCallback(async () => {
-    setIsConnecting(true);
-    setError(null);
+  const buildOverrides = useCallback(() => {
+    const context = buildAgentContext();
 
-    try {
-      // Request microphone permission
-      await navigator.mediaDevices.getUserMedia({ audio: true });
-
-      // Get conversation token from edge function
-      const { data, error: fnError } = await supabase.functions.invoke(
-        'elevenlabs-conversation-token',
-        { body: {} }
-      );
-
-      if (fnError || !data?.token) {
-        throw new Error('Could not connect to the tutor');
-      }
-
-      // Build context for the agent
-      const context = buildAgentContext();
-
-      // Build the dynamic prompt with exercise context
-      const dynamicPrompt = context.current_question
-        ? `You are helping a student with the following math problem:
+    const prompt = context.current_question
+      ? `You are helping a student with the following math problem:
 
 CURRENT PROBLEM: ${context.current_question}
 TOPIC: ${context.subtopic_name}
@@ -187,53 +190,136 @@ ${context.conversation_summary ? `RECENT CONVERSATION:\n${context.conversation_s
 
 INSTRUCTIONS:
 - Speak in short sentences (max 2 sentences at a time)
-- First ask what the student has already tried
+- Ask one guiding question at a time, then wait
+- Default to hint-first help; only give full solutions if asked
 - Do NOT give the answer directly - help them discover it themselves
 - Use layered help: hint → stronger hint → steps
 - When explaining formulas, say them clearly (e.g., "x squared plus 2x")
 - Check in regularly: "What do you think the next step is?"
 - Be patient and encouraging`
-        : `The student wants help with math but is not working on a specific problem.
+      : `The student wants help with math but is not working on a specific problem.
 Help with general questions or suggest starting a practice session.
 Keep answers short (max 2 sentences at a time).`;
 
-      // Start the conversation with dynamic context
-      await conversation.startSession({
-        conversationToken: data.token,
-        connectionType: 'webrtc',
-        overrides: {
-          agent: {
-            prompt: {
-              prompt: dynamicPrompt,
-            },
-            firstMessage: context.current_question
-              ? `Hi! I see you're working on ${context.subtopic_name}. What are you stuck on?`
-              : 'Hello! I\'m your math tutor. How can I help you today?',
-          },
-        },
-      });
+    const firstMessage = context.current_question
+      ? `Hi! Quick check: what's your goal for this problem, and what have you tried so far?`
+      : `Hi! What's your goal right now, and how can I help?`;
 
-      // Add the first message to transcript
-      const firstMessage = context.current_question
-        ? `Hi! I see you're working on ${context.subtopic_name}. What are you stuck on?`
-        : 'Hello! I\'m your math tutor. How can I help you today?';
-      
-      setTranscript([{
+    return { prompt, firstMessage };
+  }, [buildAgentContext]);
+
+  const startWebrtc = useCallback(async () => {
+    // Get conversation token from backend function
+    const { data, error: fnError } = await supabase.functions.invoke('elevenlabs-conversation-token', {
+      body: {},
+    });
+
+    if (fnError || !data?.token) {
+      throw new Error('Could not connect to the tutor');
+    }
+
+    const overrides = buildOverrides();
+    lastOverridesRef.current = overrides;
+
+    await conversation.startSession({
+      conversationToken: data.token,
+      connectionType: 'webrtc',
+      overrides: {
+        agent: {
+          prompt: { prompt: overrides.prompt },
+          firstMessage: overrides.firstMessage,
+          language: 'en',
+        },
+      },
+    });
+
+    setTranscript([
+      {
         id: 'greeting',
         role: 'tutor',
-        content: firstMessage,
+        content: overrides.firstMessage,
         timestamp: new Date(),
-      }]);
+      },
+    ]);
+  }, [buildOverrides, conversation]);
 
+  const startWebsocketFallback = useCallback(async () => {
+    const overrides = lastOverridesRef.current ?? buildOverrides();
+    lastOverridesRef.current = overrides;
+
+    const { data, error: fnError } = await supabase.functions.invoke('elevenlabs-conversation-token', {
+      body: { mode: 'signed_url' },
+    });
+
+    if (fnError || !data?.signedUrl) {
+      throw new Error('Could not reconnect (fallback)');
+    }
+
+    await conversation.startSession({
+      signedUrl: data.signedUrl,
+      connectionType: 'websocket',
+      overrides: {
+        agent: {
+          prompt: { prompt: overrides.prompt },
+          firstMessage: overrides.firstMessage,
+          language: 'en',
+        },
+      },
+    });
+
+    setTranscript([
+      {
+        id: 'greeting',
+        role: 'tutor',
+        content: overrides.firstMessage,
+        timestamp: new Date(),
+      },
+    ]);
+  }, [buildOverrides, conversation]);
+
+  useEffect(() => {
+    if (!fallbackRequested) return;
+
+    (async () => {
+      try {
+        setIsConnecting(true);
+        setError('WebRTC connection dropped. Retrying...');
+        await startWebsocketFallback();
+        setError(null);
+      } catch (e) {
+        console.error('WebSocket fallback failed:', e);
+        setError(e instanceof Error ? e.message : 'Could not reconnect');
+      } finally {
+        setFallbackRequested(false);
+        setIsConnecting(false);
+      }
+    })();
+  }, [fallbackRequested, startWebsocketFallback]);
+
+  // Start conversation
+  const startConversation = useCallback(async () => {
+    setIsConnecting(true);
+    setError(null);
+
+    manualEndRef.current = false;
+    fallbackTriedRef.current = false;
+    lastStartAtRef.current = Date.now();
+
+    try {
+      // Request microphone permission
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      await startWebrtc();
     } catch (err) {
       console.error('Failed to start conversation:', err);
       setError(err instanceof Error ? err.message : 'Could not connect');
       setIsConnecting(false);
     }
-  }, [conversation, buildAgentContext]);
+  }, [startWebrtc]);
 
   // End conversation
   const endConversation = useCallback(async () => {
+    manualEndRef.current = true;
     await conversation.endSession();
     setTranscript([]);
   }, [conversation]);
