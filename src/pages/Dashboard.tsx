@@ -173,16 +173,39 @@ export default function Dashboard() {
           weakSubtopics: weakSubtopicsData.slice(0, 3)
         }
       });
-      if (error) {
-        console.error('Error fetching AI insights:', error);
+      
+      // Handle rate limit or other errors gracefully with fallback
+      if (error || data?.fallback || data?.error) {
+        console.log('Using fallback insights due to:', error?.message || data?.error || 'fallback flag');
+        // Generate local fallback insights
+        const fallbackInsights = {
+          greeting: `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, ${profileData.display_name || 'Student'}!`,
+          mainFocus: weakSubtopicsData.length > 0 
+            ? `Let's focus on ${weakSubtopicsData[0].subtopic_name} today to strengthen your skills.`
+            : "Let's continue building your math mastery today!",
+          insights: [
+            { type: "tip", text: "Consistent daily practice leads to lasting improvement." }
+          ],
+          motivationalNote: "Every problem solved is progress made!"
+        };
+        setAiInsights(fallbackInsights);
+        setTutorMood('encouraging');
         return;
       }
-      if (data && !data.fallback) {
+      
+      if (data) {
         setAiInsights(data);
         setTutorMood('happy');
       }
     } catch (error) {
       console.error('Error fetching AI insights:', error);
+      // Still set fallback on catch
+      setAiInsights({
+        greeting: `Welcome back, ${profileData.display_name || 'Student'}!`,
+        mainFocus: "Ready to practice some math today?",
+        insights: [],
+        motivationalNote: "Let's make progress together!"
+      });
     } finally {
       setInsightsLoading(false);
     }
