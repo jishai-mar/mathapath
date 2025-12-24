@@ -54,8 +54,8 @@ export function VoiceChatCompanion() {
       const hasExercise = exerciseContext?.currentQuestion;
       
       const greeting = hasExercise
-        ? `Hoi! Ik zie dat je werkt aan een opgave over ${exerciseContext?.subtopicName || 'wiskunde'}. Je kunt hier typen of met me praten via de spraakknop. Waar loop je tegenaan?`
-        : 'Hallo! Ik ben je wiskunde tutor. Je kunt hier typen of met me praten via de spraakknop hiernaast. Hoe kan ik je helpen?';
+        ? `Hi! I see you're working on a ${exerciseContext?.subtopicName || 'math'} problem. You can type here or talk to me using the voice button. What are you stuck on?`
+        : 'Hello! I\'m your math tutor. You can type here or talk to me using the voice button. How can I help you?';
       
       setMessages([{
         id: 'greeting',
@@ -170,7 +170,7 @@ export function VoiceChatCompanion() {
       console.error('Error getting tutor response:', error);
       setMessages(prev => prev.map(m => 
         m.id === streamingId 
-          ? { ...m, content: 'Sorry, er ging iets mis. Probeer het opnieuw.', isStreaming: false }
+          ? { ...m, content: 'Sorry, something went wrong. Please try again.', isStreaming: false }
           : m
       ));
     } finally {
@@ -182,13 +182,13 @@ export function VoiceChatCompanion() {
     let message = '';
     switch (action) {
       case 'hint':
-        message = 'Kun je me een hint geven?';
+        message = 'Can you give me a hint?';
         break;
       case 'explain':
-        message = 'Kun je uitleggen hoe ik dit moet aanpakken?';
+        message = 'Can you explain how I should approach this?';
         break;
       case 'stuck':
-        message = 'Ik zit vast en weet niet waar te beginnen.';
+        message = 'I\'m stuck and don\'t know where to start.';
         break;
     }
     setInput(message);
@@ -211,7 +211,7 @@ export function VoiceChatCompanion() {
               size="lg"
               variant="secondary"
               className="rounded-full h-12 w-12 shadow-lg p-0"
-              title="Open tekst chat"
+              title="Open text chat"
             >
               <MessageCircle className="w-5 h-5" />
             </Button>
@@ -241,7 +241,7 @@ export function VoiceChatCompanion() {
                   <MessageCircle className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-medium text-sm">Chat met Tutor</h3>
+                  <h3 className="font-medium text-sm">Chat with Tutor</h3>
                   {exerciseContext?.subtopicName && (
                     <p className="text-xs text-muted-foreground truncate max-w-[140px]">
                       {exerciseContext.subtopicName}
@@ -324,7 +324,7 @@ export function VoiceChatCompanion() {
                       className="shrink-0 h-7 text-xs gap-1 rounded-full"
                     >
                       <Sparkles className="w-3 h-3" />
-                      Uitleg
+                      Explain
                     </Button>
                     <Button
                       variant="outline"
@@ -333,7 +333,7 @@ export function VoiceChatCompanion() {
                       className="shrink-0 h-7 text-xs gap-1 rounded-full"
                     >
                       <HelpCircle className="w-3 h-3" />
-                      Vast
+                      Stuck
                     </Button>
                   </div>
 
@@ -347,7 +347,7 @@ export function VoiceChatCompanion() {
                         ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Typ je vraag..."
+                        placeholder="Type your question..."
                         disabled={isLoading}
                         className="flex-1 h-9 text-sm rounded-full"
                       />
