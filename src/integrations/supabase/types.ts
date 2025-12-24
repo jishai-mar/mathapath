@@ -376,51 +376,66 @@ export type Database = {
       }
       learning_sessions: {
         Row: {
+          average_time_per_exercise: number | null
           correct_answers: number | null
           created_at: string
+          difficulty_progression: Json | null
           dominant_emotion: string | null
           duration_minutes: number | null
           ended_at: string | null
+          exercise_timings: Json | null
+          final_difficulty: string | null
           hints_used: number | null
           id: string
           problems_solved: number | null
           session_goal: string | null
           session_summary: string | null
           started_at: string
+          starting_difficulty: string | null
           topics_covered: string[] | null
           total_attempts: number | null
           user_id: string
           xp_earned: number | null
         }
         Insert: {
+          average_time_per_exercise?: number | null
           correct_answers?: number | null
           created_at?: string
+          difficulty_progression?: Json | null
           dominant_emotion?: string | null
           duration_minutes?: number | null
           ended_at?: string | null
+          exercise_timings?: Json | null
+          final_difficulty?: string | null
           hints_used?: number | null
           id?: string
           problems_solved?: number | null
           session_goal?: string | null
           session_summary?: string | null
           started_at?: string
+          starting_difficulty?: string | null
           topics_covered?: string[] | null
           total_attempts?: number | null
           user_id: string
           xp_earned?: number | null
         }
         Update: {
+          average_time_per_exercise?: number | null
           correct_answers?: number | null
           created_at?: string
+          difficulty_progression?: Json | null
           dominant_emotion?: string | null
           duration_minutes?: number | null
           ended_at?: string | null
+          exercise_timings?: Json | null
+          final_difficulty?: string | null
           hints_used?: number | null
           id?: string
           problems_solved?: number | null
           session_goal?: string | null
           session_summary?: string | null
           started_at?: string
+          starting_difficulty?: string | null
           topics_covered?: string[] | null
           total_attempts?: number | null
           user_id?: string

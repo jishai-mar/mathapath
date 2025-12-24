@@ -503,9 +503,58 @@ export function GuidedTutoringSession({
     loadNextExercise();
   };
 
+  // Save session analytics to database
+  const saveSessionAnalytics = useCallback(async () => {
+    if (!user) return;
+    
+    const durationMinutes = Math.round((Date.now() - sessionStartTime) / 60000);
+    const avgTime = exerciseTimings.length > 0 
+      ? Math.round(exerciseTimings.reduce((sum, t) => sum + t.timeSpentSeconds, 0) / exerciseTimings.length)
+      : 0;
+    
+    // Determine starting difficulty (first exercise's difficulty or from student mastery)
+    const startingDiff = difficultyProgressions.length > 0 
+      ? difficultyProgressions[0].fromDifficulty 
+      : (studentMastery >= 61 ? 'hard' : studentMastery >= 31 ? 'medium' : 'easy');
+    
+    try {
+      // Use type assertion to handle new columns not yet in generated types
+      const insertData = {
+        user_id: user.id,
+        session_goal: `Practice: ${subtopicName}`,
+        started_at: new Date(sessionStartTime).toISOString(),
+        ended_at: new Date().toISOString(),
+        duration_minutes: durationMinutes,
+        problems_solved: stats.total,
+        correct_answers: stats.correct,
+        total_attempts: stats.total,
+        xp_earned: stats.xpEarned,
+        topics_covered: [subtopicName],
+        difficulty_progression: difficultyProgressions,
+        exercise_timings: exerciseTimings,
+        starting_difficulty: startingDiff,
+        final_difficulty: currentDifficulty,
+        average_time_per_exercise: avgTime,
+      };
+      
+      const { error } = await supabase
+        .from('learning_sessions')
+        .insert(insertData as any);
+      
+      if (error) {
+        console.error('Error saving session analytics:', error);
+      }
+    } catch (err) {
+      console.error('Failed to save session analytics:', err);
+    }
+  }, [user, sessionStartTime, exerciseTimings, difficultyProgressions, stats, subtopicName, currentDifficulty, studentMastery]);
+
   const generateWrapUp = async () => {
     setPhase('wrap-up');
     setTutorMood('explaining');
+    
+    // Save analytics to database
+    await saveSessionAnalytics();
 
     try {
       const { data } = await supabase.functions.invoke('generate-session-wrapup', {
