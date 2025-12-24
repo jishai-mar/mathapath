@@ -9,7 +9,7 @@ import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
 import { ExerciseProvider } from "@/contexts/ExerciseContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { TalkToTutorButton } from "@/components/tutor/TalkToTutorButton";
+import { PersistentGilbert } from "@/components/tutor/PersistentGilbert";
 // Pages
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -115,7 +115,7 @@ const App = () => (
               <BrowserRouter>
                 <AppRoutes />
               </BrowserRouter>
-              <TalkToTutorButton variant="floating" />
+              <PersistentGilbert />
             </ExerciseProvider>
           </TutorSessionProvider>
         </TutorProvider>
