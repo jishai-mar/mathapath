@@ -135,10 +135,24 @@ Generate personalized daily insights for this student.`;
     }
 
     const data = await response.json();
+    console.log("AI gateway response:", JSON.stringify(data).slice(0, 500));
     const content = data.choices?.[0]?.message?.content;
 
+    // If there's no content, return a fallback (don't throw – that causes 500)
     if (!content) {
-      throw new Error("No content in AI response");
+      console.warn("Empty content from AI; returning fallback.");
+      const fallback = {
+        greeting: `Hey ${studentName}!`,
+        mainFocus: weakSubtopics?.[0]
+          ? `Let's work on ${weakSubtopics[0].subtopic_name} today.`
+          : "Ready to keep learning?",
+        insights: [{ type: "tip", text: "Small steps every day lead to mastery." }],
+        motivationalNote: "You've got this!",
+        fallback: true,
+      };
+      return new Response(JSON.stringify(fallback), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Parse the JSON response
