@@ -8,6 +8,7 @@ import { TutorProvider, useTutor } from "@/contexts/TutorContext";
 import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { GlobalElevenLabsWidget } from "@/components/tutor/GlobalElevenLabsWidget";
 // Pages
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -112,6 +113,7 @@ const App = () => (
             <BrowserRouter>
               <AppRoutes />
             </BrowserRouter>
+            <GlobalElevenLabsWidget />
           </TutorSessionProvider>
         </TutorProvider>
       </AuthProvider>
