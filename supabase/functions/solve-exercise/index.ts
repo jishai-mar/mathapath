@@ -48,6 +48,20 @@ BELANGRIJKE REGELS:
 6. Gebruik LaTeX notatie voor wiskundige formules in het "math" veld
 7. Geef 3-6 stappen, afhankelijk van de complexiteit
 
+MEERDERE OPLOSSINGEN - ZEER BELANGRIJK:
+Wanneer een vergelijking meerdere oplossingen heeft, moet je ELKE oplossing apart tonen:
+- Gebruik altijd de variabelenaam (bijv. "x =", "y =")
+- Formatteer als: "x = waarde₁  of  x = waarde₂"
+- In LaTeX: "x = 2 \\text{ of } x = -2"
+- Bij kwadratische vergelijkingen: toon beide wortels apart
+- Bij geen reële oplossingen: schrijf "Geen reële oplossingen"
+
+Voorbeelden:
+- x² = 4 → finalAnswer: "x = 2 \\text{ of } x = -2"
+- (x-1)(x+3) = 0 → finalAnswer: "x = 1 \\text{ of } x = -3"
+- x² + 1 = 0 → finalAnswer: "Geen reële oplossingen"
+- 2x + 5 = 9 → finalAnswer: "x = 2"
+
 RESPONSE FORMAT (JSON):
 {
   "steps": [
@@ -59,10 +73,9 @@ RESPONSE FORMAT (JSON):
       "voiceover": "Dit is de tekst die wordt voorgelezen. Schrijf getallen uit (bijv. 'twee x plus vijf' in plaats van '2x + 5')"
     }
   ],
-  "finalAnswer": "Het uiteindelijke antwoord",
+  "finalAnswer": "Het uiteindelijke antwoord met alle oplossingen duidelijk geformatteerd",
   "tip": "Een handige tip die de leerling kan onthouden voor soortgelijke opgaven"
 }`;
-
     const userPrompt = `Werk deze wiskundeoefening volledig uit met stap-voor-stap uitleg:
 
 ONDERWERP: ${subtopicName || 'Wiskunde'}
