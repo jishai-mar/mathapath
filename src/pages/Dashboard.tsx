@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
@@ -68,11 +68,17 @@ export default function Dashboard() {
     motivationalNote?: string;
   } | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+
+  // Prevent spammy re-fetches (which can trigger AI rate limits)
+  const insightsInFlightRef = useRef(false);
+  const lastInsightsFetchAtRef = useRef<number>(0);
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
     }
   }, [user, authLoading, navigate]);
+
   useEffect(() => {
     if (user) {
       checkComprehensiveDiagnostic();
@@ -150,6 +156,15 @@ export default function Dashboard() {
   // Fetch AI-generated insights
   const fetchAiInsights = async (profileData: Profile | null, topicsData: Topic[], progressData: TopicProgress[], weakSubtopicsData: SubtopicProgress[]) => {
     if (!profileData) return;
+
+    const now = Date.now();
+    if (insightsInFlightRef.current) return;
+    // Cooldown to avoid repeatedly triggering 429s during rerenders/preferences changes
+    if (now - lastInsightsFetchAtRef.current < 45_000) return;
+
+    insightsInFlightRef.current = true;
+    lastInsightsFetchAtRef.current = now;
+
     setInsightsLoading(true);
     try {
       const topicProgressForAI = progressData.map(p => {
@@ -173,41 +188,37 @@ export default function Dashboard() {
           weakSubtopics: weakSubtopicsData.slice(0, 3)
         }
       });
-      
-      // Handle rate limit or other errors gracefully with fallback
+
+      // Handle rate limit/credits/errors gracefully with fallback
       if (error || data?.fallback || data?.error) {
-        console.log('Using fallback insights due to:', error?.message || data?.error || 'fallback flag');
-        // Generate local fallback insights
         const fallbackInsights = {
           greeting: `${new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}, ${profileData.display_name || 'Student'}!`,
-          mainFocus: weakSubtopicsData.length > 0 
+          mainFocus: weakSubtopicsData.length > 0
             ? `Let's focus on ${weakSubtopicsData[0].subtopic_name} today to strengthen your skills.`
             : "Let's continue building your math mastery today!",
-          insights: [
-            { type: "tip", text: "Consistent daily practice leads to lasting improvement." }
-          ],
-          motivationalNote: "Every problem solved is progress made!"
+          insights: [{ type: 'tip', text: 'Consistent daily practice leads to lasting improvement.' }],
+          motivationalNote: 'Every problem solved is progress made!'
         };
         setAiInsights(fallbackInsights);
         setTutorMood('encouraging');
         return;
       }
-      
+
       if (data) {
         setAiInsights(data);
         setTutorMood('happy');
       }
     } catch (error) {
       console.error('Error fetching AI insights:', error);
-      // Still set fallback on catch
       setAiInsights({
         greeting: `Welcome back, ${profileData.display_name || 'Student'}!`,
-        mainFocus: "Ready to practice some math today?",
+        mainFocus: 'Ready to practice some math today?',
         insights: [],
         motivationalNote: "Let's make progress together!"
       });
     } finally {
       setInsightsLoading(false);
+      insightsInFlightRef.current = false;
     }
   };
   const getTopicProgress = (topicId: string) => {
