@@ -61,9 +61,9 @@ serve(async (req) => {
       imageData,
     } = await req.json() as RequestBody;
     
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
-    if (!OPENAI_API_KEY) {
-      throw new Error("OPENAI_API_KEY is not configured");
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     // Fetch past session notes for memory/recall
@@ -444,39 +444,70 @@ Remember: You are not just teaching math - you are building confidence, creating
 
     console.log(`Tutor query [${sessionPhase}][${tutoringMode}] for "${subtopicName}": ${question.substring(0, 100)}${imageData ? ' [with image]' : ''}...`);
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-5-mini-2025-08-07",
+        model: "google/gemini-2.5-flash",
         messages,
         max_completion_tokens: 2048,
       }),
     });
 
+    // IMPORTANT: Always return 200 with fallback for rate limits so the client doesn't throw
     if (!response.ok) {
+      const fallbackAnswer = "I'm sorry, I'm temporarily unavailable. Please try again in a moment.";
+      const detectedEmotion = analyzeEmotionalState(question);
+
       if (response.status === 429) {
+        console.warn("AI gateway rate limit hit");
         return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            answer: fallbackAnswer,
+            detectedEmotion,
+            fallback: true,
+            rate_limited: true,
+            error: "Rate limit exceeded. Please try again.",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       if (response.status === 402) {
+        console.warn("AI credits depleted");
         return new Response(
-          JSON.stringify({ error: "AI service unavailable. Please try again later." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            answer: fallbackAnswer,
+            detectedEmotion,
+            fallback: true,
+            credits_depleted: true,
+            error: "AI credits depleted.",
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
       const errorText = await response.text();
       console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      return new Response(
+        JSON.stringify({
+          answer: fallbackAnswer,
+          detectedEmotion,
+          fallback: true,
+          error: "AI gateway error",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const data = await response.json();
-    const answer = data.choices?.[0]?.message?.content || "I couldn't generate a response. Please try again.";
+    const rawAnswer = data.choices?.[0]?.message?.content;
+    const answer =
+      typeof rawAnswer === "string" && rawAnswer.trim().length > 0
+        ? rawAnswer.trim()
+        : "I couldn't generate a response. Please try again.";
 
     // Analyze the student's message for emotional indicators
     const detectedEmotion = analyzeEmotionalState(question);
@@ -489,9 +520,15 @@ Remember: You are not just teaching math - you are building confidence, creating
     );
   } catch (error) {
     console.error("Error in ask-tutor function:", error);
+    const fallbackAnswer = "Sorry, something went wrong. Please try again.";
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        answer: fallbackAnswer,
+        detectedEmotion: "neutral",
+        fallback: true,
+        error: error instanceof Error ? error.message : "Unknown error",
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
