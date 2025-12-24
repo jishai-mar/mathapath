@@ -23,10 +23,10 @@ async function generateTutorFeedback(
   what_to_focus_on_next: string;
   emotional_support?: string;
 }> {
-  const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   
-  if (!OPENAI_API_KEY) {
-    console.error("OPENAI_API_KEY not configured");
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY not configured");
     return {
       what_went_well: "You attempted the problem.",
       where_it_breaks: "Review your solution steps carefully.",
@@ -93,14 +93,14 @@ Return ONLY valid JSON in this exact format:
 }`;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${OPENAI_API_KEY}`,
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-5-mini-2025-08-07",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
@@ -111,7 +111,7 @@ Return ONLY valid JSON in this exact format:
 
     if (!response.ok) {
       console.error("AI API error:", response.status);
-      throw new Error("AI API error");
+      // Return fallback instead of throwing
     }
 
     const data = await response.json();
