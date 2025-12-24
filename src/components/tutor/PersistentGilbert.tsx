@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWakeWordDetection } from '@/hooks/useWakeWordDetection';
 import { useExerciseContext } from '@/contexts/ExerciseContext';
@@ -7,6 +7,8 @@ import { ConversationalTutor } from './ConversationalTutor';
 import { Mic, MicOff, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+const GILBERT_WAKE_WORDS: string[] = ['gilbert', 'hey gilbert', 'hé gilbert', 'hoi gilbert', 'hi gilbert'];
 
 export function PersistentGilbert() {
   const [isTutorOpen, setIsTutorOpen] = useState(false);
@@ -17,20 +19,20 @@ export function PersistentGilbert() {
 
   const handleWakeWordDetected = useCallback((transcript: string) => {
     console.log('Wake word detected in:', transcript);
-    
+
     // Play activation sound
     playSound('achievement');
-    
+
     // Show visual feedback
     setShowActivationGlow(true);
     setTimeout(() => setShowActivationGlow(false), 1000);
-    
+
     // Open the tutor
     setIsTutorOpen(true);
   }, [playSound]);
 
-  const { isListening, wakeWordDetected, isSupported, transcript } = useWakeWordDetection({
-    wakeWords: ['gilbert', 'hey gilbert', 'hé gilbert', 'hoi gilbert', 'hi gilbert'],
+  const { isListening, wakeWordDetected, isSupported } = useWakeWordDetection({
+    wakeWords: GILBERT_WAKE_WORDS,
     onWakeWordDetected: handleWakeWordDetected,
     enabled: isWakeWordEnabled && !isTutorOpen, // Disable when tutor is open
   });
