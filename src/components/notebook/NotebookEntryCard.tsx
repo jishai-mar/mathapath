@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { format, formatDistanceToNow } from 'date-fns';
 import { 
   Lightbulb, 
@@ -14,7 +15,9 @@ import {
   Trophy,
   Link2,
   Zap,
-  FileText
+  FileText,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,11 +92,13 @@ export function NotebookEntryCard({
   onAskTutor,
   onMarkMastered
 }: NotebookEntryCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const config = noteTypeConfig[entry.note_type] || noteTypeConfig.emotional;
   const Icon = config.icon;
   const isStruggle = entry.note_type === 'struggle';
   const isMastered = isStruggle && entry.mastered_at !== null;
   const isFromStruggle = entry.note_type === 'breakthrough' && entry.related_entry_id !== null;
+  const isWorkedExample = entry.note_type === 'worked_example';
 
   // Check if content contains math (LaTeX patterns)
   const hasMath = /\$.*?\$|\\\[.*?\\\]|\\\(.*?\\\)/s.test(entry.content);
@@ -102,6 +107,31 @@ export function NotebookEntryCard({
   const daysToMastery = isMastered && entry.mastered_at
     ? Math.ceil((new Date(entry.mastered_at).getTime() - new Date(entry.detected_at).getTime()) / (1000 * 60 * 60 * 24))
     : null;
+
+  // Parse worked example content into sections
+  const parseWorkedExample = (content: string) => {
+    const sections: { title: string; content: string }[] = [];
+    const lines = content.split('\n');
+    let currentSection = { title: '', content: '' };
+    
+    for (const line of lines) {
+      if (line.startsWith('📝 ') || line.startsWith('🔢 ') || line.startsWith('✅ ') || line.startsWith('💡 ')) {
+        if (currentSection.title || currentSection.content) {
+          sections.push(currentSection);
+        }
+        currentSection = { title: line, content: '' };
+      } else if (line.trim()) {
+        currentSection.content += (currentSection.content ? '\n' : '') + line;
+      }
+    }
+    if (currentSection.title || currentSection.content) {
+      sections.push(currentSection);
+    }
+    
+    return sections;
+  };
+
+  const workedExampleSections = isWorkedExample ? parseWorkedExample(entry.content) : [];
 
   return (
     <motion.div
@@ -161,13 +191,101 @@ export function NotebookEntryCard({
             )}
           </div>
           
-          <div className="text-sm text-foreground leading-relaxed">
-            {hasMath ? (
-              <MathRenderer latex={entry.content} />
-            ) : (
-              <p className="line-clamp-3">{entry.content}</p>
-            )}
-          </div>
+          {/* Content display - special handling for worked examples */}
+          {isWorkedExample ? (
+            <div className="space-y-2">
+              {/* Preview - always show first section */}
+              {workedExampleSections.length > 0 && (
+                <div className="text-sm text-foreground">
+                  <div className="font-medium">{workedExampleSections[0].title}</div>
+                  {workedExampleSections[0].content && (
+                    <div className="mt-1">
+                      {hasMath ? (
+                        <MathRenderer latex={workedExampleSections[0].content} />
+                      ) : (
+                        <p>{workedExampleSections[0].content}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Expand/collapse button */}
+              {workedExampleSections.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs gap-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 w-full justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(!isExpanded);
+                  }}
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp className="w-3 h-3" />
+                      Hide steps
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3 h-3" />
+                      Show {workedExampleSections.length - 1} more steps
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* Expanded content */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-3 overflow-hidden"
+                  >
+                    {workedExampleSections.slice(1).map((section, index) => (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`pl-3 border-l-2 ${
+                          section.title.startsWith('✅') 
+                            ? 'border-emerald-500/50 bg-emerald-500/5' 
+                            : section.title.startsWith('💡')
+                            ? 'border-amber-500/50 bg-amber-500/5'
+                            : 'border-blue-500/30'
+                        } rounded-r-lg py-2 pr-2`}
+                      >
+                        <div className="text-sm font-medium text-foreground">
+                          {section.title}
+                        </div>
+                        {section.content && (
+                          <div className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                            {hasMath || /\$.*?\$|\\\[.*?\\\]|\\\(.*?\\\)/s.test(section.content) ? (
+                              <MathRenderer latex={section.content} />
+                            ) : (
+                              section.content
+                            )}
+                          </div>
+                        )}
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : (
+            <div className="text-sm text-foreground leading-relaxed">
+              {hasMath ? (
+                <MathRenderer latex={entry.content} />
+              ) : (
+                <p className="line-clamp-3">{entry.content}</p>
+              )}
+            </div>
+          )}
 
           {/* Show related entry info */}
           {relatedEntry && (
