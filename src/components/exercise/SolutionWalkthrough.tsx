@@ -8,6 +8,8 @@ import { MultipleSolutionsRenderer } from '@/components/math/MultipleSolutionsRe
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { useTutorTTS } from '@/hooks/useTutorTTS';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
 import { 
   Play, 
   Pause, 
@@ -19,7 +21,9 @@ import {
   Lightbulb,
   Loader2,
   CheckCircle2,
-  ChevronRight
+  ChevronRight,
+  BookmarkPlus,
+  BookmarkCheck
 } from 'lucide-react';
 
 interface SolutionStep {
@@ -51,6 +55,7 @@ export function SolutionWalkthrough({
   subtopicName,
   correctAnswer,
 }: SolutionWalkthroughProps) {
+  const { user } = useAuth();
   const [solution, setSolution] = useState<SolutionData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,6 +63,8 @@ export function SolutionWalkthrough({
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [isSavedToNotebook, setIsSavedToNotebook] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const { speak, stopSpeaking, isSpeaking, isLoading: ttsLoading } = useTutorTTS({
     personality: 'patient',
@@ -86,8 +93,42 @@ export function SolutionWalkthrough({
       setIsPlaying(false);
       setCurrentStepIndex(0);
       setCompletedSteps(new Set());
+      setIsSavedToNotebook(false);
     }
   }, [isOpen, stopSpeaking]);
+
+  const saveToNotebook = async () => {
+    if (!user || !solution) return;
+    
+    setIsSaving(true);
+    try {
+      // Format the solution steps for storage
+      const stepsContent = solution.steps.map(step => 
+        `**Stap ${step.stepNumber}: ${step.title}**\n${step.explanation}\n${step.math ? `$$${step.math}$$` : ''}`
+      ).join('\n\n');
+      
+      const fullContent = `**Opgave:** ${question}\n\n${stepsContent}\n\n**Eindantwoord:** ${solution.finalAnswer}${solution.tip ? `\n\n**Tip:** ${solution.tip}` : ''}`;
+      
+      const { error: insertError } = await supabase
+        .from('student_session_notes')
+        .insert({
+          user_id: user.id,
+          note_type: 'worked_example',
+          content: fullContent,
+          subtopic_name: subtopicName,
+        });
+      
+      if (insertError) throw insertError;
+      
+      setIsSavedToNotebook(true);
+      toast.success('Uitwerking opgeslagen in je notitieboek!');
+    } catch (err) {
+      console.error('Error saving to notebook:', err);
+      toast.error('Kon uitwerking niet opslaan');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const fetchSolution = async () => {
     setIsLoading(true);
@@ -517,9 +558,26 @@ export function SolutionWalkthrough({
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.4 }}
+                    className="flex gap-3"
                   >
-                    <Button onClick={onClose} className="w-full" size="lg">
-                      Begrepen, sluiten
+                    <Button 
+                      onClick={saveToNotebook} 
+                      variant="outline"
+                      size="lg"
+                      className="flex-1 gap-2"
+                      disabled={isSavedToNotebook || isSaving || !user}
+                    >
+                      {isSaving ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isSavedToNotebook ? (
+                        <BookmarkCheck className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <BookmarkPlus className="w-4 h-4" />
+                      )}
+                      {isSavedToNotebook ? 'Opgeslagen' : 'Opslaan in notitieboek'}
+                    </Button>
+                    <Button onClick={onClose} className="flex-1" size="lg">
+                      Sluiten
                     </Button>
                   </motion.div>
                 </motion.div>
