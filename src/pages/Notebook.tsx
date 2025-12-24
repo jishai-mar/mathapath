@@ -33,7 +33,7 @@ type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'mastered' 
 export default function Notebook() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { entries, stats, isLoading, deleteEntry, markAsMastered, getRelatedEntry } = useNotebook();
+  const { entries, stats, isLoading, deleteEntry, markAsMastered, getRelatedEntry, updatePersonalNote } = useNotebook();
   const [filter, setFilter] = useState<FilterType>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedEntry, setSelectedEntry] = useState<NotebookEntry | null>(null);
@@ -331,6 +331,7 @@ export default function Notebook() {
                     onPractice={handlePractice}
                     onAskTutor={handleAskTutor}
                     onMarkMastered={handleMarkMastered}
+                    onUpdatePersonalNote={updatePersonalNote}
                   />
                 ))}
               </div>
