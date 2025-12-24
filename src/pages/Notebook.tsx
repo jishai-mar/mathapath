@@ -20,13 +20,15 @@ import {
   Trophy,
   Target,
   Zap,
-  FileText
+  FileText,
+  Download
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NotebookSearch } from '@/components/notebook/NotebookSearch';
 import { NotebookEntryCard } from '@/components/notebook/NotebookEntryCard';
 import { NotebookTutor } from '@/components/notebook/NotebookTutor';
 import { XPDisplay } from '@/components/notebook/XPDisplay';
+import { exportSolutionsToPdf } from '@/utils/exportSolutionsPdf';
 
 type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'mastered' | 'worked_example';
 
@@ -161,6 +163,28 @@ export default function Notebook() {
           
           <div className="flex items-center gap-3">
             <XPDisplay compact />
+            {workedExamplesCount > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 text-blue-400 border-blue-400/30 hover:bg-blue-500/10"
+                onClick={() => {
+                  try {
+                    exportSolutionsToPdf(entries);
+                    toast.success('Study guide exported!', {
+                      description: `${workedExamplesCount} solution${workedExamplesCount !== 1 ? 's' : ''} saved as PDF`,
+                    });
+                  } catch (error) {
+                    toast.error('Export failed', {
+                      description: error instanceof Error ? error.message : 'Unknown error',
+                    });
+                  }
+                }}
+              >
+                <Download className="w-4 h-4" />
+                <span className="hidden sm:inline">Export PDF</span>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
