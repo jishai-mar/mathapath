@@ -18,20 +18,20 @@ serve(async (req) => {
       throw new Error('ELEVENLABS_API_KEY is not configured')
     }
 
-    // Get agent ID from request body (optional, has default)
-    const { agentId } = await req.json().catch(() => ({}))
+    // Get agent ID + request mode from request body (optional, has defaults)
+    const { agentId, mode } = await req.json().catch(() => ({}))
     const agent = agentId || 'agent_4501kd82684tegmad70k26kqzs17'
 
-    // Get conversation token from ElevenLabs
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${agent}`,
-      {
-        method: 'GET',
-        headers: {
-          'xi-api-key': ELEVENLABS_API_KEY,
-        },
-      }
-    )
+    const endpoint = mode === 'signed_url'
+      ? `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agent}`
+      : `https://api.elevenlabs.io/v1/convai/conversation/token?agent_id=${agent}`
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'xi-api-key': ELEVENLABS_API_KEY,
+      },
+    })
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -42,10 +42,14 @@ serve(async (req) => {
     const data = await response.json()
 
     return new Response(
-      JSON.stringify({ token: data.token }),
+      JSON.stringify(
+        mode === 'signed_url'
+          ? { signedUrl: data.signed_url }
+          : { token: data.token },
+      ),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      }
+      },
     )
   } catch (error) {
     console.error('Error getting conversation token:', error)

@@ -27,7 +27,7 @@ export function TalkToTutorButton({
             onClick={() => setIsOpen(true)}
             size="lg"
             className="rounded-full h-14 w-14 p-0 shadow-lg bg-primary hover:bg-primary/90"
-            title="Praat met je tutor"
+            title="Talk to your tutor"
           >
             <Phone className="w-6 h-6" />
           </Button>
@@ -49,7 +49,7 @@ export function TalkToTutorButton({
         className={`gap-2 ${className}`}
       >
         <MessageCircle className="w-4 h-4" />
-        {showLabel && 'Praat met tutor'}
+        {showLabel && 'Talk to tutor'}
       </Button>
 
       <ConversationalTutor isOpen={isOpen} onClose={() => setIsOpen(false)} />
