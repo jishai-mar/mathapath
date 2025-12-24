@@ -598,20 +598,7 @@ export default function Dashboard() {
       </main>
 
       {/* Floating Ask Tutor Button */}
-      <motion.button initial={{
-      scale: 0,
-      opacity: 0
-    }} animate={{
-      scale: 1,
-      opacity: 1
-    }} transition={{
-      delay: 0.5,
-      type: 'spring',
-      stiffness: 200
-    }} onClick={() => setShowTutorChat(true)} className="fixed bottom-6 right-6 z-40 flex items-center gap-3 px-5 py-4 rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:scale-105 transition-all">
-        <TutorAvatar style={tutorPrefs.avatarStyle} mood="happy" size="sm" />
-        
-      </motion.button>
+      
 
       {/* Tutor Chat Panel */}
       {showTutorChat && <TutorChat subtopicName="General Help" onClose={() => setShowTutorChat(false)} />}
