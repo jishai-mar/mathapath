@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import MathRenderer from '@/components/MathRenderer';
+import { MultipleSolutionsRenderer } from '@/components/math/MultipleSolutionsRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { useTutorTTS } from '@/hooks/useTutorTTS';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,8 @@ import {
   X,
   Lightbulb,
   Loader2,
-  CheckCircle2
+  CheckCircle2,
+  ListOrdered
 } from 'lucide-react';
 
 interface SolutionStep {
@@ -319,13 +321,11 @@ export function SolutionWalkthrough({
                   className="space-y-4"
                 >
                   <div className="p-6 rounded-2xl bg-primary/10 border border-primary/30">
-                    <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                    <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                       <CheckCircle2 className="w-5 h-5 text-primary" />
                       Eindantwoord
                     </h3>
-                    <div className="text-xl">
-                      <MathRenderer latex={solution.finalAnswer} />
-                    </div>
+                    <MultipleSolutionsRenderer answer={solution.finalAnswer} className="text-xl" />
                   </div>
 
                   {solution.tip && (
