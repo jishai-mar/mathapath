@@ -9,7 +9,7 @@ import { useTutorTTS } from '@/hooks/useTutorTTS';
 import MathRenderer from '@/components/MathRenderer';
 import { ElevenLabsAgent } from '@/components/tutor/ElevenLabsAgent';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
-import { NeedHelpButton } from '@/components/tutor/NeedHelpButton';
+import { TalkToTutorButton } from '@/components/tutor/TalkToTutorButton';
 import { 
   Send, 
   Volume2, 
@@ -493,7 +493,7 @@ export function GuidedTutoringSession({
                       Hint
                     </button>
                   )}
-                  <NeedHelpButton variant="inline" />
+                  <TalkToTutorButton variant="secondary" size="sm" />
                 </div>
               </form>
             </motion.div>

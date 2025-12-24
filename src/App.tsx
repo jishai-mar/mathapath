@@ -9,8 +9,7 @@ import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
 import { ExerciseProvider } from "@/contexts/ExerciseContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { GlobalElevenLabsWidget } from "@/components/tutor/GlobalElevenLabsWidget";
-import { VoiceChatCompanion } from "@/components/tutor/VoiceChatCompanion";
+import { TalkToTutorButton } from "@/components/tutor/TalkToTutorButton";
 // Pages
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -116,8 +115,7 @@ const App = () => (
               <BrowserRouter>
                 <AppRoutes />
               </BrowserRouter>
-              <GlobalElevenLabsWidget />
-              <VoiceChatCompanion />
+              <TalkToTutorButton variant="floating" />
             </ExerciseProvider>
           </TutorSessionProvider>
         </TutorProvider>
