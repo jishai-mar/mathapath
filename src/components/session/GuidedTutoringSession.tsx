@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useExerciseContext } from '@/contexts/ExerciseContext';
 import { useTutorTTS } from '@/hooks/useTutorTTS';
 import MathRenderer from '@/components/MathRenderer';
 import { ElevenLabsAgent } from '@/components/tutor/ElevenLabsAgent';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
+import { NeedHelpButton } from '@/components/tutor/NeedHelpButton';
 import { 
   Send, 
   Volume2, 
@@ -49,6 +51,7 @@ export function GuidedTutoringSession({
   onEndSession,
 }: GuidedTutoringSessionProps) {
   const { user } = useAuth();
+  const exerciseContext = useExerciseContext();
   const [phase, setPhase] = useState<SessionPhase>('greeting');
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
   const [answer, setAnswer] = useState('');
@@ -155,6 +158,15 @@ export function GuidedTutoringSession({
         const randomExercise = exercises[Math.floor(Math.random() * exercises.length)];
         setCurrentExercise(randomExercise as Exercise);
         
+        // Update exercise context for the AI tutor
+        exerciseContext?.setCurrentExercise({
+          question: randomExercise.question || '',
+          subtopicName,
+          subtopicId,
+          difficulty: randomExercise.difficulty as 'easy' | 'medium' | 'hard',
+          hints: randomExercise.hints || [],
+        });
+        
         // Announce exercise
         if (!isMuted) {
           const intro = stats.total === 0 
@@ -169,11 +181,21 @@ export function GuidedTutoringSession({
         });
         
         if (data && !data.error) {
-          setCurrentExercise({
+          const newExercise = {
             id: data.id,
             question: data.question,
             difficulty: data.difficulty,
             hints: data.hints,
+          };
+          setCurrentExercise(newExercise);
+          
+          // Update exercise context for the AI tutor
+          exerciseContext?.setCurrentExercise({
+            question: data.question,
+            subtopicName,
+            subtopicId,
+            difficulty: data.difficulty,
+            hints: data.hints || [],
           });
         }
       }
@@ -188,6 +210,10 @@ export function GuidedTutoringSession({
 
     setIsSubmitting(true);
     setTutorMood('thinking');
+    
+    // Update exercise context with the student's answer
+    exerciseContext?.setStudentAnswer(answer);
+    exerciseContext?.incrementAttempts();
 
     try {
       const { data, error } = await supabase.functions.invoke('check-exercise-answer', {
@@ -204,6 +230,12 @@ export function GuidedTutoringSession({
       const { isCorrect, correctAnswer, tutorFeedback } = data;
       
       setLastCorrectAnswer(correctAnswer);
+      
+      // Update exercise context with the correct answer
+      if (correctAnswer) {
+        exerciseContext?.setCorrectAnswer(correctAnswer);
+      }
+      
       setStats(prev => ({
         correct: prev.correct + (isCorrect ? 1 : 0),
         total: prev.total + 1,
@@ -222,6 +254,7 @@ export function GuidedTutoringSession({
         ];
         const message = celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
         setCurrentFeedback({ isCorrect: true, message });
+        exerciseContext?.setLastFeedback(message);
         
         if (!isMuted) {
           speak(message, 'celebrating');
@@ -445,20 +478,23 @@ export function GuidedTutoringSession({
                   </Button>
                 </div>
 
-                {currentExercise.hints && currentExercise.hints.length > 0 && (
-                  <button
-                    type="button"
-                    className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-                    onClick={() => {
-                      if (!isMuted) {
-                        speak(currentExercise.hints![0], 'thinking');
-                      }
-                    }}
-                  >
-                    <Lightbulb className="w-4 h-4 inline mr-2" />
-                    Hint nodig?
-                  </button>
-                )}
+                <div className="flex items-center justify-center gap-4">
+                  {currentExercise.hints && currentExercise.hints.length > 0 && (
+                    <button
+                      type="button"
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => {
+                        if (!isMuted) {
+                          speak(currentExercise.hints![0], 'thinking');
+                        }
+                      }}
+                    >
+                      <Lightbulb className="w-4 h-4 inline mr-2" />
+                      Hint
+                    </button>
+                  )}
+                  <NeedHelpButton variant="inline" />
+                </div>
               </form>
             </motion.div>
           )}

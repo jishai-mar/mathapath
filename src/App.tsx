@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TutorProvider, useTutor } from "@/contexts/TutorContext";
 import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
+import { ExerciseProvider } from "@/contexts/ExerciseContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GlobalElevenLabsWidget } from "@/components/tutor/GlobalElevenLabsWidget";
@@ -108,12 +109,14 @@ const App = () => (
       <AuthProvider>
         <TutorProvider>
           <TutorSessionProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
-            <GlobalElevenLabsWidget />
+            <ExerciseProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppRoutes />
+              </BrowserRouter>
+              <GlobalElevenLabsWidget />
+            </ExerciseProvider>
           </TutorSessionProvider>
         </TutorProvider>
       </AuthProvider>
