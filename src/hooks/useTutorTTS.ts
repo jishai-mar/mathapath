@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type VoiceContext = 'explaining' | 'encouraging' | 'correcting' | 'celebrating' | 'thinking' | 'default';
@@ -35,6 +35,16 @@ export function useTutorTTS(options: UseTutorTTSOptions = {}) {
   const audioQueueRef = useRef<string[]>([]);
   const isProcessingQueueRef = useRef(false);
 
+  const onSpeakStartRef = useRef(onSpeakStart);
+  const onSpeakEndRef = useRef(onSpeakEnd);
+
+  useEffect(() => {
+    onSpeakStartRef.current = onSpeakStart;
+  }, [onSpeakStart]);
+
+  useEffect(() => {
+    onSpeakEndRef.current = onSpeakEnd;
+  }, [onSpeakEnd]);
   const stopSpeaking = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -44,8 +54,8 @@ export function useTutorTTS(options: UseTutorTTSOptions = {}) {
     audioQueueRef.current = [];
     isProcessingQueueRef.current = false;
     setState(prev => ({ ...prev, isSpeaking: false }));
-    onSpeakEnd?.();
-  }, [onSpeakEnd]);
+    onSpeakEndRef.current?.();
+  }, []);
 
   const playAudioFromBase64 = useCallback((base64Audio: string): Promise<void> => {
     return new Promise((resolve, reject) => {
@@ -71,7 +81,7 @@ export function useTutorTTS(options: UseTutorTTSOptions = {}) {
 
     isProcessingQueueRef.current = true;
     setState(prev => ({ ...prev, isSpeaking: true }));
-    onSpeakStart?.();
+    onSpeakStartRef.current?.();
 
     while (audioQueueRef.current.length > 0) {
       const base64Audio = audioQueueRef.current.shift();
@@ -86,8 +96,8 @@ export function useTutorTTS(options: UseTutorTTSOptions = {}) {
 
     isProcessingQueueRef.current = false;
     setState(prev => ({ ...prev, isSpeaking: false }));
-    onSpeakEnd?.();
-  }, [playAudioFromBase64, onSpeakStart, onSpeakEnd]);
+    onSpeakEndRef.current?.();
+  }, [playAudioFromBase64]);
 
   const speak = useCallback(async (
     text: string, 

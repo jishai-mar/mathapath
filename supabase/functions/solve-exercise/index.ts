@@ -48,6 +48,8 @@ BELANGRIJKE REGELS:
 6. Gebruik LaTeX notatie voor wiskundige formules in het "math" veld
 7. Geef 3-6 stappen, afhankelijk van de complexiteit
 
+BELANGRIJK: Antwoord ALLEEN met geldige JSON (geen Markdown, geen codeblokken).
+
 MEERDERE OPLOSSINGEN - ZEER BELANGRIJK:
 Wanneer een vergelijking meerdere oplossingen heeft, moet je ELKE oplossing apart tonen:
 - Gebruik altijd de variabelenaam (bijv. "x =", "y =")
@@ -132,10 +134,33 @@ Geef een complete uitwerking die de leerling helpt begrijpen hoe je tot het antw
 
     let solution: SolutionResponse;
     try {
-      solution = JSON.parse(content);
+      // The model sometimes wraps JSON in markdown code fences; strip them.
+      let jsonText = String(content).trim();
+
+      const fenced = jsonText.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+      if (fenced?.[1]) {
+        jsonText = fenced[1].trim();
+      } else {
+        // Fallback: extract the first JSON object in the text.
+        const firstBrace = jsonText.indexOf('{');
+        const lastBrace = jsonText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+          jsonText = jsonText.slice(firstBrace, lastBrace + 1);
+        }
+      }
+
+      solution = JSON.parse(jsonText);
     } catch (parseError) {
       console.error('Failed to parse AI response:', content);
-      throw new Error('Invalid AI response format');
+      return new Response(
+        JSON.stringify({
+          steps: [{ stepNumber: 1, title: 'Fout', explanation: 'Het antwoord van de tutor had een onverwacht formaat.', math: '', voiceover: 'Probeer het later opnieuw.' }],
+          finalAnswer: 'Niet beschikbaar',
+          tip: 'Probeer het later opnieuw.',
+          fallback: true,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Validate response structure
