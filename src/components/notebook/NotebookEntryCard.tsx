@@ -13,7 +13,8 @@ import {
   CheckCircle2,
   Trophy,
   Link2,
-  Zap
+  Zap,
+  FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,12 @@ const noteTypeConfig: Record<string, { icon: typeof Lightbulb; label: string; co
     label: 'Insight',
     color: 'text-purple-400',
     bgColor: 'bg-purple-500/10 border-purple-500/20',
+  },
+  worked_example: {
+    icon: FileText,
+    label: 'Solution',
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10 border-blue-500/20',
   },
 };
 

@@ -19,7 +19,8 @@ import {
   PanelRightClose,
   Trophy,
   Target,
-  Zap
+  Zap,
+  FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { NotebookSearch } from '@/components/notebook/NotebookSearch';
@@ -27,7 +28,7 @@ import { NotebookEntryCard } from '@/components/notebook/NotebookEntryCard';
 import { NotebookTutor } from '@/components/notebook/NotebookTutor';
 import { XPDisplay } from '@/components/notebook/XPDisplay';
 
-type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'mastered';
+type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'mastered' | 'worked_example';
 
 export default function Notebook() {
   const { user, loading: authLoading } = useAuth();
@@ -43,6 +44,12 @@ export default function Notebook() {
     ? Math.round((stats.masteredStruggles / stats.struggles) * 100) 
     : 0;
 
+  // Count worked examples
+  const workedExamplesCount = useMemo(() => 
+    entries.filter(e => e.note_type === 'worked_example').length,
+    [entries]
+  );
+
   // Filter and search entries
   const filteredEntries = useMemo(() => {
     let result = entries;
@@ -50,6 +57,8 @@ export default function Notebook() {
     // Apply type filter
     if (filter === 'mastered') {
       result = result.filter(e => e.note_type === 'struggle' && e.mastered_at !== null);
+    } else if (filter === 'worked_example') {
+      result = result.filter(e => e.note_type === 'worked_example');
     } else if (filter !== 'all') {
       result = result.filter(e => e.note_type === filter);
     }
@@ -115,6 +124,7 @@ export default function Notebook() {
 
   const filterOptions: { value: FilterType; label: string; count: number; icon?: typeof Sparkles }[] = [
     { value: 'all', label: 'All', count: stats.totalEntries },
+    { value: 'worked_example', label: 'Solutions', count: workedExamplesCount, icon: FileText },
     { value: 'breakthrough', label: 'Breakthroughs', count: stats.breakthroughs, icon: Sparkles },
     { value: 'struggle', label: 'Challenges', count: stats.struggles, icon: AlertTriangle },
     { value: 'mastered', label: 'Mastered', count: stats.masteredStruggles, icon: Trophy },
@@ -290,13 +300,15 @@ export default function Notebook() {
                 <BookOpen className="w-8 h-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-medium text-foreground">
-                {searchQuery ? 'No matching entries' : filter === 'mastered' ? 'No mastered challenges yet' : 'No entries yet'}
+                {searchQuery ? 'No matching entries' : filter === 'mastered' ? 'No mastered challenges yet' : filter === 'worked_example' ? 'No saved solutions yet' : 'No entries yet'}
               </h3>
               <p className="text-muted-foreground text-sm max-w-md mx-auto">
                 {searchQuery 
                   ? 'Try a different search term or clear your filters.'
                   : filter === 'mastered'
                   ? 'Practice your challenges and mark them as mastered when you\'ve conquered them!'
+                  : filter === 'worked_example'
+                  ? 'Save step-by-step solutions from exercises to review them here.'
                   : 'Your learning insights will appear here as you practice with your tutor.'}
               </p>
               {!searchQuery && filter === 'all' && (
