@@ -46,9 +46,9 @@ serve(async (req) => {
 
   try {
     const { 
-      question, 
-      subtopicName, 
-      theoryContext, 
+      question = '', 
+      subtopicName = 'General', 
+      theoryContext = '', 
       conversationHistory = [], 
       tutorName = 'Alex', 
       personality = 'patient',
