@@ -46,6 +46,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
   const lastStartAtRef = useRef(0);
   const fallbackTriedRef = useRef(false);
   const manualEndRef = useRef(false);
+  const startInFlightRef = useRef(false);
   const lastOverridesRef = useRef<{ prompt: string; firstMessage: string } | null>(null);
 
   // Build dynamic context for the agent
@@ -87,9 +88,11 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
       console.log('Connected to ElevenLabs agent');
       setIsConnecting(false);
       setError(null);
+      startInFlightRef.current = false;
     },
     onDisconnect: () => {
       console.log('Disconnected from ElevenLabs agent');
+      startInFlightRef.current = false;
 
       // If we disconnect immediately after starting, try a WebSocket fallback once.
       const msSinceStart = Date.now() - lastStartAtRef.current;
@@ -166,6 +169,19 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     },
   });
 
+  // Keep output volume in sync (prevents "connected but silent")
+  useEffect(() => {
+    if (conversation.status !== 'connected') return;
+
+    (async () => {
+      try {
+        await conversation.setVolume({ volume: isMuted ? 0 : 1 });
+      } catch {
+        // ignore
+      }
+    })();
+  }, [conversation, conversation.status, isMuted]);
+
   // Auto-scroll to bottom
   useEffect(() => {
     if (scrollRef.current) {
@@ -207,6 +223,18 @@ Keep answers short (max 2 sentences at a time).`;
 
     return { prompt, firstMessage };
   }, [buildAgentContext]);
+
+  const safeResetSession = useCallback(async () => {
+    try {
+      // endSession is safe even if already disconnected
+      await conversation.endSession();
+    } catch {
+      // ignore
+    }
+
+    // Give the SDK a moment to fully tear down PC/WebSocket before restarting
+    await new Promise((r) => setTimeout(r, 250));
+  }, [conversation]);
 
   const startWebrtc = useCallback(async () => {
     // Get conversation token from backend function
@@ -284,7 +312,10 @@ Keep answers short (max 2 sentences at a time).`;
       try {
         setIsConnecting(true);
         setError('WebRTC connection dropped. Retrying...');
+
+        await safeResetSession();
         await startWebsocketFallback();
+
         setError(null);
       } catch (e) {
         console.error('WebSocket fallback failed:', e);
@@ -294,10 +325,13 @@ Keep answers short (max 2 sentences at a time).`;
         setIsConnecting(false);
       }
     })();
-  }, [fallbackRequested, startWebsocketFallback]);
+  }, [fallbackRequested, safeResetSession, startWebsocketFallback]);
 
   // Start conversation
   const startConversation = useCallback(async () => {
+    if (startInFlightRef.current) return;
+    startInFlightRef.current = true;
+
     setIsConnecting(true);
     setError(null);
 
@@ -306,6 +340,8 @@ Keep answers short (max 2 sentences at a time).`;
     lastStartAtRef.current = Date.now();
 
     try {
+      await safeResetSession();
+
       // Request microphone permission
       await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -314,8 +350,9 @@ Keep answers short (max 2 sentences at a time).`;
       console.error('Failed to start conversation:', err);
       setError(err instanceof Error ? err.message : 'Could not connect');
       setIsConnecting(false);
+      startInFlightRef.current = false;
     }
-  }, [startWebrtc]);
+  }, [safeResetSession, startWebrtc]);
 
   // End conversation
   const endConversation = useCallback(async () => {
