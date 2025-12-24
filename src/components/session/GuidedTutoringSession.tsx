@@ -140,6 +140,35 @@ export function GuidedTutoringSession({
     startSession();
   }, []);
 
+  // Listen for Gilbert's tool call events
+  useEffect(() => {
+    const handleEasier = () => {
+      console.log('Gilbert requested easier exercise');
+      setCurrentDifficulty(prev => prev === 'hard' ? 'medium' : 'easy');
+      loadNextExercise();
+    };
+    
+    const handleHarder = () => {
+      console.log('Gilbert requested harder exercise');
+      setCurrentDifficulty(prev => prev === 'easy' ? 'medium' : 'hard');
+      loadNextExercise();
+    };
+
+    const handleShowSolution = () => {
+      setShowWalkthrough(true);
+    };
+    
+    window.addEventListener('gilbert-request-easier', handleEasier);
+    window.addEventListener('gilbert-request-harder', handleHarder);
+    window.addEventListener('gilbert-show-solution', handleShowSolution);
+    
+    return () => {
+      window.removeEventListener('gilbert-request-easier', handleEasier);
+      window.removeEventListener('gilbert-request-harder', handleHarder);
+      window.removeEventListener('gilbert-show-solution', handleShowSolution);
+    };
+  }, []);
+
   // Fetch student mastery at session start
   const fetchStudentMastery = useCallback(async () => {
     if (!user) return;

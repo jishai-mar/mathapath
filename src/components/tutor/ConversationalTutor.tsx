@@ -81,9 +81,116 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     };
   }, [exerciseContext]);
 
+  // Client tools for Gilbert to take actions
+  const clientTools = {
+    requestEasierExercise: useCallback(async () => {
+      console.log('Gilbert: Requesting easier exercise');
+      window.dispatchEvent(new CustomEvent('gilbert-request-easier'));
+      return 'I will get you an easier exercise. Give me a moment...';
+    }, []),
+    
+    requestHarderExercise: useCallback(async () => {
+      console.log('Gilbert: Requesting harder exercise');
+      window.dispatchEvent(new CustomEvent('gilbert-request-harder'));
+      return 'Challenge accepted! Let me find you a harder one...';
+    }, []),
+    
+    solveExercise: useCallback(async () => {
+      console.log('Gilbert: Solving exercise');
+      if (!exerciseContext?.currentQuestion) {
+        return 'There is no current exercise to solve. Start a practice session first!';
+      }
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('solve-exercise', {
+          body: {
+            question: exerciseContext.currentQuestion,
+            subtopicName: exerciseContext.subtopicName,
+            correctAnswer: exerciseContext.correctAnswer,
+          },
+        });
+        
+        if (error || !data) {
+          return 'Let me walk you through this step by step...';
+        }
+        
+        // Dispatch event to show walkthrough in UI
+        window.dispatchEvent(new CustomEvent('gilbert-show-solution', { 
+          detail: data 
+        }));
+        
+        // Return a spoken summary
+        const steps = data.steps || [];
+        const spokenSteps = steps.slice(0, 3).map((s: any, i: number) => 
+          `Step ${i + 1}: ${s.explanation}`
+        ).join('. ');
+        
+        return `Here is how to solve this: ${spokenSteps}${steps.length > 3 ? '. And so on...' : ''} The final answer is ${data.finalAnswer || exerciseContext.correctAnswer}.`;
+      } catch (err) {
+        console.error('Error solving exercise:', err);
+        return 'Let me explain this problem to you step by step...';
+      }
+    }, [exerciseContext]),
+    
+    giveHint: useCallback(async () => {
+      console.log('Gilbert: Giving hint');
+      const hints = exerciseContext?.hints;
+      const attempts = exerciseContext?.studentAttempts || 0;
+      
+      if (hints && hints.length > 0) {
+        const hintIndex = Math.min(attempts, hints.length - 1);
+        const hint = hints[hintIndex];
+        
+        // Dispatch event for UI
+        window.dispatchEvent(new CustomEvent('gilbert-hint', { 
+          detail: { hint, hintNumber: hintIndex + 1 } 
+        }));
+        
+        return `Here is a hint: ${hint}`;
+      }
+      
+      return 'Think about what the problem is really asking. What information do you already have, and what do you need to find?';
+    }, [exerciseContext]),
+    
+    explainTheory: useCallback(async () => {
+      console.log('Gilbert: Explaining theory');
+      if (!exerciseContext?.subtopicId && !exerciseContext?.subtopicName) {
+        return 'What topic would you like me to explain? Just tell me and I will help!';
+      }
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('generate-theory-content', {
+          body: {
+            subtopicId: exerciseContext.subtopicId,
+            subtopicName: exerciseContext.subtopicName,
+          },
+        });
+        
+        if (error || !data) {
+          return `Let me explain ${exerciseContext.subtopicName} to you. What specifically would you like to understand better?`;
+        }
+        
+        // Dispatch event for UI
+        window.dispatchEvent(new CustomEvent('gilbert-theory', { 
+          detail: data 
+        }));
+        
+        // Return a short spoken explanation
+        const explanation = data.explanation || data.content || '';
+        const shortExplanation = explanation.split('.').slice(0, 3).join('.') + '.';
+        
+        return shortExplanation;
+      } catch (err) {
+        console.error('Error generating theory:', err);
+        return `Let me explain the key concepts of ${exerciseContext?.subtopicName || 'this topic'} to you.`;
+      }
+    }, [exerciseContext]),
+  };
+
   // ElevenLabs conversation hook
   const conversation = useConversation({
     preferHeadphonesForIosDevices: true,
+    clientTools,
     onConnect: () => {
       console.log('Connected to ElevenLabs agent');
       setIsConnecting(false);
@@ -161,6 +268,12 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
           });
         }
       }
+      
+      // Handle client tool calls
+      if (message.type === 'client_tool_call') {
+        const toolName = message.client_tool_call?.tool_name;
+        console.log('Gilbert tool call:', toolName);
+      }
     },
     onError: (err: unknown) => {
       // Safely handle error - ElevenLabs may pass various error formats
@@ -197,7 +310,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     const context = buildAgentContext();
 
     const prompt = context.current_question
-      ? `You are helping a student with the following math problem:
+      ? `You are Gilbert, a friendly and patient Dutch math tutor helping a student.
 
 CURRENT PROBLEM: ${context.current_question}
 TOPIC: ${context.subtopic_name}
@@ -208,22 +321,32 @@ ${context.hints ? `AVAILABLE HINTS: ${context.hints}` : ''}
 ${context.last_feedback ? `LAST FEEDBACK: ${context.last_feedback}` : ''}
 ${context.conversation_summary ? `RECENT CONVERSATION:\n${context.conversation_summary}` : ''}
 
+AVAILABLE ACTIONS (use these when the student asks):
+- If student wants an EASIER exercise: use the requestEasierExercise tool
+- If student wants a HARDER exercise: use the requestHarderExercise tool  
+- If student asks you to SOLVE/SHOW the answer: use the solveExercise tool
+- If student asks for a HINT: use the giveHint tool
+- If student wants THEORY explained: use the explainTheory tool
+
 INSTRUCTIONS:
 - Speak in short sentences (max 2 sentences at a time)
 - Ask one guiding question at a time, then wait
-- Default to hint-first help; only give full solutions if asked
+- Default to hint-first help; only give full solutions if explicitly asked
 - Do NOT give the answer directly - help them discover it themselves
 - Use layered help: hint → stronger hint → steps
 - When explaining formulas, say them clearly (e.g., "x squared plus 2x")
 - Check in regularly: "What do you think the next step is?"
-- Be patient and encouraging`
-      : `The student wants help with math but is not working on a specific problem.
+- Be patient and encouraging
+- Respond to your name "Gilbert" warmly`
+      : `You are Gilbert, a friendly Dutch math tutor. 
+The student wants help with math but is not working on a specific problem.
 Help with general questions or suggest starting a practice session.
-Keep answers short (max 2 sentences at a time).`;
+Keep answers short (max 2 sentences at a time).
+Respond warmly when called by your name "Gilbert".`;
 
     const firstMessage = context.current_question
-      ? `Hi! Quick check: what's your goal for this problem, and what have you tried so far?`
-      : `Hi! What's your goal right now, and how can I help?`;
+      ? `Hey! I see you're working on a problem. What have you tried so far, and where are you stuck?`
+      : `Hey! I'm Gilbert, your math tutor. What would you like to work on today?`;
 
     return { prompt, firstMessage };
   }, [buildAgentContext]);
