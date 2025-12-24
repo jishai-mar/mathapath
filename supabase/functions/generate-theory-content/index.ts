@@ -14,9 +14,9 @@ serve(async (req) => {
   try {
     const { subtopicName, topicName, existingTheory, existingExamples } = await req.json();
     
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     console.log(`Generating theory content for: ${subtopicName} (Topic: ${topicName})`);
@@ -67,14 +67,14 @@ RULES:
 
     const userPrompt = `Generate clean theory for: "${subtopicName}" (Topic: ${topicName}). Return ONLY valid JSON.`;
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
+        model: 'google/gemini-2.5-flash',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt }
@@ -86,7 +86,24 @@ RULES:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      
+      const fallbackTheory = {
+        definition: "Content temporarily unavailable.",
+        key_rule: "Please try again.",
+        formula: "",
+        when_to_use: "",
+        worked_example: { problem: "", steps: [], answer: "" },
+        common_mistake: { wrong: "", right: "" },
+        needs_graph: false,
+        voiceover_scripts: {},
+        fallback: true,
+        rate_limited: response.status === 429,
+        credits_depleted: response.status === 402,
+      };
+      
+      return new Response(JSON.stringify(fallbackTheory), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     const data = await response.json();

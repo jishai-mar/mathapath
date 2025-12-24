@@ -13,10 +13,10 @@ serve(async (req) => {
 
   try {
     const { message, selectedEntry, allEntries, conversationHistory } = await req.json();
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY is not configured');
     }
 
     // Build context about the student's notebook
@@ -106,14 +106,14 @@ When the notebook first opens, give a brief, warm greeting mentioning any patter
 
     console.log('Calling Lovable AI for notebook tutor...');
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-5-mini-2025-08-07',
+        model: 'google/gemini-2.5-flash',
         messages,
         stream: true,
         max_completion_tokens: 2048,
@@ -121,21 +121,20 @@ When the notebook first opens, give a brief, warm greeting mentioning any patter
     });
 
     if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }), {
-          status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: 'Payment required. Please add credits.' }), {
-          status: 402,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+      
+      const fallbackResponse = {
+        content: "I'm temporarily unavailable. Please try again in a moment.",
+        fallback: true,
+        rate_limited: response.status === 429,
+        credits_depleted: response.status === 402,
+      };
+      
+      return new Response(JSON.stringify(fallbackResponse), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
     }
 
     return new Response(response.body, {
