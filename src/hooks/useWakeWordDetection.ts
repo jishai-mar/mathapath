@@ -62,6 +62,17 @@ export function useWakeWordDetection({
   const restartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
   const lastDetectionRef = useRef<number>(0);
+  const enabledRef = useRef(enabled);
+  const onWakeWordDetectedRef = useRef(onWakeWordDetected);
+
+  // Keep refs in sync
+  useEffect(() => {
+    enabledRef.current = enabled;
+  }, [enabled]);
+
+  useEffect(() => {
+    onWakeWordDetectedRef.current = onWakeWordDetected;
+  }, [onWakeWordDetected]);
 
   // Check if Web Speech API is available
   const isSupported = typeof window !== 'undefined' && 
@@ -72,41 +83,33 @@ export function useWakeWordDetection({
     return wakeWords.some(word => normalizedTranscript.includes(word.toLowerCase()));
   }, [wakeWords]);
 
-  const handleResult = useCallback((event: Event) => {
-    const speechEvent = event as SpeechRecognitionEvent;
-    let transcript = '';
+  const stopListening = useCallback(() => {
+    if (restartTimeoutRef.current) {
+      clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
     
-    for (let i = speechEvent.resultIndex; i < speechEvent.results.length; i++) {
-      const result = speechEvent.results[i];
-      transcript += result[0].transcript;
-    }
-
-    setState(prev => ({ ...prev, transcript }));
-
-    // Check for wake word with debounce to prevent multiple triggers
-    if (checkForWakeWord(transcript)) {
-      const now = Date.now();
-      // Prevent triggering more than once every 3 seconds
-      if (now - lastDetectionRef.current > 3000) {
-        lastDetectionRef.current = now;
-        
-        setState(prev => ({ ...prev, wakeWordDetected: true }));
-        onWakeWordDetected?.(transcript);
-        
-        // Reset wake word detection after a short delay
-        if (debounceRef.current) {
-          clearTimeout(debounceRef.current);
-        }
-        debounceRef.current = setTimeout(() => {
-          setState(prev => ({ ...prev, wakeWordDetected: false }));
-        }, 2000);
+    if (recognitionRef.current) {
+      recognitionRef.current.onend = null; // Prevent auto-restart
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        // Ignore errors when stopping
       }
+      recognitionRef.current = null;
     }
-  }, [checkForWakeWord, onWakeWordDetected]);
+    
+    setState(prev => ({ ...prev, isListening: false }));
+  }, []);
 
   const startListening = useCallback(() => {
     if (!isSupported) {
       setState(prev => ({ ...prev, error: 'Speech recognition not supported' }));
+      return;
+    }
+
+    // Already listening
+    if (recognitionRef.current) {
       return;
     }
 
@@ -129,16 +132,15 @@ export function useWakeWordDetection({
 
       recognition.onend = () => {
         setState(prev => ({ ...prev, isListening: false }));
+        recognitionRef.current = null;
         
         // Auto-restart if still enabled
-        if (enabled && recognitionRef.current) {
+        if (enabledRef.current) {
           restartTimeoutRef.current = setTimeout(() => {
-            try {
-              recognitionRef.current?.start();
-            } catch (e) {
-              console.log('Recognition restart failed, will retry');
+            if (enabledRef.current && !recognitionRef.current) {
+              startListening();
             }
-          }, 100);
+          }, 500);
         }
       };
 
@@ -151,7 +153,37 @@ export function useWakeWordDetection({
         setState(prev => ({ ...prev, error: event.error }));
       };
 
-      recognition.onresult = handleResult;
+      recognition.onresult = (event: Event) => {
+        const speechEvent = event as SpeechRecognitionEvent;
+        let transcript = '';
+        
+        for (let i = speechEvent.resultIndex; i < speechEvent.results.length; i++) {
+          const result = speechEvent.results[i];
+          transcript += result[0].transcript;
+        }
+
+        setState(prev => ({ ...prev, transcript }));
+
+        // Check for wake word with debounce to prevent multiple triggers
+        if (checkForWakeWord(transcript)) {
+          const now = Date.now();
+          // Prevent triggering more than once every 3 seconds
+          if (now - lastDetectionRef.current > 3000) {
+            lastDetectionRef.current = now;
+            
+            setState(prev => ({ ...prev, wakeWordDetected: true }));
+            onWakeWordDetectedRef.current?.(transcript);
+            
+            // Reset wake word detection after a short delay
+            if (debounceRef.current) {
+              clearTimeout(debounceRef.current);
+            }
+            debounceRef.current = setTimeout(() => {
+              setState(prev => ({ ...prev, wakeWordDetected: false }));
+            }, 2000);
+          }
+        }
+      };
 
       recognitionRef.current = recognition;
       recognition.start();
@@ -159,22 +191,7 @@ export function useWakeWordDetection({
       console.error('Failed to start speech recognition:', error);
       setState(prev => ({ ...prev, error: 'Failed to start speech recognition' }));
     }
-  }, [isSupported, enabled, handleResult]);
-
-  const stopListening = useCallback(() => {
-    if (restartTimeoutRef.current) {
-      clearTimeout(restartTimeoutRef.current);
-      restartTimeoutRef.current = null;
-    }
-    
-    if (recognitionRef.current) {
-      recognitionRef.current.onend = null; // Prevent auto-restart
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-    
-    setState(prev => ({ ...prev, isListening: false }));
-  }, []);
+  }, [isSupported, checkForWakeWord]);
 
   const resetDetection = useCallback(() => {
     setState(prev => ({ ...prev, wakeWordDetected: false, transcript: '' }));
@@ -194,7 +211,7 @@ export function useWakeWordDetection({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [enabled, isSupported, startListening, stopListening]);
+  }, [enabled, isSupported]); // Removed function deps - use refs instead
 
   return {
     ...state,
