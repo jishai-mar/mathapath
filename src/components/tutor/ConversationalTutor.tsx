@@ -58,7 +58,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     }
 
     const recentConvo = exerciseContext.tutorConversation.slice(-5)
-      .map(m => `${m.role === 'student' ? 'Leerling' : 'Tutor'}: ${m.message}`)
+      .map(m => `${m.role === 'student' ? 'Student' : 'Tutor'}: ${m.message}`)
       .join('\n');
 
     return {
@@ -138,7 +138,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     },
     onError: (err) => {
       console.error('Conversation error:', err);
-      setError('Er ging iets mis met de verbinding. Probeer opnieuw.');
+      setError('Something went wrong with the connection. Please try again.');
       setIsConnecting(false);
     },
   });
@@ -166,7 +166,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
       );
 
       if (fnError || !data?.token) {
-        throw new Error('Kon geen verbinding maken met de tutor');
+        throw new Error('Could not connect to the tutor');
       }
 
       // Build context for the agent
@@ -174,28 +174,28 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
 
       // Build the dynamic prompt with exercise context
       const dynamicPrompt = context.current_question
-        ? `Je helpt nu een student met de volgende wiskunde opgave:
+        ? `You are helping a student with the following math problem:
 
-HUIDIGE OPGAVE: ${context.current_question}
-ONDERWERP: ${context.subtopic_name}
-MOEILIJKHEID: ${context.difficulty}
-${context.student_answer ? `ANTWOORD VAN STUDENT: ${context.student_answer}` : ''}
-AANTAL POGINGEN: ${context.attempts}
-${context.hints ? `BESCHIKBARE HINTS: ${context.hints}` : ''}
-${context.last_feedback ? `LAATSTE FEEDBACK: ${context.last_feedback}` : ''}
-${context.conversation_summary ? `RECENTE CONVERSATIE:\n${context.conversation_summary}` : ''}
+CURRENT PROBLEM: ${context.current_question}
+TOPIC: ${context.subtopic_name}
+DIFFICULTY: ${context.difficulty}
+${context.student_answer ? `STUDENT'S ANSWER: ${context.student_answer}` : ''}
+ATTEMPTS: ${context.attempts}
+${context.hints ? `AVAILABLE HINTS: ${context.hints}` : ''}
+${context.last_feedback ? `LAST FEEDBACK: ${context.last_feedback}` : ''}
+${context.conversation_summary ? `RECENT CONVERSATION:\n${context.conversation_summary}` : ''}
 
-INSTRUCTIES:
-- Spreek in korte zinnen (max 2 zinnen per keer)
-- Vraag eerst wat de student al heeft geprobeerd
-- Geef NIET direct het antwoord - help ze zelf ontdekken
-- Gebruik gelaagde hulp: hint → sterkere hint → stappen
-- Als je formules uitlegt, zeg ze duidelijk (bijv. "x kwadraat plus 2x")
-- Check regelmatig: "Wat denk je dat de volgende stap is?"
-- Wees geduldig en moedigend`
-        : `De student wil hulp met wiskunde maar werkt niet aan een specifieke opgave.
-Help met algemene vragen of verwijs naar het starten van een oefensessie.
-Houd antwoorden kort (max 2 zinnen per keer).`;
+INSTRUCTIONS:
+- Speak in short sentences (max 2 sentences at a time)
+- First ask what the student has already tried
+- Do NOT give the answer directly - help them discover it themselves
+- Use layered help: hint → stronger hint → steps
+- When explaining formulas, say them clearly (e.g., "x squared plus 2x")
+- Check in regularly: "What do you think the next step is?"
+- Be patient and encouraging`
+        : `The student wants help with math but is not working on a specific problem.
+Help with general questions or suggest starting a practice session.
+Keep answers short (max 2 sentences at a time).`;
 
       // Start the conversation with dynamic context
       await conversation.startSession({
@@ -207,16 +207,16 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
               prompt: dynamicPrompt,
             },
             firstMessage: context.current_question
-              ? `Hoi! Ik zie dat je werkt aan ${context.subtopic_name}. Waar loop je tegenaan?`
-              : 'Hallo! Ik ben je wiskunde tutor. Hoe kan ik je vandaag helpen?',
+              ? `Hi! I see you're working on ${context.subtopic_name}. What are you stuck on?`
+              : 'Hello! I\'m your math tutor. How can I help you today?',
           },
         },
       });
 
       // Add the first message to transcript
       const firstMessage = context.current_question
-        ? `Hoi! Ik zie dat je werkt aan ${context.subtopic_name}. Waar loop je tegenaan?`
-        : 'Hallo! Ik ben je wiskunde tutor. Hoe kan ik je vandaag helpen?';
+        ? `Hi! I see you're working on ${context.subtopic_name}. What are you stuck on?`
+        : 'Hello! I\'m your math tutor. How can I help you today?';
       
       setTranscript([{
         id: 'greeting',
@@ -227,7 +227,7 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
 
     } catch (err) {
       console.error('Failed to start conversation:', err);
-      setError(err instanceof Error ? err.message : 'Kon geen verbinding maken');
+      setError(err instanceof Error ? err.message : 'Could not connect');
       setIsConnecting(false);
     }
   }, [conversation, buildAgentContext]);
@@ -258,12 +258,12 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
 
   // Get status indicator
   const getStatusText = () => {
-    if (isConnecting) return 'Verbinden...';
+    if (isConnecting) return 'Connecting...';
     if (conversation.status === 'connected') {
-      if (conversation.isSpeaking) return 'Tutor spreekt...';
-      return 'Luisteren...';
+      if (conversation.isSpeaking) return 'Tutor speaking...';
+      return 'Listening...';
     }
-    return 'Niet verbonden';
+    return 'Not connected';
   };
 
   if (!isOpen) return null;
@@ -295,7 +295,7 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
                 <MessageCircle className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold">Praat met je Tutor</h3>
+                <h3 className="font-semibold">Talk to your Tutor</h3>
                 <p className="text-xs text-muted-foreground">{getStatusText()}</p>
               </div>
             </div>
@@ -314,7 +314,7 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
           {/* Current Exercise Context */}
           {exerciseContext?.currentQuestion && (
             <div className="px-4 py-3 border-b border-border bg-primary/5">
-              <p className="text-xs text-muted-foreground mb-1">Huidige opgave:</p>
+              <p className="text-xs text-muted-foreground mb-1">Current problem:</p>
               <div className="text-sm">
                 <MathRenderer latex={exerciseContext.currentQuestion} />
               </div>
@@ -392,7 +392,7 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
                 className="shrink-0 h-8 text-xs gap-1.5 rounded-full"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                Uitleg
+                Explain
               </Button>
               <Button
                 variant="outline"
@@ -400,7 +400,7 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
                 className="shrink-0 h-8 text-xs gap-1.5 rounded-full"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
-                Ik zit vast
+                I'm stuck
               </Button>
             </div>
           )}
@@ -412,7 +412,7 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
                 {/* Listening indicator */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Mic className={`w-4 h-4 ${!conversation.isSpeaking ? 'text-secondary animate-pulse' : ''}`} />
-                  <span>{conversation.isSpeaking ? 'Tutor spreekt' : 'Jij kunt praten'}</span>
+                  <span>{conversation.isSpeaking ? 'Tutor speaking' : 'You can speak'}</span>
                 </div>
                 
                 {/* End call button */}
@@ -435,12 +435,12 @@ Houd antwoorden kort (max 2 zinnen per keer).`;
                 {isConnecting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Verbinden...
+                    Connecting...
                   </>
                 ) : (
                   <>
                     <Phone className="w-5 h-5" />
-                    Start gesprek
+                    Start conversation
                   </>
                 )}
               </Button>
