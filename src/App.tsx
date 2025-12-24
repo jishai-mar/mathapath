@@ -9,20 +9,29 @@ import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
 import { ExerciseProvider } from "@/contexts/ExerciseContext";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-
+import { TalkToTutorButton } from "@/components/tutor/TalkToTutorButton";
 // Pages
 import Landing from "./pages/Landing";
-import Home from "./pages/Home";
+import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import Practice from "./pages/Practice";
+import DiagnosticTest from "./pages/DiagnosticTest";
 import ComprehensiveDiagnostic from "./pages/ComprehensiveDiagnostic";
+import LearningProfile from "./pages/LearningProfile";
 import Profile from "./pages/Profile";
+import MeetYourTutor from "./pages/MeetYourTutor";
+import SessionHistory from "./pages/SessionHistory";
+import Notebook from "./pages/Notebook";
+import Bookmarks from "./pages/Bookmarks";
+import VoiceFirstTutoring from "./pages/VoiceFirstTutoring";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+// Smart router that handles auth state and redirects
 function AppRoutes() {
   const { user, loading } = useAuth();
-  const { isLoading: tutorLoading } = useTutor();
+  const { isFirstTime, isLoading: tutorLoading } = useTutor();
   const [diagnosticCompleted, setDiagnosticCompleted] = useState<boolean | null>(null);
   const [checkingDiagnostic, setCheckingDiagnostic] = useState(true);
 
@@ -36,9 +45,9 @@ function AppRoutes() {
 
       try {
         const { data } = await supabase
-          .from("profiles")
-          .select("comprehensive_diagnostic_completed")
-          .eq("id", user.id)
+          .from('profiles')
+          .select('comprehensive_diagnostic_completed')
+          .eq('id', user.id)
           .single();
 
         setDiagnosticCompleted(data?.comprehensive_diagnostic_completed ?? false);
@@ -52,31 +61,43 @@ function AppRoutes() {
     checkDiagnosticStatus();
   }, [user]);
 
+  // Show nothing while loading to prevent flash
   if (loading || checkingDiagnostic || tutorLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
     <Routes>
-      <Route
-        path="/"
+      {/* Public landing page for non-authenticated users */}
+      <Route 
+        path="/" 
         element={
           !user ? (
             <Landing />
           ) : !diagnosticCompleted ? (
             <ComprehensiveDiagnostic />
+          ) : isFirstTime ? (
+            <MeetYourTutor />
           ) : (
-            <Home />
+            <Dashboard />
           )
-        }
+        } 
       />
       <Route path="/auth" element={<Auth />} />
       <Route path="/diagnostic" element={<ComprehensiveDiagnostic />} />
+      <Route path="/diagnostic/:topicId" element={<DiagnosticTest />} />
+      <Route path="/practice/:topicId" element={<Practice />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/learning-profile" element={<LearningProfile />} />
+      <Route path="/meet-tutor" element={<MeetYourTutor />} />
+      <Route path="/session-history" element={<SessionHistory />} />
+      <Route path="/notebook" element={<Notebook />} />
+      <Route path="/bookmarks" element={<Bookmarks />} />
+      <Route path="/voice-tutor" element={<VoiceFirstTutoring />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -94,6 +115,7 @@ const App = () => (
               <BrowserRouter>
                 <AppRoutes />
               </BrowserRouter>
+              <TalkToTutorButton variant="floating" />
             </ExerciseProvider>
           </TutorSessionProvider>
         </TutorProvider>
