@@ -20,7 +20,7 @@ interface TutorContextType {
 }
 
 const defaultPreferences: TutorPreferences = {
-  tutorName: 'Alex',
+  tutorName: 'Gilbert',
   avatarStyle: 'friendly-robot',
   personality: 'patient',
   chatTheme: 'default',
