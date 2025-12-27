@@ -344,9 +344,36 @@ Help with general questions or suggest starting a practice session.
 Keep answers short (max 2 sentences at a time).
 Respond warmly when called by your name "Gilbert".`;
 
-    const firstMessage = context.current_question
-      ? `Hey! I see you're working on a problem. What have you tried so far, and where are you stuck?`
-      : `Hey! I'm Gilbert, your math tutor. What would you like to work on today?`;
+    // Generate a unique first message each time
+    const getRandomFirstMessage = () => {
+      if (context.current_question) {
+        const problemGreetings = [
+          `Hey there! I see you're tackling ${context.subtopic_name}. What part has you thinking?`,
+          `Alright, let's figure this one out together! Where would you like to start?`,
+          `Nice problem! What's your first instinct on how to approach this?`,
+          `I'm here to help! Walk me through what you've tried so far.`,
+          `This looks interesting! What do you notice about the problem first?`,
+          `Let's break this down step by step. What information do we have?`,
+          `Ready when you are! Tell me what's tripping you up.`,
+          `Good choice working on ${context.subtopic_name}! What's your game plan?`,
+        ];
+        return problemGreetings[Math.floor(Math.random() * problemGreetings.length)];
+      } else {
+        const generalGreetings = [
+          `Hey! What math adventure are we going on today?`,
+          `Hi there! Ready to do some math together?`,
+          `What's on your mind? I'm here to help with anything math-related!`,
+          `Good to see you! What would you like to explore today?`,
+          `Hey! Got a tricky problem or want to practice something specific?`,
+          `I'm all ears! What math topic can I help you with?`,
+          `Let's get started! What are we working on today?`,
+          `Hi! Whether it's equations, geometry, or anything else - I'm ready to help!`,
+        ];
+        return generalGreetings[Math.floor(Math.random() * generalGreetings.length)];
+      }
+    };
+
+    const firstMessage = getRandomFirstMessage();
 
     return { prompt, firstMessage };
   }, [buildAgentContext]);
