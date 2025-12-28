@@ -6,235 +6,336 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Topic-specific difficulty matrices with precise criteria
-const DIFFICULTY_MATRICES: Record<string, {
-  easy: { description: string; maxSteps: number; criteria: string[] };
-  medium: { description: string; maxSteps: number; criteria: string[] };
-  hard: { description: string; maxSteps: number; criteria: string[] };
+/**
+ * REICHMAN MECHINA BOOKLET - EXERCISE TEMPLATES
+ * These are the EXACT question styles from the official exam preparation booklet.
+ * ALL generated exercises MUST match these patterns precisely.
+ */
+const BOOKLET_TOPIC_TEMPLATES: Record<string, {
+  examples: string[];
+  patterns: string[];
+  easy: string;
+  medium: string;
+  hard: string;
 }> = {
+  // ==========================================
+  // FIRST-DEGREE EQUATIONS (ONE VARIABLE)
+  // ==========================================
   "Linear Equations": {
-    easy: {
-      description: "Single variable, positive integers, one operation",
-      maxSteps: 2,
-      criteria: ["Only positive whole numbers (1-20)", "Single operation to solve", "Form: ax = b or x + a = b", "No negative results"]
-    },
-    medium: {
-      description: "Variable on both sides, simple fractions, negatives allowed",
-      maxSteps: 4,
-      criteria: ["Variables on both sides allowed", "Simple fractions (halves, thirds)", "Negative numbers allowed", "May require distribution once"]
-    },
-    hard: {
-      description: "Nested expressions, multiple distribution, complex setup",
-      maxSteps: 6,
-      criteria: ["Nested parentheses", "Multiple distributions", "Word problems requiring equation setup", "Complex fractions"]
-    }
+    examples: [
+      "Solve for x: 7x + 40 = 58 − 2x",
+      "Solve for x: x + 6 = 46 − 7x",
+      "Solve for x: 7(x + 2) + 4(x + 6) = 137",
+      "Solve for x: 9x − 5(x + 2) = 18",
+      "Solve for x: 4(x − 3) − 2(x + 5) = 6",
+      "Solve for x: (3x − 1)/4 = (x + 5)/2",
+    ],
+    patterns: [
+      "ax + b = c − dx (variable on both sides)",
+      "a(x + b) + c(x + d) = e (distribution)",
+      "ax − b(x + c) = d (negative distribution)",
+      "(ax + b)/c = (dx + e)/f (cross multiply)",
+    ],
+    easy: "Coefficients 1-10, single operation like 2x + 5 = 11, answer is positive integer 1-10",
+    medium: "Variables on both sides, one distribution, coefficients up to 20, answer may be fraction",
+    hard: "Multiple distributions, nested parentheses, coefficients up to 50, complex fraction answers",
   },
+
+  // ==========================================
+  // QUADRATIC EQUATIONS
+  // ==========================================
   "Quadratic Equations": {
-    easy: {
-      description: "Perfect squares, direct square roots",
-      maxSteps: 2,
-      criteria: ["Form: x² = a (perfect squares)", "Direct factoring like x² - 4 = 0", "Integer solutions only", "No middle term (b=0)"]
-    },
-    medium: {
-      description: "Factoring with middle term, completing the square",
-      maxSteps: 4,
-      criteria: ["Standard form with middle term", "Factoring required", "Completing the square prep", "Integer or simple fraction solutions"]
-    },
-    hard: {
-      description: "Quadratic formula required, discriminant analysis",
-      maxSteps: 6,
-      criteria: ["Quadratic formula needed", "Irrational or complex solutions", "Discriminant analysis", "Setting up from word problems"]
-    }
+    examples: [
+      "Solve for x: 2x² − 72 = 0",
+      "Solve for x: 18x² − 50 = 0",
+      "Solve for x: x² + 5x − 150 = 0",
+      "Solve for x: x² − 7x + 12 = 0",
+      "Solve for x: 3x² − 7x + 2 = 0",
+      "Solve for x: (x − 3)² = 16",
+    ],
+    patterns: [
+      "ax² − b = 0 (direct square root)",
+      "x² + bx + c = 0 (factoring)",
+      "ax² + bx + c = 0 (quadratic formula)",
+      "(x − a)² = b (square root method)",
+    ],
+    easy: "Form ax² = b with perfect squares like 2x² = 72, or simple factoring x² − 9 = 0",
+    medium: "Standard form requiring factoring or formula, integer solutions",
+    hard: "Requires formula, may have irrational roots or need simplification",
   },
+
+  // ==========================================
+  // HIGHER-DEGREE (BIQUADRATIC)
+  // ==========================================
+  "Higher-Degree Equations": {
+    examples: [
+      "Solve for x: x⁴ − 13x² + 36 = 0",
+      "Solve for x: x⁴ − 5x² + 4 = 0",
+      "Solve for x: x⁴ − 81 = 0",
+      "Solve for x: x⁴ + 7x² − 18 = 0",
+    ],
+    patterns: [
+      "x⁴ + bx² + c = 0 (substitute u = x²)",
+      "x⁴ − a = 0 (fourth roots)",
+    ],
+    easy: "x⁴ = a where a is a perfect fourth power",
+    medium: "Biquadratic with nice substitution, integer roots",
+    hard: "Biquadratic requiring careful analysis, may have some real and some excluded roots",
+  },
+
+  // ==========================================
+  // FRACTIONS / ALGEBRAIC EXPRESSIONS
+  // ==========================================
   "Fractions & Algebraic Expressions": {
-    easy: {
-      description: "Simple fraction operations, single variable",
-      maxSteps: 2,
-      criteria: ["Single fraction simplification", "Adding fractions with same denominator", "No variables in denominator", "Small integers"]
-    },
-    medium: {
-      description: "Different denominators, polynomial numerators",
-      maxSteps: 4,
-      criteria: ["Finding common denominators", "Polynomial expressions", "Simplifying by factoring", "Variables in one term"]
-    },
-    hard: {
-      description: "Complex rational expressions, multiple variables",
-      maxSteps: 6,
-      criteria: ["Variables in denominators", "Multiple operations combined", "Partial fractions", "Complex factoring needed"]
-    }
+    examples: [
+      "Solve for x: (2x + 1)/(x − 3) = 5/2",
+      "Solve for x: 3/x + 2/(x − 1) = 5",
+      "Simplify: (x² − 4)/(x + 2)",
+      "Simplify: (3a²b)/(6ab²)",
+      "Solve for x: (x + 4)/(x − 2) = 3",
+    ],
+    patterns: [
+      "(ax + b)/(cx + d) = e/f (cross multiply)",
+      "a/x + b/(x + c) = d (common denominator)",
+      "Simplify algebraic fractions (factor and cancel)",
+    ],
+    easy: "Single fraction equation or simple simplification",
+    medium: "Cross multiplication or LCD with linear expressions",
+    hard: "Multiple rational terms, requires careful domain checking",
   },
+
+  // ==========================================
+  // RADICAL EQUATIONS
+  // ==========================================
   "Radical Equations": {
-    easy: {
-      description: "Single radical, direct solving",
-      maxSteps: 2,
-      criteria: ["Form: √x = a", "Perfect square results", "Single radical only", "No extraneous solutions"]
-    },
-    medium: {
-      description: "Radical with linear expression inside",
-      maxSteps: 4,
-      criteria: ["Form: √(ax + b) = c", "Squaring both sides once", "May have extraneous solution", "Simple linear under radical"]
-    },
-    hard: {
-      description: "Multiple radicals, nested expressions",
-      maxSteps: 6,
-      criteria: ["Multiple radicals", "Radicals on both sides", "Nested radicals", "Multiple squaring needed"]
-    }
+    examples: [
+      "Solve for x: √(2x + 3) = 5",
+      "Solve for x: √(x + 5) = √(2x − 1)",
+      "Solve for x: √(x + 7) = x − 5",
+      "Solve for x: √(3x − 2) = 4",
+    ],
+    patterns: [
+      "√(ax + b) = c (square both sides)",
+      "√(ax + b) = √(cx + d) (equal radicals)",
+      "√(ax + b) = x + c (isolate and square)",
+    ],
+    easy: "Single radical, direct squaring gives integer answer",
+    medium: "Radical equals linear expression, check for extraneous",
+    hard: "May have extraneous solution, requires verification",
   },
+
+  // ==========================================
+  // EXPONENTS
+  // ==========================================
   "Exponents & Exponential Equations": {
-    easy: {
-      description: "Same base, direct comparison",
-      maxSteps: 2,
-      criteria: ["Same base on both sides", "Simple exponent rules", "Integer exponents only", "Direct solve"]
-    },
-    medium: {
-      description: "Converting to same base, negative exponents",
-      maxSteps: 4,
-      criteria: ["Different bases (convertible)", "Negative exponents", "Exponent rules application", "One conversion step"]
-    },
-    hard: {
-      description: "Logarithms needed, complex expressions",
-      maxSteps: 6,
-      criteria: ["Bases not easily convertible", "Requires logarithms", "Multiple exponent rules", "Complex expressions"]
-    }
+    examples: [
+      "Solve for x: 2ˣ = 32",
+      "Solve for x: 3ˣ⁺¹ = 81",
+      "Simplify: (2³)⁴ × 2² ÷ 2⁵",
+      "Solve for x: 4ˣ = 8",
+      "Simplify: (a³b²)² ÷ (ab)³",
+      "Solve for x: 9ˣ = 27",
+    ],
+    patterns: [
+      "aˣ = b where b = aⁿ (same base)",
+      "aˣ = b where a, b are powers of same number",
+      "Simplify using exponent rules",
+    ],
+    easy: "Same base both sides, like 2ˣ = 16",
+    medium: "Convert to same base (4ˣ = 8 → 2²ˣ = 2³)",
+    hard: "Requires multiple rule applications or fractional exponents in answer",
   },
+
+  // ==========================================
+  // LOGARITHMS
+  // ==========================================
   "Logarithms & Logarithmic Equations": {
-    easy: {
-      description: "Direct evaluation, simple equations",
-      maxSteps: 2,
-      criteria: ["Direct log evaluation", "Form: log_a(x) = b", "Common bases (10, 2, e)", "Integer results"]
-    },
-    medium: {
-      description: "Log rules application, combining logs",
-      maxSteps: 4,
-      criteria: ["Product/quotient rules", "Combining multiple logs", "Change of base formula", "One variable"]
-    },
-    hard: {
-      description: "Complex log equations, multiple variables",
-      maxSteps: 6,
-      criteria: ["Multiple log terms", "Quadratic in log form", "Nested logarithms", "Domain restrictions matter"]
-    }
+    examples: [
+      "Evaluate: log₂ 64",
+      "Solve for x: log₃ x = 4",
+      "Simplify: log₂ 8 + log₂ 4",
+      "Solve for x: log x + log(x − 3) = 1",
+      "Evaluate: log₅ 125",
+      "Solve for x: log₂(x − 1) = 3",
+    ],
+    patterns: [
+      "logₐ b = ? (direct evaluation)",
+      "logₐ x = b (convert to exponential)",
+      "logₐ x + logₐ y = c (product rule)",
+      "logₐ x − logₐ y = c (quotient rule)",
+    ],
+    easy: "Direct evaluation of logₐ b where b is a power of a",
+    medium: "Solve logₐ x = b or use one log rule",
+    hard: "Multiple log terms, may lead to quadratic, check domain",
   },
+
+  // ==========================================
+  // INEQUALITIES
+  // ==========================================
   "Inequalities": {
-    easy: {
-      description: "Simple linear inequalities",
-      maxSteps: 2,
-      criteria: ["Form: ax + b < c", "No sign flipping needed", "Positive coefficients", "Integer endpoints"]
-    },
-    medium: {
-      description: "Compound inequalities, sign changes",
-      maxSteps: 4,
-      criteria: ["Dividing by negatives", "Compound inequalities", "Interval notation", "Simple absolute value"]
-    },
-    hard: {
-      description: "Quadratic inequalities, rational inequalities",
-      maxSteps: 6,
-      criteria: ["Quadratic inequalities", "Rational expressions", "Multiple intervals", "Sign analysis needed"]
-    }
+    examples: [
+      "Solve: 2x + 5 < 13",
+      "Solve: x² − 5x + 6 > 0",
+      "Solve: (x − 2)(x + 3) ≤ 0",
+      "Solve: (x + 1)/(x − 2) > 0",
+      "Solve: 3x − 7 ≥ 2x + 1",
+    ],
+    patterns: [
+      "ax + b < c (linear)",
+      "ax² + bx + c > 0 (quadratic)",
+      "(x − a)(x − b) ≤ 0 (factored form)",
+      "(ax + b)/(cx + d) > 0 (rational)",
+    ],
+    easy: "Linear inequality, no sign flip needed",
+    medium: "Quadratic or factored quadratic, find intervals",
+    hard: "Rational inequality with sign analysis",
   },
-  "Linear Functions & Lines": {
-    easy: {
-      description: "Identify slope/intercept, plot points",
-      maxSteps: 2,
-      criteria: ["Given y = mx + b form", "Identify slope and intercept", "Plot two points", "Integer values"]
-    },
-    medium: {
-      description: "Find equation from points, parallel/perpendicular",
-      maxSteps: 4,
-      criteria: ["Find equation from two points", "Parallel and perpendicular lines", "Convert between forms", "Intercept calculations"]
-    },
-    hard: {
-      description: "Systems context, distance/midpoint applications",
-      maxSteps: 6,
-      criteria: ["Word problems", "Distance and midpoint", "Systems of lines", "Area calculations with lines"]
-    }
-  },
-  "Quadratic Functions & Parabolas": {
-    easy: {
-      description: "Identify vertex from standard form",
-      maxSteps: 2,
-      criteria: ["Vertex form given", "Find axis of symmetry", "Identify direction", "Simple graphing"]
-    },
-    medium: {
-      description: "Convert forms, find vertex from standard",
-      maxSteps: 4,
-      criteria: ["Standard to vertex form", "Find x-intercepts", "Completing the square", "Range/domain"]
-    },
-    hard: {
-      description: "Word problems, optimization",
-      maxSteps: 6,
-      criteria: ["Optimization problems", "Projectile motion", "Multiple parabolas", "System with parabola and line"]
-    }
-  },
+
+  // ==========================================
+  // LIMITS
+  // ==========================================
   "Limits": {
-    easy: {
-      description: "Direct substitution",
-      maxSteps: 2,
-      criteria: ["Direct substitution works", "Polynomial limits", "No indeterminate forms", "Finite results"]
-    },
-    medium: {
-      description: "Factor and cancel, simple indeterminate",
-      maxSteps: 4,
-      criteria: ["0/0 form requiring factoring", "Conjugate multiplication", "Simple rational functions", "One-sided limits"]
-    },
-    hard: {
-      description: "L'Hôpital's rule, limits at infinity",
-      maxSteps: 6,
-      criteria: ["L'Hôpital's rule", "Limits at infinity", "Complex indeterminate forms", "Trigonometric limits"]
-    }
+    examples: [
+      "Evaluate: lim(x→2) (x² − 4)/(x − 2)",
+      "Evaluate: lim(x→∞) (3x² + 2x)/(x² − 1)",
+      "Evaluate: lim(x→0) (x² + 3x)/x",
+      "Evaluate: lim(x→4) (√x − 2)/(x − 4)",
+      "Evaluate: lim(x→1) (x³ − 1)/(x − 1)",
+    ],
+    patterns: [
+      "lim(x→a) where direct substitution works",
+      "lim(x→a) with 0/0 requiring factoring",
+      "lim(x→∞) polynomial/polynomial",
+      "lim with radical (conjugate method)",
+    ],
+    easy: "Direct substitution gives answer",
+    medium: "Factor numerator/denominator to cancel, or conjugate",
+    hard: "Complex factoring or multiple techniques",
   },
+
+  // ==========================================
+  // DERIVATIVES
+  // ==========================================
   "Derivatives & Applications": {
-    easy: {
-      description: "Power rule, basic derivatives",
-      maxSteps: 2,
-      criteria: ["Power rule only", "Polynomial functions", "Basic differentiation", "No chain rule"]
-    },
-    medium: {
-      description: "Product/quotient rule, chain rule intro",
-      maxSteps: 4,
-      criteria: ["Product or quotient rule", "Simple chain rule", "Finding critical points", "Basic slope problems"]
-    },
-    hard: {
-      description: "Implicit differentiation, optimization",
-      maxSteps: 6,
-      criteria: ["Implicit differentiation", "Related rates", "Optimization problems", "Multiple rules combined"]
-    }
-  }
+    examples: [
+      "Find f'(x) if f(x) = x³ + 6x² + x",
+      "Find f'(x) if f(x) = 5x⁴ − 2x² + 7",
+      "Find f'(x) if f(x) = √x",
+      "Find f'(2) if f(x) = x² − 3x + 1",
+      "Find f'(x) if f(x) = 1/x²",
+      "Find the equation of the tangent line to y = x² at x = 3",
+    ],
+    patterns: [
+      "f(x) = polynomial → power rule",
+      "f(x) = xⁿ where n is fraction or negative",
+      "Find f'(a) for specific value",
+      "Tangent line at a point",
+    ],
+    easy: "Power rule on simple polynomial like x³ + 2x",
+    medium: "Polynomial with multiple terms, or fractional exponents",
+    hard: "Find derivative and evaluate, or tangent line equation",
+  },
+
+  // ==========================================
+  // LINEAR FUNCTIONS
+  // ==========================================
+  "Linear Functions & Lines": {
+    examples: [
+      "Find the equation of the line through (2, 3) with slope 4",
+      "Find the slope of the line through (1, 2) and (4, 8)",
+      "Find the intersection of y = 2x + 1 and y = −x + 7",
+      "Find a line parallel to y = 3x − 1 through (0, 5)",
+    ],
+    patterns: [
+      "Point-slope form: y − y₁ = m(x − x₁)",
+      "Slope from two points: m = (y₂ − y₁)/(x₂ − x₁)",
+      "Intersection of two lines (substitution)",
+      "Parallel/perpendicular lines",
+    ],
+    easy: "Given slope and y-intercept, or find slope from two points",
+    medium: "Point-slope form, or find intersection",
+    hard: "Parallel/perpendicular through given point",
+  },
+
+  // ==========================================
+  // QUADRATIC FUNCTIONS / PARABOLAS
+  // ==========================================
+  "Quadratic Functions & Parabolas": {
+    examples: [
+      "Find the vertex of y = x² − 6x + 5",
+      "Find the x-intercepts of y = x² − 5x + 6",
+      "Write in vertex form: y = x² + 4x + 7",
+      "Find the axis of symmetry for y = 2x² − 8x + 3",
+    ],
+    patterns: [
+      "Vertex: x = −b/(2a), then find y",
+      "x-intercepts: solve ax² + bx + c = 0",
+      "Vertex form: y = a(x − h)² + k",
+    ],
+    easy: "Find vertex or axis of symmetry using formula",
+    medium: "Convert to vertex form by completing square",
+    hard: "Multiple properties of same parabola",
+  },
 };
 
-// Difficulty-specific instructions for AI
-const DIFFICULTY_INSTRUCTIONS = {
-  easy: `
-EASY DIFFICULTY - For students who need confidence building:
-- Use ONLY positive whole numbers under 20 (no negatives, no fractions, no decimals)
-- Maximum 2 steps to solve
-- Single operation type per problem
-- Pattern should be obvious and direct
-- Numbers should be "friendly" (multiples of 2, 5, 10)
-- Answer should be a clean whole number
-- No hidden tricks or edge cases
-GOAL: Build confidence with guaranteed success. Student should feel "I can do this!"
-`,
-  medium: `
-MEDIUM DIFFICULTY - For students with basic understanding:
-- Negative numbers and simple fractions (halves, thirds, quarters) allowed
-- Maximum 4 steps to solve
-- May combine 2 concepts (but not more)
-- May require one distribution or collecting like terms
-- Numbers can be larger but answers should still be clean
-- One small challenge or decision point
-GOAL: Reinforce concepts with moderate challenge. Student should think but not struggle.
-`,
-  hard: `
-HARD DIFFICULTY - For advanced students seeking challenge:
-- Complex expressions, nested parentheses, multiple operations
-- 5-6 steps typically required
-- Requires insight or non-obvious first step
-- May combine multiple topic concepts
-- Answers may involve radicals, fractions, or multiple solutions
-- May require strategic approach selection
-GOAL: Push critical thinking. Student should feel accomplished after solving.
-`
-};
+/**
+ * FORBIDDEN CONTENT - NEVER GENERATE THESE
+ * The Reichman Mechina booklet does NOT include these topics
+ */
+const FORBIDDEN_CONTENT = `
+ABSOLUTELY FORBIDDEN - NEVER include these in any exercise:
+
+FORBIDDEN TOPICS:
+- Trigonometry: sin, cos, tan, cot, sec, csc
+- Trigonometric equations of any kind
+- Inverse trig: arcsin, arccos, arctan
+- Radians with π (like π/4, 2π)
+- Unit circle
+- θ (theta), α (alpha), β (beta) as variables
+- Degrees notation (°)
+- Epsilon-delta proofs
+- L'Hôpital's rule (don't mention by name)
+- Integration or integrals
+- Complex numbers (i = √−1)
+- Matrices
+- Vectors
+- Series and sequences
+- Probability
+- Statistics
+
+FORBIDDEN QUESTION STYLES:
+- Word problems with real-world context
+- Story problems ("A train leaves...")
+- Multiple choice
+- True/False
+- Proof questions ("Prove that...")
+- "Find all values in [0, 2π)"
+
+IF YOU GENERATE ANY FORBIDDEN CONTENT, THE EXERCISE WILL BE REJECTED.
+`;
+
+/**
+ * Get the booklet-style template for a topic
+ */
+function getTopicTemplate(topicName: string) {
+  // Direct match
+  if (BOOKLET_TOPIC_TEMPLATES[topicName]) {
+    return BOOKLET_TOPIC_TEMPLATES[topicName];
+  }
+  
+  // Try partial matching
+  const normalized = topicName.toLowerCase();
+  for (const [key, template] of Object.entries(BOOKLET_TOPIC_TEMPLATES)) {
+    const keyLower = key.toLowerCase();
+    if (normalized.includes(keyLower.split(' ')[0]) || 
+        keyLower.includes(normalized.split(' ')[0])) {
+      return template;
+    }
+  }
+  
+  // Default to linear equations style
+  return BOOKLET_TOPIC_TEMPLATES["Linear Equations"];
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -268,17 +369,15 @@ serve(async (req) => {
       .eq('id', subtopicId)
       .single();
 
-    const topicName = (subtopic as any)?.topics?.name || 'Mathematics';
+    const topicName = (subtopic as any)?.topics?.name || 'Linear Equations';
     const subtopicName = subtopic?.name || 'General';
 
-    // Get topic-specific difficulty matrix
-    const topicMatrix = DIFFICULTY_MATRICES[topicName] || DIFFICULTY_MATRICES["Linear Equations"];
-    const difficultySpec = topicMatrix[difficulty as keyof typeof topicMatrix];
+    // Get booklet-style template for this topic
+    const template = getTopicTemplate(topicName);
+    const difficultyGuide = template[difficulty as keyof typeof template] || template.medium;
 
-    // Fetch student's performance data if userId provided
+    // Fetch student performance context
     let studentContext = '';
-    let misconceptions: string[] = [];
-    
     if (userId) {
       const { data: recentAttempts } = await supabase
         .from('exercise_attempts')
@@ -290,228 +389,110 @@ serve(async (req) => {
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
-        .limit(30);
+        .limit(20);
 
       const subtopicAttempts = (recentAttempts || []).filter((a: any) => a.exercises?.subtopic_id === subtopicId);
       
       if (subtopicAttempts.length > 0) {
-        const stats = { easy: { c: 0, t: 0 }, medium: { c: 0, t: 0 }, hard: { c: 0, t: 0 } };
+        const correct = subtopicAttempts.filter((a: any) => a.is_correct).length;
+        const total = subtopicAttempts.length;
+        const successRate = Math.round((correct / total) * 100);
         
-        subtopicAttempts.forEach((a: any) => {
-          const d = a.exercises?.difficulty;
-          if (d && stats[d as keyof typeof stats]) {
-            stats[d as keyof typeof stats].t++;
-            if (a.is_correct) stats[d as keyof typeof stats].c++;
-          }
-          if (a.misconception_tag && !misconceptions.includes(a.misconception_tag)) {
-            misconceptions.push(a.misconception_tag);
-          }
-        });
+        const isStruggling = total >= 3 && successRate < 40;
+        const isExcelling = total >= 3 && successRate > 80;
 
-        const successRates = Object.entries(stats)
-          .filter(([_, v]) => v.t > 0)
-          .map(([k, v]) => `${k}: ${Math.round((v.c / v.t) * 100)}%`)
-          .join(', ');
+        if (isStruggling) {
+          studentContext = `\n⚠️ Student is STRUGGLING (${successRate}% success rate). Create a SIMPLER exercise within the ${difficulty} tier.`;
+        } else if (isExcelling) {
+          studentContext = `\n✓ Student is EXCELLING (${successRate}% success rate). Create a slightly more challenging exercise within the ${difficulty} tier.`;
+        }
 
-        // Calculate if student is struggling or excelling
-        const currentStats = stats[difficulty as keyof typeof stats];
-        const isStruggling = currentStats.t >= 3 && (currentStats.c / currentStats.t) < 0.4;
-        const isExcelling = currentStats.t >= 3 && (currentStats.c / currentStats.t) > 0.8;
-
-        studentContext = `
-STUDENT PERFORMANCE ANALYSIS:
-- Success rates: ${successRates || 'No data yet'}
-- Attempts in this subtopic: ${subtopicAttempts.length}
-- Current difficulty (${difficulty}) performance: ${currentStats.t > 0 ? Math.round((currentStats.c / currentStats.t) * 100) + '%' : 'new'}
-${isStruggling ? `
-⚠️ STUDENT IS STRUGGLING at ${difficulty} level:
-- Create a SIMPLER exercise within this difficulty tier
-- Use more obvious patterns and smaller numbers
-- Provide clearer structure with fewer steps
-- Focus on ONE concept only
-` : ''}
-${isExcelling ? `
-✓ STUDENT IS EXCELLING at ${difficulty} level:
-- Create a slightly more challenging exercise within this tier
-- Can include minor additional complexity
-- Push toward the upper bound of this difficulty
-` : ''}
-`;
-      }
-
-      // Add misconception targeting
-      if (misconceptions.length > 0) {
-        studentContext += `
-CRITICAL - TARGET THESE SPECIFIC WEAKNESSES:
-${misconceptions.slice(0, 3).map((m, i) => `${i + 1}. ${m}`).join('\n')}
-
-Generate an exercise that DIRECTLY addresses one of these misconceptions.
-The exercise should help the student practice the exact skill they're missing.
-For example:
-- If misconception is "forgets to distribute negative sign" → create: "Solve: 5 - 2(x + 3) = 1"
-- If misconception is "sign errors with negatives" → use problems with negative coefficients
-- If misconception is "fraction operations" → include simple fractions
-`;
+        // Add misconception targeting
+        const misconceptions = [...new Set(subtopicAttempts
+          .filter((a: any) => a.misconception_tag)
+          .map((a: any) => a.misconception_tag))];
+        
+        if (misconceptions.length > 0) {
+          studentContext += `\n\nTARGET THESE WEAKNESSES:\n${misconceptions.slice(0, 3).map((m, i) => `${i + 1}. ${m}`).join('\n')}`;
+        }
       }
     }
 
-    // Add sub-level guidance for finer difficulty tuning
-    const subLevelGuidance = subLevel 
-      ? `\nSUB-LEVEL TUNING: This is sub-level ${subLevel} of 3 within ${difficulty}. ${
-          subLevel === 1 ? 'Use the EASIEST variant within this difficulty tier.' :
-          subLevel === 2 ? 'Use a MIDDLE variant within this difficulty tier.' :
-          'Use the HARDER variant within this difficulty tier (but still within the tier).'
-        }`
+    // Format examples from template
+    const templateExamples = template.examples.slice(0, 4).map((ex, i) => `${i + 1}. "${ex}"`).join('\n');
+    
+    // Format existing exercises to avoid duplicates
+    const existingText = existingExercises && existingExercises.length > 0
+      ? `\n\nDO NOT REPEAT these recent exercises:\n${existingExercises.map((ex: any) => `- ${ex.question}`).join('\n')}`
       : '';
 
-    const examplesText = existingExercises && existingExercises.length > 0
-      ? existingExercises.map((ex: any, i: number) => 
-          `Example ${i + 1}:\nQuestion: ${ex.question}\nAnswer: ${ex.correct_answer}`
-        ).join('\n\n')
-      : 'No examples available - create a typical exercise for this topic.';
+    const systemPrompt = `You are generating exercises for the REICHMAN MECHINA exam preparation course.
+Your exercises must EXACTLY match the style of the official booklet.
 
-    const systemPrompt = `You are a mathematics educator creating exercises for the Reichman Mechina curriculum, following TOP-QUALITY COURSEBOOK standards.
+TOPIC: ${topicName}
+SUBTOPIC: ${subtopicName}
+DIFFICULTY: ${difficulty.toUpperCase()}
 
-Topic: ${topicName}
-Subtopic: ${subtopicName}
-Difficulty: ${difficulty}
+=== BOOKLET-STYLE EXAMPLES FOR THIS TOPIC ===
+${templateExamples}
 
-TOPIC-SPECIFIC DIFFICULTY CRITERIA FOR ${topicName.toUpperCase()} (${difficulty.toUpperCase()}):
-${difficultySpec.description}
-Maximum steps: ${difficultySpec.maxSteps}
-Requirements:
-${difficultySpec.criteria.map(c => `• ${c}`).join('\n')}
+=== QUESTION PATTERNS ===
+${template.patterns.map(p => `• ${p}`).join('\n')}
 
-${DIFFICULTY_INSTRUCTIONS[difficulty as keyof typeof DIFFICULTY_INSTRUCTIONS]}
-${subLevelGuidance}
+=== DIFFICULTY SPECIFICATION ===
+${difficultyGuide}
 ${studentContext}
 
-=== TEXTBOOK-STYLE QUESTION DESIGN PHILOSOPHY ===
+${FORBIDDEN_CONTENT}
 
-You create questions EXACTLY as they would appear in the best mathematics coursebooks:
+=== QUESTION FORMAT RULES ===
 
-EASY QUESTIONS:
-- Straightforward, direct language that average students understand on first read
-- Focus on a SINGLE skill or concept with no unnecessary complexity
-- Use clear prompts: "Calculate...", "Solve for x...", "Simplify..."
-- Pattern should be obvious and direct
-- Build confidence with guaranteed success
+REQUIRED FORMAT:
+- Start with command: "Solve for x:", "Evaluate:", "Simplify:", "Find f'(x):", etc.
+- Use clean Unicode math symbols: ², ³, √, ±, ≤, ≥
+- NO LaTeX syntax ($, \\frac, \\sqrt, ^)
+- NO motivational phrases ("Let's", "Try to", "Can you")
+- NO explanatory text before the mathematical task
 
-HARD QUESTIONS:
-- Include more context or require multiple steps
-- Do NOT give away the solution path - student must decide the method
-- May present as word problems without explicitly stating which operation to use
-- Phrasing can hint at the challenge but must remain unambiguous
-- Push critical thinking while maintaining clear goals
+CORRECT EXAMPLES:
+✓ "Solve for x: 2x² − 8 = 0"
+✓ "Evaluate: log₂ 32"
+✓ "Find f'(x) if f(x) = x³ + 2x"
+✓ "Simplify: (3x² − 12)/(x − 2)"
 
-FOR ALL QUESTIONS:
-- Use PROPER NOTATION and TERMINOLOGY (say "find the derivative" not "do the derivative")
-- Even tricky problems must have a CLEAR GOAL (what to find or prove)
-- Mirror textbook style: exercises for practice, problems for application
+WRONG EXAMPLES:
+✗ "Let's solve this: $2x^2 - 8 = 0$"
+✗ "Try to find x: 2x² − 8 = 0"
+✗ Any trigonometry question
 
-QUESTION FORMATTING - STRICT TEXTBOOK STYLE:
-- Write questions EXACTLY as they would appear in a professional mathematics textbook
-- Use ONLY formal, neutral command language:
-  • "Solve for x:"
-  • "Find all real solutions:"
-  • "Simplify:"
-  • "Determine the value of:"
-  • "Calculate:"
-  • "Factor completely:"
-  • "Evaluate:"
-  • "Prove that:"
-  • "Express in terms of:"
-- ABSOLUTELY NO motivational phrases: never use "Let's", "Try", "Can you", "Here's", "Now", "Great", etc.
-- ABSOLUTELY NO commentary or context before the task: state the mathematical task directly
-- Questions must be concise, direct, and mathematically precise
+=== ANSWER FORMAT ===
+- Use Unicode: "±4" not "+/-4"
+- Fractions: "3/4" not "0.75"
+- Multiple solutions: "2, −3" not "x = 2 or x = -3"
+- Keep answers simple and exact
 
-MATHEMATICAL NOTATION - CLEAN UNICODE (CRITICAL):
-- Use ONLY clean Unicode symbols, NEVER LaTeX syntax
-- Square root: √ (not \\sqrt, not sqrt, not ^(1/2))
-- Exponents: ² ³ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ (e.g., x² not x^2, not x**2)
-- Plus-minus: ± (not +/-, not +-) 
-- Multiplication: × or · when explicit (not *, not x as multiply)
-- Division in expressions: use fraction form a/b
-- Inequality: ≤ ≥ ≠ < > (proper symbols)
-- REMOVE all dollar signs ($), backslashes (\\), LaTeX commands
-- REMOVE unnecessary parentheses around single variables: write x not (x)
-- REMOVE extra spaces and formatting artifacts
-
-FORBIDDEN PATTERNS (never include these):
-- "Let's solve...", "Try to...", "Can you find..."
-- "Here is a problem...", "Consider the following..."
-- Any emoji or decorative characters
-- $...$ or $$...$$ delimiters
-- \\frac, \\sqrt, \\pm, or any LaTeX command
-- Explanatory text before the actual question
-- Multiple questions in one exercise
-
-CORRECT EXAMPLES BY DIFFICULTY:
-
-EASY:
-✓ "Solve for x: 2x + 6 = 14"
-✓ "Calculate: 15 × 4"
-✓ "Simplify: 3x + 5x"
-
-MEDIUM:
-✓ "Solve for x: 3x² − 12 = 0"
-✓ "Find all real solutions: √(x + 5) = 3"
-✓ "Factor completely: x² − 9"
-
-HARD:
-✓ "A rectangular garden has an area of 120 m² and a perimeter of 46 m. Find its dimensions."
-✓ "Determine all values of k for which the equation x² + kx + 9 = 0 has exactly one real solution."
-✓ "Solve the system: { 2x − 3y = 7, x² + y² = 25 }"
-
-INCORRECT EXAMPLES (never do this):
-✗ "Let's solve this equation: $3x^2 - 12 = 0$"
-✗ "Try to find x in: \\sqrt{x+5} = 3"
-✗ "Here's a fun challenge for you!"
-✗ "Here's a challenge! Can you simplify (2x^3 + 6x^2) / 2x?"
-
-EXPLANATION - TEACH THE REASONING:
-- Start by identifying what the problem is asking
-- Explain WHY each step is taken, not just what to do
-- Connect steps to underlying mathematical concepts
-- Use phrases like "Notice that...", "This works because...", "The key insight is..."
-
-HINTS - GUIDE WITHOUT REVEALING:
-- First hint: Identify what type of problem this is or what concept applies
-- Second hint: Suggest a starting strategy without showing steps
-- Hints should make the student think, not just follow instructions
-
-CORRECT ANSWER FORMAT:
-- Use clean Unicode: "±3" not "+/-3" or "\\pm 3"
-- Use proper fractions: "3/4" not "0.75" (unless decimals are appropriate)
-- Multiple solutions: "2, −5" not "x = 2 or x = -5"
-
-You MUST respond with valid JSON in exactly this format:
+=== OUTPUT FORMAT ===
+Return ONLY valid JSON:
 {
-  "question": "Solve for x: 2x + 5 = 13",
-  "correct_answer": "4",
-  "explanation": "Step-by-step solution that teaches the reasoning",
-  "hints": ["What operation undoes addition?", "After isolating the term with x, what operation isolates x itself?"]
+  "question": "Solve for x: 2x² − 8 = 0",
+  "correct_answer": "±2",
+  "explanation": "Step-by-step solution explaining the reasoning",
+  "hints": ["Hint 1 that guides without revealing", "Hint 2"]
 }`;
 
-    const userPrompt = `Generate a NEW ${difficulty} exercise for ${subtopicName}.
+    const userPrompt = `Generate a NEW ${difficulty} exercise for "${subtopicName}" in the "${topicName}" topic.
 
-${examplesText}
+REQUIREMENTS:
+1. Match the booklet style shown in examples above
+2. Be different from any existing exercises
+3. Follow the ${difficulty} difficulty specification exactly
+4. Use clean Unicode notation (no LaTeX)
+5. NO trigonometry, NO word problems, NO forbidden content
+${existingText}
 
-Create a similar but DIFFERENT exercise appropriate for ${difficulty} difficulty.
-Remember: ${difficulty === 'easy' ? 'Keep it simple with small positive numbers and obvious patterns.' : 
-           difficulty === 'medium' ? 'Include moderate complexity with some challenge.' : 
-           'Create a challenging problem requiring insight.'}
+Generate the exercise now:`;
 
-CRITICAL REQUIREMENTS:
-1. Question must use ONLY Unicode math symbols (√, ², ³, ±, ≤, ≥)
-2. NO LaTeX syntax ($, \\, \\frac, \\sqrt, ^)
-3. NO motivational phrases - just the mathematical task
-4. Formal textbook language only (e.g., "Solve for x:", "Find all solutions:")
-5. Clean, unambiguous mathematical notation
-6. MUST match the difficulty criteria provided above`;
-
-    console.log('Generating new exercise with AI...');
-    console.log(`Topic: ${topicName}, Subtopic: ${subtopicName}, Difficulty: ${difficulty}, SubLevel: ${subLevel || 'none'}`);
+    console.log(`Generating booklet-style exercise: Topic=${topicName}, Subtopic=${subtopicName}, Difficulty=${difficulty}`);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -533,15 +514,14 @@ CRITICAL REQUIREMENTS:
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
       
+      // Return a booklet-style fallback
       const fallbackExercise = {
-        question: "Solve for x: 2x + 4 = 10",
-        correct_answer: "3",
-        explanation: "Subtract 4 from both sides, then divide by 2.",
-        hints: ["What operation undoes addition?"],
+        question: "Solve for x: 3x + 7 = 22",
+        correct_answer: "5",
+        explanation: "Subtract 7 from both sides: 3x = 15. Divide by 3: x = 5.",
+        hints: ["What operation undoes +7?", "After isolating 3x, divide both sides by 3"],
         difficulty,
         fallback: true,
-        rate_limited: response.status === 429,
-        credits_depleted: response.status === 402,
       };
       
       return new Response(
@@ -573,6 +553,21 @@ CRITICAL REQUIREMENTS:
       throw new Error('Failed to generate valid exercise');
     }
 
+    // Validate: reject if contains forbidden content
+    const questionLower = exercise.question.toLowerCase();
+    const forbiddenPatterns = ['sin', 'cos', 'tan', 'theta', 'θ', 'π', 'arcsin', 'arccos', 'arctan'];
+    const hasForbidden = forbiddenPatterns.some(p => questionLower.includes(p));
+    
+    if (hasForbidden) {
+      console.warn('Generated exercise contains forbidden content, using fallback');
+      exercise = {
+        question: "Solve for x: 2x − 5 = 11",
+        correct_answer: "8",
+        explanation: "Add 5 to both sides: 2x = 16. Divide by 2: x = 8.",
+        hints: ["Add 5 to both sides first", "Then divide by the coefficient of x"],
+      };
+    }
+
     // Insert into database
     const { data: newExercise, error: insertError } = await supabase
       .from('exercises')
@@ -592,7 +587,7 @@ CRITICAL REQUIREMENTS:
       throw new Error('Failed to save generated exercise');
     }
 
-    console.log('New exercise created:', newExercise.id);
+    console.log('New booklet-style exercise created:', newExercise.id);
 
     return new Response(
       JSON.stringify(newExercise),
