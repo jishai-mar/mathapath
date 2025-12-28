@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
-import { parseContentSegments, normalizeLatex } from '@/lib/normalizeLatex';
+import { parseContentSegments, normalizeLatex, fixMalformedLatex } from '@/lib/normalizeLatex';
 
 interface MathRendererProps {
   latex: string;
@@ -15,8 +15,9 @@ export default function MathRenderer({ latex, displayMode = false, className = '
   useEffect(() => {
     if (!containerRef.current || !latex) return;
 
-    // Parse the content into segments
-    const segments = parseContentSegments(latex);
+    // First fix any malformed LaTeX patterns, then parse into segments
+    const fixedLatex = fixMalformedLatex(latex);
+    const segments = parseContentSegments(fixedLatex);
     
     // Clear the container
     containerRef.current.innerHTML = '';
@@ -50,9 +51,9 @@ export default function MathRenderer({ latex, displayMode = false, className = '
     });
 
     // If no segments were created but we have content, render as-is
-    if (segments.length === 0 && latex && containerRef.current) {
+    if (segments.length === 0 && fixedLatex && containerRef.current) {
       try {
-        const normalizedLatex = normalizeLatex(latex);
+        const normalizedLatex = normalizeLatex(fixedLatex);
         katex.render(normalizedLatex, containerRef.current, {
           displayMode,
           throwOnError: false,
@@ -61,7 +62,7 @@ export default function MathRenderer({ latex, displayMode = false, className = '
         });
       } catch (error) {
         console.error('KaTeX render error:', error);
-        containerRef.current.textContent = latex;
+        containerRef.current.textContent = fixedLatex;
       }
     }
   }, [latex, displayMode]);

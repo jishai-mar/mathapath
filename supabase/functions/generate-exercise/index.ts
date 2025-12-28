@@ -129,20 +129,22 @@ const BOOKLET_TOPIC_TEMPLATES: Record<string, {
   // ==========================================
   "Exponents & Exponential Equations": {
     examples: [
-      "Solve for x: 2ˣ = 32",
-      "Solve for x: 3ˣ⁺¹ = 81",
-      "Simplify: (2³)⁴ × 2² ÷ 2⁵",
-      "Solve for x: 4ˣ = 8",
-      "Simplify: (a³b²)² ÷ (ab)³",
-      "Solve for x: 9ˣ = 27",
+      "Solve for x: $2^x = 32$",
+      "Solve for x: $3^{x+1} = 81$",
+      "Simplify: $(2^3)^4 \\times 2^2 \\div 2^5$",
+      "Solve for x: $4^x = 8$",
+      "Simplify: $(a^3 b^2)^2 \\div (ab)^3$",
+      "Solve for x: $9^x = 27$",
+      "Solve for x: $5^{x+2} = \\frac{1}{25}$",
     ],
     patterns: [
-      "aˣ = b where b = aⁿ (same base)",
-      "aˣ = b where a, b are powers of same number",
+      "$a^x = b$ where $b = a^n$ (same base)",
+      "$a^x = b$ where a, b are powers of same number",
       "Simplify using exponent rules",
+      "$a^{x+c} = \\frac{1}{a^n}$ (negative exponent)",
     ],
-    easy: "Same base both sides, like 2ˣ = 16",
-    medium: "Convert to same base (4ˣ = 8 → 2²ˣ = 2³)",
+    easy: "Same base both sides, like $2^x = 16$",
+    medium: "Convert to same base ($4^x = 8$ becomes $2^{2x} = 2^3$)",
     hard: "Requires multiple rule applications or fractional exponents in answer",
   },
 
@@ -445,37 +447,62 @@ ${studentContext}
 
 ${FORBIDDEN_CONTENT}
 
+=== MATHEMATICAL NOTATION RULES (CRITICAL) ===
+
+You MUST use PROPER LaTeX syntax with these rules:
+
+EXPONENTS - ALWAYS use braces for multi-character exponents:
+✓ CORRECT: $5^{x+2}$, $3^{2x-1}$, $2^{x+1}$
+✗ WRONG: $5^x+2$, $5^x+^2$, 5ˣ⁺²
+
+FRACTIONS:
+✓ CORRECT: $\\frac{1}{25}$, $\\frac{3}{4}$
+✗ WRONG: 1/25 without LaTeX
+
+LOGARITHMS:
+✓ CORRECT: $\\log_{2}(x)$, $\\log_{10}(x)$
+✗ WRONG: log_2(x), log₂x
+
+SQUARE ROOTS:
+✓ CORRECT: $\\sqrt{x+5}$, $\\sqrt{2x-1}$
+✗ WRONG: √(x+5), sqrt(x+5)
+
+WRAP ALL MATH in $ delimiters:
+✓ CORRECT: "Solve for x: $5^{x+2} = \\frac{1}{25}$"
+✗ WRONG: "Solve for x: 5^x+2 = 1/25"
+
 === QUESTION FORMAT RULES ===
 
 REQUIRED FORMAT:
 - Start with command: "Solve for x:", "Evaluate:", "Simplify:", "Find f'(x):", etc.
-- Use clean Unicode math symbols: ², ³, √, ±, ≤, ≥
-- NO LaTeX syntax ($, \\frac, \\sqrt, ^)
+- Wrap ALL mathematical expressions in $ delimiters
+- Use proper LaTeX notation with braces
 - NO motivational phrases ("Let's", "Try to", "Can you")
 - NO explanatory text before the mathematical task
 
 CORRECT EXAMPLES:
-✓ "Solve for x: 2x² − 8 = 0"
-✓ "Evaluate: log₂ 32"
-✓ "Find f'(x) if f(x) = x³ + 2x"
-✓ "Simplify: (3x² − 12)/(x − 2)"
+✓ "Solve for x: $2x^2 - 8 = 0$"
+✓ "Solve for x: $5^{x+2} = \\frac{1}{25}$"
+✓ "Evaluate: $\\log_{2}(32)$"
+✓ "Find f'(x) if $f(x) = x^3 + 2x$"
 
-WRONG EXAMPLES:
-✗ "Let's solve this: $2x^2 - 8 = 0$"
-✗ "Try to find x: 2x² − 8 = 0"
+WRONG EXAMPLES (NEVER DO THIS):
+✗ "Solve for x: 5^x+^2 = 1/25" (malformed exponent)
+✗ "Solve for x: 5^x+2 = 1/25" (missing braces)
+✗ "Solve for x: 5ˣ⁺² = 1/25" (Unicode superscripts don't render properly)
 ✗ Any trigonometry question
 
 === ANSWER FORMAT ===
-- Use Unicode: "±4" not "+/-4"
-- Fractions: "3/4" not "0.75"
-- Multiple solutions: "2, −3" not "x = 2 or x = -3"
+- Use LaTeX: "$\\pm 4$" not "+/-4"
+- Fractions: "$\\frac{3}{4}$" or "3/4"
+- Multiple solutions: "$2, -3$"
 - Keep answers simple and exact
 
 === OUTPUT FORMAT ===
 Return ONLY valid JSON:
 {
-  "question": "Solve for x: 2x² − 8 = 0",
-  "correct_answer": "±2",
+  "question": "Solve for x: $5^{x+2} = \\frac{1}{25}$",
+  "correct_answer": "-4",
   "explanation": "Step-by-step solution explaining the reasoning",
   "hints": ["Hint 1 that guides without revealing", "Hint 2"]
 }`;
@@ -486,8 +513,9 @@ REQUIREMENTS:
 1. Match the booklet style shown in examples above
 2. Be different from any existing exercises
 3. Follow the ${difficulty} difficulty specification exactly
-4. Use clean Unicode notation (no LaTeX)
-5. NO trigonometry, NO word problems, NO forbidden content
+4. Use PROPER LaTeX notation with $ delimiters
+5. Use BRACES for multi-character exponents: $5^{x+2}$ NOT $5^x+2$
+6. NO trigonometry, NO word problems, NO forbidden content
 ${existingText}
 
 Generate the exercise now:`;
