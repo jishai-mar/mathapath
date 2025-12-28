@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExerciseContext } from '@/contexts/ExerciseContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
+import { normalizeSpokenMath, mathToSpoken, containsMathContent } from '@/lib/spokenMathParser';
 import { 
   X, 
   Mic, 
@@ -18,7 +20,8 @@ import {
   HelpCircle,
   Phone,
   PhoneOff,
-  Loader2
+  Loader2,
+  Calculator
 } from 'lucide-react';
 
 interface TranscriptMessage {
@@ -35,12 +38,14 @@ interface ConversationalTutorProps {
 
 export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProps) {
   const exerciseContext = useExerciseContext();
+  const { user } = useAuth();
   const [isConnecting, setIsConnecting] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
   const [currentPartial, setCurrentPartial] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [fallbackRequested, setFallbackRequested] = useState(false);
+  const [studentName, setStudentName] = useState<string>('');
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const lastStartAtRef = useRef(0);
@@ -48,6 +53,22 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
   const manualEndRef = useRef(false);
   const startInFlightRef = useRef(false);
   const lastOverridesRef = useRef<{ prompt: string; firstMessage: string } | null>(null);
+
+  // Load student name for personalization
+  useEffect(() => {
+    const loadStudentName = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('first_name, display_name')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setStudentName(data.first_name || data.display_name || '');
+      }
+    };
+    loadStudentName();
+  }, [user?.id]);
 
   // Build dynamic context for the agent
   const buildAgentContext = useCallback(() => {
@@ -98,7 +119,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     solveExercise: useCallback(async () => {
       console.log('Gilbert: Solving exercise');
       if (!exerciseContext?.currentQuestion) {
-        return 'There is no current exercise to solve. Start a practice session first!';
+        return 'There is no current exercise to solve. Would you like to start a practice session?';
       }
       
       try {
@@ -111,7 +132,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
         });
         
         if (error || !data) {
-          return 'Let me walk you through this step by step...';
+          return 'Let me walk you through this step by step. First, let\'s identify what we know and what we need to find.';
         }
         
         // Dispatch event to show walkthrough in UI
@@ -119,16 +140,18 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
           detail: data 
         }));
         
-        // Return a spoken summary
+        // Return a spoken summary with math converted to speech-friendly format
         const steps = data.steps || [];
-        const spokenSteps = steps.slice(0, 3).map((s: any, i: number) => 
-          `Step ${i + 1}: ${s.explanation}`
-        ).join('. ');
+        const spokenSteps = steps.slice(0, 3).map((s: any, i: number) => {
+          const explanation = mathToSpoken(s.explanation || '');
+          return `Step ${i + 1}: ${explanation}`;
+        }).join('. ');
         
-        return `Here is how to solve this: ${spokenSteps}${steps.length > 3 ? '. And so on...' : ''} The final answer is ${data.finalAnswer || exerciseContext.correctAnswer}.`;
+        const spokenAnswer = mathToSpoken(data.finalAnswer || exerciseContext.correctAnswer || '');
+        return `Here's how to solve this: ${spokenSteps}${steps.length > 3 ? '. And there are more steps...' : ''} The final answer is ${spokenAnswer}.`;
       } catch (err) {
         console.error('Error solving exercise:', err);
-        return 'Let me explain this problem to you step by step...';
+        return 'Let me explain this problem to you step by step. What part would you like to start with?';
       }
     }, [exerciseContext]),
     
@@ -146,16 +169,50 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
           detail: { hint, hintNumber: hintIndex + 1 } 
         }));
         
-        return `Here is a hint: ${hint}`;
+        // Convert any math in the hint to spoken form
+        const spokenHint = mathToSpoken(hint);
+        return `Here's hint number ${hintIndex + 1}: ${spokenHint}`;
+      }
+      
+      // Generate a contextual hint based on the problem type
+      if (exerciseContext?.currentQuestion) {
+        const question = exerciseContext.currentQuestion.toLowerCase();
+        if (question.includes('solve') || question.includes('=')) {
+          return 'Start by isolating the variable. What operations can you do to both sides of the equation?';
+        } else if (question.includes('simplify')) {
+          return 'Look for like terms that you can combine. What terms have the same variable?';
+        } else if (question.includes('factor')) {
+          return 'Think about what numbers multiply to give you the constant term. What pairs of factors should you consider?';
+        }
       }
       
       return 'Think about what the problem is really asking. What information do you already have, and what do you need to find?';
     }, [exerciseContext]),
     
+    checkAnswer: useCallback(async (params: { studentAnswer: string }) => {
+      console.log('Gilbert: Checking answer', params);
+      if (!exerciseContext?.correctAnswer) {
+        return 'I don\'t have a problem to check. Can you tell me what problem you\'re working on?';
+      }
+      
+      const normalizedStudent = normalizeSpokenMath(params.studentAnswer || '').toLowerCase().replace(/\s+/g, '');
+      const normalizedCorrect = (exerciseContext.correctAnswer || '').toLowerCase().replace(/\s+/g, '');
+      
+      if (normalizedStudent === normalizedCorrect) {
+        window.dispatchEvent(new CustomEvent('gilbert-correct-answer'));
+        return 'That\'s correct! Excellent work! Would you like to try another problem or shall we move on?';
+      } else {
+        window.dispatchEvent(new CustomEvent('gilbert-incorrect-answer', {
+          detail: { studentAnswer: params.studentAnswer }
+        }));
+        return `Hmm, ${mathToSpoken(params.studentAnswer)} isn't quite right. Would you like a hint, or should we work through it together?`;
+      }
+    }, [exerciseContext]),
+    
     explainTheory: useCallback(async () => {
       console.log('Gilbert: Explaining theory');
       if (!exerciseContext?.subtopicId && !exerciseContext?.subtopicName) {
-        return 'What topic would you like me to explain? Just tell me and I will help!';
+        return 'What topic would you like me to explain? Just tell me and I\'ll help!';
       }
       
       try {
@@ -175,16 +232,27 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
           detail: data 
         }));
         
-        // Return a short spoken explanation
+        // Return a short spoken explanation with math in speech form
         const explanation = data.explanation || data.content || '';
-        const shortExplanation = explanation.split('.').slice(0, 3).join('.') + '.';
+        const sentences = explanation.split('.').slice(0, 3);
+        const shortExplanation = sentences.map((s: string) => mathToSpoken(s)).join('.') + '.';
         
         return shortExplanation;
       } catch (err) {
         console.error('Error generating theory:', err);
-        return `Let me explain the key concepts of ${exerciseContext?.subtopicName || 'this topic'} to you.`;
+        return `Let me explain the key concepts of ${exerciseContext?.subtopicName || 'this topic'} to you. What part are you most curious about?`;
       }
     }, [exerciseContext]),
+    
+    repeatLastStatement: useCallback(async () => {
+      console.log('Gilbert: Repeating last statement');
+      return 'Let me repeat that for you.';
+    }, []),
+    
+    slowDown: useCallback(async () => {
+      console.log('Gilbert: Slowing down');
+      return 'Of course, let me explain that more slowly and clearly.';
+    }, []),
   };
 
   // ElevenLabs conversation hook
@@ -227,10 +295,15 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
         const userText = message.user_transcription_event?.user_transcript;
         if (userText) {
           setCurrentPartial('');
+          
+          // Parse spoken math and check if there's math content
+          const normalizedText = normalizeSpokenMath(userText);
+          const hasMath = containsMathContent(userText);
+          
           const newMessage: TranscriptMessage = {
             id: `user-${Date.now()}`,
             role: 'student',
-            content: userText,
+            content: hasMath ? normalizedText : userText,
             timestamp: new Date(),
           };
           setTranscript((prev) => [...prev, newMessage]);
@@ -308,66 +381,109 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
 
   const buildOverrides = useCallback(() => {
     const context = buildAgentContext();
+    const name = studentName ? `, ${studentName}` : '';
+
+    const mathUnderstandingRules = `
+MATH UNDERSTANDING RULES (CRITICAL):
+When students speak math verbally, you MUST interpret it correctly:
+- "x squared" or "x to the second" = x²
+- "x cubed" = x³
+- "two x" or "2x" = 2x (coefficient times variable)
+- "x plus three" = x + 3
+- "x minus two" = x - 2
+- "three over four" or "three fourths" = 3/4
+- "square root of x" = √x
+- "negative x" or "minus x" = -x
+
+When YOU speak math, always say it clearly:
+- Say "x squared" not "x to the power of 2"
+- Say "two x plus three" not "2x+3"
+- Say "equals" not "is equal to"
+- Spell out fractions: "one half" not "0.5"
+
+ALWAYS confirm understanding of complex expressions:
+- Student says "two x squared plus three x equals zero"
+- You respond: "So we have 2x² + 3x = 0, right?"`;
 
     const prompt = context.current_question
-      ? `You are Gilbert, a friendly and patient Dutch math tutor helping a student.
+      ? `You are Gilbert, a friendly, patient, and encouraging math tutor having a real-time voice conversation with a student.
+
+${mathUnderstandingRules}
 
 CURRENT PROBLEM: ${context.current_question}
 TOPIC: ${context.subtopic_name}
 DIFFICULTY: ${context.difficulty}
-${context.student_answer ? `STUDENT'S ANSWER: ${context.student_answer}` : ''}
-ATTEMPTS: ${context.attempts}
+${context.student_answer ? `STUDENT'S CURRENT ANSWER: ${context.student_answer}` : ''}
+ATTEMPTS SO FAR: ${context.attempts}
 ${context.hints ? `AVAILABLE HINTS: ${context.hints}` : ''}
 ${context.last_feedback ? `LAST FEEDBACK: ${context.last_feedback}` : ''}
 ${context.conversation_summary ? `RECENT CONVERSATION:\n${context.conversation_summary}` : ''}
 
-AVAILABLE ACTIONS (use these when the student asks):
-- If student wants an EASIER exercise: use the requestEasierExercise tool
-- If student wants a HARDER exercise: use the requestHarderExercise tool  
-- If student asks you to SOLVE/SHOW the answer: use the solveExercise tool
-- If student asks for a HINT: use the giveHint tool
-- If student wants THEORY explained: use the explainTheory tool
+AVAILABLE TOOLS (use when appropriate):
+- requestEasierExercise: When student is struggling and wants something simpler
+- requestHarderExercise: When student is bored and wants a challenge
+- solveExercise: ONLY when student explicitly asks "show me the answer" or "solve it for me"
+- giveHint: When student asks for help or is stuck
+- checkAnswer: When student tells you their answer to verify it
+- explainTheory: When student needs concept explanation
+- repeatLastStatement: When student says "repeat that" or "say again"
+- slowDown: When student asks you to slow down
 
-INSTRUCTIONS:
-- Speak in short sentences (max 2 sentences at a time)
-- Ask one guiding question at a time, then wait
-- Default to hint-first help; only give full solutions if explicitly asked
-- Do NOT give the answer directly - help them discover it themselves
-- Use layered help: hint → stronger hint → steps
-- When explaining formulas, say them clearly (e.g., "x squared plus 2x")
-- Check in regularly: "What do you think the next step is?"
-- Be patient and encouraging
-- Respond to your name "Gilbert" warmly`
-      : `You are Gilbert, a friendly Dutch math tutor. 
-The student wants help with math but is not working on a specific problem.
-Help with general questions or suggest starting a practice session.
-Keep answers short (max 2 sentences at a time).
-Respond warmly when called by your name "Gilbert".`;
+TUTORING APPROACH:
+1. NEVER give the answer directly - guide them to discover it
+2. Ask ONE question at a time, then WAIT for response
+3. Keep responses SHORT (1-2 sentences max for voice)
+4. Use the Socratic method: "What do you think happens if...?"
+5. Celebrate small wins: "Exactly!" "Great thinking!" "You've got it!"
+6. When they're stuck: Give a small hint first, then bigger hints if needed
+7. If they say an answer verbally, use checkAnswer to verify it
+8. Speak naturally - you're having a conversation, not reading a textbook
 
-    // Generate a unique first message each time
+PERSONALITY:
+- Warm and encouraging, like a supportive older sibling
+- Patient - never frustrated, even if they don't get it quickly
+- Enthusiastic about math - show genuine interest
+- Respond warmly when called "Gilbert"
+- Use their name occasionally if you know it`
+      : `You are Gilbert, a friendly math tutor having a voice conversation.
+
+${mathUnderstandingRules}
+
+The student is not currently working on a specific problem. You can:
+- Chat about math topics they're interested in
+- Help with any math questions they have
+- Suggest starting a practice session
+
+Keep responses SHORT (1-2 sentences) since this is voice.
+Be warm, friendly, and enthusiastic about math!
+Respond happily when called "Gilbert".`;
+
+    // Generate personalized first message
     const getRandomFirstMessage = () => {
+      const nameGreeting = studentName ? `Hey ${studentName}!` : 'Hey there!';
+      
       if (context.current_question) {
         const problemGreetings = [
-          `Hey there! I see you're tackling ${context.subtopic_name}. What part has you thinking?`,
-          `Alright, let's figure this one out together! Where would you like to start?`,
-          `Nice problem! What's your first instinct on how to approach this?`,
-          `I'm here to help! Walk me through what you've tried so far.`,
-          `This looks interesting! What do you notice about the problem first?`,
-          `Let's break this down step by step. What information do we have?`,
-          `Ready when you are! Tell me what's tripping you up.`,
-          `Good choice working on ${context.subtopic_name}! What's your game plan?`,
+          `${nameGreeting} I see you're working on ${context.subtopic_name}. What part has you thinking?`,
+          `${nameGreeting} Nice problem you've got here! Where would you like to start?`,
+          `Alright${name}, let's figure this one out together! What have you tried so far?`,
+          `${nameGreeting} This looks like a fun one! What's your first instinct?`,
+          `I'm here to help${name}! Walk me through what you're thinking.`,
+          `${nameGreeting} Let's break this down step by step. What do we know?`,
+          `Ready when you are${name}! What's got you stuck?`,
+          `Great choice picking ${context.subtopic_name}${name}! What's your game plan?`,
         ];
         return problemGreetings[Math.floor(Math.random() * problemGreetings.length)];
       } else {
         const generalGreetings = [
-          `Hey! What math adventure are we going on today?`,
-          `Hi there! Ready to do some math together?`,
-          `What's on your mind? I'm here to help with anything math-related!`,
-          `Good to see you! What would you like to explore today?`,
-          `Hey! Got a tricky problem or want to practice something specific?`,
-          `I'm all ears! What math topic can I help you with?`,
-          `Let's get started! What are we working on today?`,
-          `Hi! Whether it's equations, geometry, or anything else - I'm ready to help!`,
+          `${nameGreeting} What math adventure are we going on today?`,
+          `Hi${name}! Ready to do some math together?`,
+          `${nameGreeting} I'm here to help with anything math-related!`,
+          `Good to see you${name}! What would you like to explore?`,
+          `${nameGreeting} Got a tricky problem or want to practice something?`,
+          `I'm all ears${name}! What math topic can I help with?`,
+          `${nameGreeting} Let's get started! What are we working on?`,
+          `Hi${name}! Equations, geometry, or something else? I'm ready!`,
         ];
         return generalGreetings[Math.floor(Math.random() * generalGreetings.length)];
       }
@@ -376,7 +492,7 @@ Respond warmly when called by your name "Gilbert".`;
     const firstMessage = getRandomFirstMessage();
 
     return { prompt, firstMessage };
-  }, [buildAgentContext]);
+  }, [buildAgentContext, studentName]);
 
   const safeResetSession = useCallback(async () => {
     try {
@@ -508,12 +624,56 @@ Respond warmly when called by your name "Gilbert".`;
     }
   }, [safeResetSession, startWebrtc]);
 
+  // Save conversation to database for learning insights
+  const saveConversation = useCallback(async (messages: TranscriptMessage[]) => {
+    if (!user?.id || messages.length < 2) return;
+    
+    try {
+      const conversationText = messages
+        .map(m => `${m.role === 'student' ? 'Student' : 'Gilbert'}: ${m.content}`)
+        .join('\n');
+      
+      // Find any math-related insights from the conversation
+      const studentMessages = messages.filter(m => m.role === 'student');
+      const tutorMessages = messages.filter(m => m.role === 'tutor');
+      
+      // Check if conversation contained learning moments
+      const hadHelpRequest = studentMessages.some(m => 
+        /help|stuck|don't understand|confused|hint/i.test(m.content)
+      );
+      
+      const hadBreakthrough = tutorMessages.some(m => 
+        /correct|exactly|you've got it|great|well done|perfect/i.test(m.content)
+      );
+      
+      // Save as session note
+      await supabase.from('student_session_notes').insert({
+        user_id: user.id,
+        note_type: 'voice_conversation',
+        content: conversationText,
+        subtopic_name: exerciseContext?.subtopicName || 'General Math',
+        personal_note: hadBreakthrough ? 'Student had a breakthrough moment!' : 
+                       hadHelpRequest ? 'Student needed help with this topic' : null,
+      });
+      
+      console.log('Saved voice conversation to database');
+    } catch (err) {
+      console.error('Error saving conversation:', err);
+    }
+  }, [user?.id, exerciseContext?.subtopicName]);
+
   // End conversation
   const endConversation = useCallback(async () => {
     manualEndRef.current = true;
+    
+    // Save the conversation before clearing
+    if (transcript.length > 0) {
+      await saveConversation(transcript);
+    }
+    
     await conversation.endSession();
     setTranscript([]);
-  }, [conversation]);
+  }, [conversation, transcript, saveConversation]);
 
   // Handle close
   const handleClose = useCallback(async () => {
