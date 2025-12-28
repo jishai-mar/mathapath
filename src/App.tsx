@@ -24,6 +24,7 @@ import SessionHistory from "./pages/SessionHistory";
 import Notebook from "./pages/Notebook";
 import Bookmarks from "./pages/Bookmarks";
 import VoiceFirstTutoring from "./pages/VoiceFirstTutoring";
+import TheoryTopic from "./pages/TheoryTopic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -98,6 +99,7 @@ function AppRoutes() {
       <Route path="/notebook" element={<Notebook />} />
       <Route path="/bookmarks" element={<Bookmarks />} />
       <Route path="/voice-tutor" element={<VoiceFirstTutoring />} />
+      <Route path="/theory/:topicId" element={<TheoryTopic />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
