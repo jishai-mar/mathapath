@@ -2715,14 +2715,13 @@ export const trigonometricEquationsTheory: TheoryTopic = {
 };
 
 // Map of all theory topics by ID
+// Note: Trigonometry and epsilon-delta removed - not in Reichman Mechina booklet
 export const theoryTopicsMap: Record<string, TheoryTopic> = {
   [TOPIC_IDS.FIRST_DEGREE_EQUATIONS]: firstDegreeEquationsTheory,
   [TOPIC_IDS.FRACTIONS]: fractionsTheory,
   [TOPIC_IDS.QUADRATIC_EQUATIONS]: quadraticEquationsTheory,
   [TOPIC_IDS.EXPONENTS]: exponentsTheory,
   [TOPIC_IDS.LOGARITHMS]: logarithmsTheory,
-  [TOPIC_IDS.EPSILON_DELTA]: limitsTheory,
-  // New topics
   [TOPIC_IDS.HIGHER_DEGREE_EQUATIONS]: higherDegreeEquationsTheory,
   [TOPIC_IDS.INEQUALITIES]: inequalitiesTheory,
   [TOPIC_IDS.EXPONENTIAL_EQUATIONS]: exponentialEquationsTheory,
@@ -2735,8 +2734,6 @@ export const theoryTopicsMap: Record<string, TheoryTopic> = {
   [TOPIC_IDS.DERIVATIVES_BASICS]: derivativesBasicsTheory,
   [TOPIC_IDS.DERIVATIVE_APPLICATIONS]: derivativeApplicationsTheory,
   [TOPIC_IDS.CHAIN_RULE]: chainRuleTheory,
-  [TOPIC_IDS.TRIGONOMETRY_BASICS]: trigonometryBasicsTheory,
-  [TOPIC_IDS.TRIGONOMETRIC_EQUATIONS]: trigonometricEquationsTheory,
 };
 
 // Get a theory topic by ID

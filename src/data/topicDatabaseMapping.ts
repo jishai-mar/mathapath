@@ -33,12 +33,7 @@ export const TOPIC_DATABASE_IDS: Record<string, string> = {
   'derivative-applications': '11111111-1111-1111-1111-111111111116',
   'chain-rule': '11111111-1111-1111-1111-111111111117',
   
-  // Trigonometry
-  'trigonometry-basics': '11111111-1111-1111-1111-111111111118',
-  'trigonometric-equations': '11111111-1111-1111-1111-111111111119',
-  
-  // Epsilon-Delta (maps to Limits in DB)
-  'epsilon-delta': '11111111-1111-1111-1111-111111111114',
+  // Note: Trigonometry topics removed - not in Reichman Mechina booklet
 } as const;
 
 /**
