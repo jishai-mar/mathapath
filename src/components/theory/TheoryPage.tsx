@@ -6,6 +6,7 @@ import { FormalDefinition } from './blocks/FormalDefinition';
 import { IntuitiveExplanation } from './blocks/IntuitiveExplanation';
 import { WorkedExample } from './blocks/WorkedExample';
 import { DeepDive } from './blocks/DeepDive';
+import { SubtopicsPanel } from './SubtopicsPanel';
 import { TheoryTopic, TheoryBlock } from './types';
 
 interface TheoryPageProps {
@@ -64,6 +65,14 @@ export function TheoryPage({ topic, onOpenTutor }: TheoryPageProps) {
       }
     >
       {topic.blocks.map((block, index) => renderBlock(block, index))}
+      
+      {/* Subtopics panel - shows related learning content from database */}
+      {topic.databaseTopicId && (
+        <SubtopicsPanel 
+          databaseTopicId={topic.databaseTopicId} 
+          topicSlug={topic.id}
+        />
+      )}
     </TheoryPageLayout>
   );
 }

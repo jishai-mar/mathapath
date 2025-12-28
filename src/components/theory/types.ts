@@ -12,6 +12,8 @@ export interface TheoryTopic {
   nextTopicId?: string;
   nextTopicTitle?: string;
   practiceUrl?: string;
+  /** Database topic ID for linking to subtopics and exercises */
+  databaseTopicId?: string;
 }
 
 export interface BreadcrumbItem {
