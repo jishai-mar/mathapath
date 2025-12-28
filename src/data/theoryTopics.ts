@@ -1,4 +1,5 @@
 import { TheoryTopic } from '@/components/theory/types';
+import { TOPIC_DATABASE_IDS } from './topicDatabaseMapping';
 
 // Topic IDs for routing
 export const TOPIC_IDS = {
@@ -28,6 +29,7 @@ export const TOPIC_IDS = {
 // First-Degree Equations Theory
 export const firstDegreeEquationsTheory: TheoryTopic = {
   id: TOPIC_IDS.FIRST_DEGREE_EQUATIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['first-degree-equations'],
   title: 'First-Degree Equations',
   subtitle: 'Master solving linear equations with one or more variables.',
   breadcrumb: [
@@ -151,6 +153,7 @@ The standard form of a linear equation in one variable is:`,
 // Fractions Theory
 export const fractionsTheory: TheoryTopic = {
   id: TOPIC_IDS.FRACTIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['fractions'],
   title: 'Fractions',
   subtitle: 'Master all fraction operations: multiply, divide, add, subtract.',
   breadcrumb: [
@@ -269,6 +272,7 @@ export const fractionsTheory: TheoryTopic = {
 // Quadratic Equations Theory
 export const quadraticEquationsTheory: TheoryTopic = {
   id: TOPIC_IDS.QUADRATIC_EQUATIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['quadratic-equations'],
   title: 'Quadratic Equations',
   subtitle: 'Solve second-degree equations using factoring, the formula, and completing the square.',
   breadcrumb: [
@@ -430,6 +434,7 @@ export const quadraticEquationsTheory: TheoryTopic = {
 // Exponents Theory
 export const exponentsTheory: TheoryTopic = {
   id: TOPIC_IDS.EXPONENTS,
+  databaseTopicId: TOPIC_DATABASE_IDS['exponents'],
   title: 'Exponents',
   subtitle: 'Master the laws of exponents and simplify exponential expressions.',
   breadcrumb: [
@@ -552,6 +557,7 @@ a^{-n} &= \\frac{1}{a^n}
 // Logarithms Theory
 export const logarithmsTheory: TheoryTopic = {
   id: TOPIC_IDS.LOGARITHMS,
+  databaseTopicId: TOPIC_DATABASE_IDS['logarithms'],
   title: 'Logarithms',
   subtitle: 'Understand logarithms as the inverse of exponentiation.',
   breadcrumb: [
@@ -693,6 +699,7 @@ export const logarithmsTheory: TheoryTopic = {
 // Epsilon-Delta Definition of Limits (existing)
 export const limitsTheory: TheoryTopic = {
   id: TOPIC_IDS.EPSILON_DELTA,
+  databaseTopicId: TOPIC_DATABASE_IDS['epsilon-delta'],
   title: 'Understanding the Limit',
   subtitle: 'Visualizing ε-δ relationships in real-time to build intuition.',
   breadcrumb: [
@@ -801,6 +808,7 @@ The statement that the limit of $f(x)$ as $x$ approaches $c$ is $L$ means that:`
 // Higher Degree Equations Theory
 export const higherDegreeEquationsTheory: TheoryTopic = {
   id: TOPIC_IDS.HIGHER_DEGREE_EQUATIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['higher-degree-equations'],
   title: 'Higher Degree Equations',
   subtitle: 'Solve biquadratic, radical, and polynomial equations of degree 3+.',
   breadcrumb: [
@@ -930,6 +938,7 @@ export const higherDegreeEquationsTheory: TheoryTopic = {
 // Inequalities Theory
 export const inequalitiesTheory: TheoryTopic = {
   id: TOPIC_IDS.INEQUALITIES,
+  databaseTopicId: TOPIC_DATABASE_IDS['inequalities'],
   title: 'Inequalities',
   subtitle: 'Solve linear, quadratic, and rational inequalities with sign analysis.',
   breadcrumb: [
@@ -1079,6 +1088,7 @@ export const inequalitiesTheory: TheoryTopic = {
 // Exponential Equations Theory
 export const exponentialEquationsTheory: TheoryTopic = {
   id: TOPIC_IDS.EXPONENTIAL_EQUATIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['exponential-equations'],
   title: 'Exponential Equations',
   subtitle: 'Solve equations where the variable is in the exponent.',
   breadcrumb: [
@@ -1203,6 +1213,7 @@ export const exponentialEquationsTheory: TheoryTopic = {
 // Logarithmic Equations Theory
 export const logarithmicEquationsTheory: TheoryTopic = {
   id: TOPIC_IDS.LOGARITHMIC_EQUATIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['logarithmic-equations'],
   title: 'Logarithmic Equations',
   subtitle: 'Solve equations containing logarithms using properties and exponentiation.',
   breadcrumb: [
@@ -1324,6 +1335,7 @@ export const logarithmicEquationsTheory: TheoryTopic = {
 // Linear Functions Theory
 export const linearFunctionsTheory: TheoryTopic = {
   id: TOPIC_IDS.LINEAR_FUNCTIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['linear-functions'],
   title: 'Linear Functions',
   subtitle: 'Understand slope, intercepts, and the equations of lines.',
   breadcrumb: [
@@ -1477,6 +1489,7 @@ export const linearFunctionsTheory: TheoryTopic = {
 // Quadratic Functions Theory
 export const quadraticFunctionsTheory: TheoryTopic = {
   id: TOPIC_IDS.QUADRATIC_FUNCTIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['quadratic-functions'],
   title: 'Quadratic Functions',
   subtitle: 'Analyze parabolas: vertex, axis of symmetry, roots, and transformations.',
   breadcrumb: [
@@ -1635,6 +1648,7 @@ export const quadraticFunctionsTheory: TheoryTopic = {
 // Polynomial Functions Theory
 export const polynomialFunctionsTheory: TheoryTopic = {
   id: TOPIC_IDS.POLYNOMIAL_FUNCTIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['polynomial-functions'],
   title: 'Polynomial Functions',
   subtitle: 'Analyze higher-degree polynomials: end behavior, roots, and multiplicity.',
   breadcrumb: [
@@ -1751,6 +1765,7 @@ export const polynomialFunctionsTheory: TheoryTopic = {
 // Rational Functions Theory
 export const rationalFunctionsTheory: TheoryTopic = {
   id: TOPIC_IDS.RATIONAL_FUNCTIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['rational-functions'],
   title: 'Rational Functions',
   subtitle: 'Analyze functions with polynomials in numerator and denominator.',
   breadcrumb: [
@@ -1904,6 +1919,7 @@ export const rationalFunctionsTheory: TheoryTopic = {
 // Limits (Computational) Theory
 export const limitsComputationalTheory: TheoryTopic = {
   id: TOPIC_IDS.LIMITS,
+  databaseTopicId: TOPIC_DATABASE_IDS['limits'],
   title: 'Limits',
   subtitle: 'Evaluate limits using algebraic techniques and special cases.',
   breadcrumb: [
@@ -2022,6 +2038,7 @@ export const limitsComputationalTheory: TheoryTopic = {
 // Derivatives Basics Theory
 export const derivativesBasicsTheory: TheoryTopic = {
   id: TOPIC_IDS.DERIVATIVES_BASICS,
+  databaseTopicId: TOPIC_DATABASE_IDS['derivatives-basics'],
   title: 'Derivatives Basics',
   subtitle: 'Learn the fundamental rules of differentiation.',
   breadcrumb: [
@@ -2175,6 +2192,7 @@ export const derivativesBasicsTheory: TheoryTopic = {
 // Derivative Applications Theory
 export const derivativeApplicationsTheory: TheoryTopic = {
   id: TOPIC_IDS.DERIVATIVE_APPLICATIONS,
+  databaseTopicId: TOPIC_DATABASE_IDS['derivative-applications'],
   title: 'Derivative Applications',
   subtitle: 'Use derivatives to find extrema, analyze functions, and solve optimization problems.',
   breadcrumb: [
@@ -2302,6 +2320,7 @@ f' \\text{ same sign} &\\Rightarrow \\text{no extremum}
 // Chain Rule Theory
 export const chainRuleTheory: TheoryTopic = {
   id: TOPIC_IDS.CHAIN_RULE,
+  databaseTopicId: TOPIC_DATABASE_IDS['chain-rule'],
   title: 'Chain Rule',
   subtitle: 'Differentiate composite functions using the chain rule.',
   breadcrumb: [
