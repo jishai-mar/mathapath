@@ -161,43 +161,56 @@ QUESTION FORMATTING - STRICT TEXTBOOK STYLE:
 - ABSOLUTELY NO styling cues, colors, emphasis markers, or UI hints
 - Questions must be concise, direct, and unambiguous
 
-MATHEMATICAL NOTATION - CLEAN UNICODE (CRITICAL):
-- Use ONLY clean Unicode symbols, NEVER LaTeX syntax
-- Square root: √ (not \\sqrt, not sqrt, not ^(1/2))
-- Exponents: ² ³ ⁴ ⁵ ⁶ ⁷ ⁸ ⁹ (e.g., x² not x^2, not x**2)
-- Plus-minus: ± (not +/-, not +-)
-- Multiplication: × or · when explicit (not *, not x as multiply)
-- Division in expressions: use fraction form a/b
-- Inequality: ≤ ≥ ≠ < > (proper symbols)
-- REMOVE all dollar signs ($), backslashes (\\), LaTeX commands
-- REMOVE unnecessary parentheses around single variables
-- REMOVE extra spaces and formatting artifacts
+=== MATHEMATICAL NOTATION RULES (CRITICAL) ===
+
+You MUST use PROPER LaTeX syntax with these rules:
+
+EXPONENTS - ALWAYS use braces for multi-character exponents:
+✓ CORRECT: $5^{x+2}$, $3^{2x-1}$, $2^{x+1}$
+✗ WRONG: $5^x+2$, $5^x+^2$, 5ˣ⁺², $5^x+^2$
+
+FRACTIONS:
+✓ CORRECT: $\\frac{1}{25}$, $\\frac{3}{4}$
+✓ ALSO OK: Simple inline like 1/25
+✗ WRONG: mixing notations inconsistently
+
+LOGARITHMS:
+✓ CORRECT: $\\log_{2}(x)$, $\\log_{10}(x)$
+✗ WRONG: log_2(x), log₂x
+
+SQUARE ROOTS:
+✓ CORRECT: $\\sqrt{x+5}$, $\\sqrt{2x-1}$
+✗ WRONG: √(x+5), sqrt(x+5)
+
+WRAP ALL MATH in $ delimiters:
+✓ CORRECT: "Solve for x: $5^{x+2} = \\frac{1}{25}$"
+✗ WRONG: "Solve for x: 5^x+2 = 1/25"
 
 FORBIDDEN PATTERNS (never include these):
 - "Let's solve...", "Try to...", "Can you find..."
 - "Here is a problem...", "Consider the following..."
 - Any emoji or decorative characters
-- $...$ or $$...$$ delimiters
-- \\frac, \\sqrt, \\pm, or any LaTeX command
-- Explanatory text before the actual question
+- Malformed exponents like $5^x+^2$ or $5^x+2$ (should be $5^{x+2}$)
+- Unicode superscripts like ˣ⁺² (use proper LaTeX)
 
 CORRECT EXAMPLES:
-✓ "Solve for x: 3x² − 12 = 0"
-✓ "Find all real solutions: √(x + 5) = 3"
-✓ "Simplify: (2x³ + 6x²) ÷ 2x"
-✓ "Factor completely: x² − 9"
+✓ "Solve for x: $3x^2 - 12 = 0$"
+✓ "Solve for x: $5^{x+2} = \\frac{1}{25}$"
+✓ "Find all real solutions: $\\sqrt{x + 5} = 3$"
+✓ "Simplify: $\\frac{2x^3 + 6x^2}{2x}$"
+✓ "Evaluate: $\\log_{2}(32)$"
 
 INCORRECT EXAMPLES (never do this):
 ✗ "Let's solve this equation: $3x^2 - 12 = 0$"
-✗ "Try to find x in: \\sqrt{x+5} = 3"
-✗ "Here's a challenge! Can you simplify (2x^3 + 6x^2) / 2x?"
+✗ "Try to find x in: $\\sqrt{x+5} = 3$"
+✗ "Solve for x: $5^x+^2 = 1/25$" (malformed exponent!)
+✗ "Solve for x: 5ˣ⁺² = 1/25" (Unicode won't render)
 
 HINTS - GUIDING, NOT REVEALING:
 - Hints should guide thinking, NOT give away the answer
 - First hint: Identify what type of problem or what concept applies
 - Second hint: Suggest a starting approach without showing steps
-- Use the same Unicode math symbols
-- No casual or enthusiastic language`;
+- Use proper LaTeX in hints as well`;
 
     const userPrompt = `Create a diagnostic assessment for the topic "${topic.name}" (${topic.description || ""}).
 
@@ -210,7 +223,7 @@ Return a JSON object with this exact structure:
     {
       "subtopic_id": "uuid-here",
       "subtopic_name": "Name for reference",
-      "question": "Solve for x: 2x + 5 = 13",
+      "question": "Solve for x: $2x + 5 = 13$",
       "correct_answer": "4",
       "difficulty": "easy",
       "hints": ["Subtract 5 from both sides.", "Divide both sides by the coefficient of x."]
@@ -220,8 +233,8 @@ Return a JSON object with this exact structure:
 
 STRICT REQUIREMENTS:
 - Each question must read exactly like a printed textbook question
-- Use Unicode math symbols (√, ², ³, ±, ×, ÷) not LaTeX commands
-- NO LaTeX delimiters (\\(, \\), $, $$) anywhere
+- Use PROPER LaTeX syntax with $ delimiters
+- Use BRACES for multi-character exponents: $5^{x+2}$ NOT $5^x+2$ or $5^x+^2$
 - NO motivational or conversational phrases
 - Answers in simplified form
 - Return ONLY valid JSON, no markdown code blocks`;

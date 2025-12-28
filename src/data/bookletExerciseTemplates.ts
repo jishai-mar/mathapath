@@ -177,20 +177,22 @@ export const BOOKLET_EXERCISE_TEMPLATES: Record<string, BookletExerciseTemplate>
   // ==========================================
   "Exponents & Exponential Equations": {
     patterns: [
-      "aˣ = b (where b is power of a)",   // 2ˣ = 32
-      "aˣ · aʸ = aᶻ",                     // Exponent rules
-      "(aᵐ)ⁿ = c",                        // Power of power
-      "Simplify: aᵐ · bⁿ / cᵖ",           // Expression simplification
+      "$a^x = b$ (where b is power of a)",
+      "$a^x \\cdot a^y = a^z$",
+      "$(a^m)^n = c$",
+      "Simplify: $a^m \\cdot b^n / c^p$",
+      "$a^{x+c} = \\frac{1}{a^n}$ (negative exponent)",
     ],
     examples: [
-      { question: "Solve for x: 2ˣ = 32", answer: "5" },
-      { question: "Solve for x: 3ˣ⁺¹ = 81", answer: "3" },
-      { question: "Simplify: (2³)⁴ · 2² / 2⁵", answer: "2⁹ or 512" },
-      { question: "Solve for x: 4ˣ = 8", answer: "3/2" },
+      { question: "Solve for x: $2^x = 32$", answer: "5" },
+      { question: "Solve for x: $3^{x+1} = 81$", answer: "3" },
+      { question: "Simplify: $(2^3)^4 \\cdot 2^2 / 2^5$", answer: "$2^9$ or 512" },
+      { question: "Solve for x: $4^x = 8$", answer: "3/2" },
+      { question: "Solve for x: $5^{x+2} = \\frac{1}{25}$", answer: "-4" },
     ],
     numberRanges: {
       easy: "Same base, small exponents",
-      medium: "Convertible bases (4 = 2², 8 = 2³)",
+      medium: "Convertible bases ($4 = 2^2$, $8 = 2^3$)",
       hard: "Requires logarithm insight or complex rules",
     },
     forbiddenElements: ["logarithms in solution (for easy)", "irrational exponents"],
@@ -202,24 +204,24 @@ export const BOOKLET_EXERCISE_TEMPLATES: Record<string, BookletExerciseTemplate>
   // ==========================================
   "Logarithms & Logarithmic Equations": {
     patterns: [
-      "logₐ(x) = b",                      // Direct evaluation
-      "logₐ(x) + logₐ(y) = c",            // Product rule
-      "logₐ(x) − logₐ(y) = c",            // Quotient rule
-      "logₐ(xⁿ) = c",                     // Power rule
-      "log(x) = a (base 10)",             // Common log
+      "$\\log_a(x) = b$",
+      "$\\log_a(x) + \\log_a(y) = c$",
+      "$\\log_a(x) - \\log_a(y) = c$",
+      "$\\log_a(x^n) = c$",
+      "$\\log(x) = a$ (base 10)",
     ],
     examples: [
-      { question: "Evaluate: log₂ 64", answer: "6" },
-      { question: "Solve for x: log₃ x = 4", answer: "81" },
-      { question: "Simplify: log₂ 8 + log₂ 4", answer: "5" },
-      { question: "Solve for x: log(x) + log(x − 3) = 1", answer: "5" },
+      { question: "Evaluate: $\\log_2(64)$", answer: "6" },
+      { question: "Solve for x: $\\log_3(x) = 4$", answer: "81" },
+      { question: "Simplify: $\\log_2(8) + \\log_2(4)$", answer: "5" },
+      { question: "Solve for x: $\\log(x) + \\log(x - 3) = 1$", answer: "5" },
     ],
     numberRanges: {
       easy: "Perfect powers, direct evaluation",
       medium: "Log rules application",
       hard: "Equations with multiple log terms",
     },
-    forbiddenElements: ["natural log ln (use logₑ notation)", "complex domain analysis"],
+    forbiddenElements: ["natural log ln (use $\\log_e$ notation)", "complex domain analysis"],
     allowedOperations: ["log rules", "exponentiation", "domain checking"],
   },
 
