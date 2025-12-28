@@ -60,6 +60,46 @@ const textToLatexMap: [RegExp, string][] = [
  * Detects if a string is primarily math content (not mixed text with some variables)
  */
 function containsMathContent(text: string): boolean {
+  // Check for LaTeX commands first - these definitely indicate math
+  const latexCommandPatterns = [
+    /\\forall/,
+    /\\exists/,
+    /\\varepsilon/,
+    /\\epsilon/,
+    /\\delta/,
+    /\\alpha/,
+    /\\beta/,
+    /\\gamma/,
+    /\\theta/,
+    /\\phi/,
+    /\\omega/,
+    /\\pi/,
+    /\\sigma/,
+    /\\Sigma/,
+    /\\lim/,
+    /\\sum/,
+    /\\int/,
+    /\\frac\{/,
+    /\\sqrt/,
+    /\\pm/,
+    /\\times/,
+    /\\div/,
+    /\\leq/,
+    /\\geq/,
+    /\\neq/,
+    /\\Rightarrow/,
+    /\\rightarrow/,
+    /\\Leftarrow/,
+    /\\leftarrow/,
+    /\\text\{/,
+    /\\mathrm\{/,
+    /\\mathbf\{/,
+  ];
+  
+  if (latexCommandPatterns.some(pattern => pattern.test(text))) {
+    return true;
+  }
+
   // If the text is mostly words (has multiple consecutive letters forming words), it's text
   const wordPattern = /[a-zA-Z]{4,}/g;
   const words = text.match(wordPattern);
@@ -68,13 +108,8 @@ function containsMathContent(text: string): boolean {
     return false;
   }
 
-  // Check for common LaTeX patterns that indicate actual math
+  // Check for common math patterns
   const mathPatterns = [
-    /\\frac\{/,
-    /\\sqrt/,
-    /\\pm/,
-    /\\times/,
-    /\\div/,
     /\^[\d{]/,
     /_[\d{]/,
     /\\[a-zA-Z]+\{/,   // LaTeX commands with braces
