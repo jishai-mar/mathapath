@@ -185,29 +185,36 @@ This assessment samples ONE question per subtopic across the entire curriculum t
 
 CRITICAL FORMATTING RULES:
 - Write questions exactly as they would appear in a printed mathematics textbook
-- Use formal, neutral language with imperative statements: "Solve for x:", "Find:", "Simplify:", "Determine:", "Calculate:"
+- Use formal, neutral language with imperative statements: "Solve for x:", "Find:", "Simplify:", "Determine:", "Calculate:", "Evaluate:"
 - NO motivational phrases, commentary, or casual language (never "Let's", "Try this", "Can you", etc.)
 - NO styling cues, colors, or emphasis markers in the text
 - Questions must be direct and professional
 
-MATHEMATICAL NOTATION - USE UNICODE SYMBOLS:
-- Use actual math symbols, NOT LaTeX syntax in visible text
-- Use √ for square root (not \\sqrt)
-- Use ² ³ for exponents (e.g., x² not x^2)
-- Use ÷ for division, × for multiplication when needed
-- Use ± for plus-minus
-- Use fractions as a/b format or proper notation
-- Remove unnecessary parentheses around single variables
-- All expressions must be clean and readable
+=== MATHEMATICAL NOTATION RULES (CRITICAL) ===
+- Use PROPER LaTeX syntax for all math expressions
+- Wrap ALL math in $ delimiters
+
+EXPONENTS (no ambiguity):
+✓ $5^{x+2}$, $3^{2x-1}$
+✗ $5^x+2$, $5^x+^2$, 5ˣ⁺²
+
+FRACTIONS:
+✓ $\\frac{1}{25}$
+
+LOGARITHMS:
+✓ $\\log_{2}(x)$
+
+SQUARE ROOTS:
+✓ $\\sqrt{x+5}$
 
 EXAMPLES OF CORRECT FORMAT:
-- "Solve for x: √x = 5"
-- "Find all real solutions: x² − 9 = 0"
-- "Simplify: (3x + 2)(x − 4)"
+- "Solve for x: $\\sqrt{x} = 5$"
+- "Find all real solutions: $x^2 - 9 = 0$"
+- "Simplify: $(3x + 2)(x - 4)$"
 
 HINTS:
 - Write as clear, instructional guidance
-- Use the same Unicode math symbols
+- Use proper LaTeX as well
 - No casual or enthusiastic language
 
 DIFFICULTY BALANCE:
@@ -232,7 +239,7 @@ Return a JSON object with this exact structure:
       "topic_name": "Topic Name",
       "subtopic_id": "uuid-of-subtopic",
       "subtopic_name": "Subtopic Name",
-      "question": "Solve for x: 2x + 5 = 13",
+      "question": "Solve for x: $2x + 5 = 13$",
       "correct_answer": "4",
       "difficulty": "easy",
       "hints": ["Subtract 5 from both sides.", "Divide both sides by the coefficient of x."]
@@ -243,8 +250,8 @@ Return a JSON object with this exact structure:
 STRICT REQUIREMENTS:
 - Generate exactly ONE question per subtopic (${subtopics.length} total questions)
 - Each question must read exactly like a printed textbook question
-- Use Unicode math symbols (√, ², ³, ±, ×, ÷) not LaTeX commands
-- NO LaTeX delimiters (\\(, \\), $, $$) anywhere
+- Use PROPER LaTeX with $ delimiters for math
+- Use BRACES for multi-character exponents: $5^{x+2}$ NOT $5^x+2$ or $5^x+^2$
 - NO motivational or conversational phrases
 - Answers in simplified form
 - Return ONLY valid JSON, no markdown code blocks`;

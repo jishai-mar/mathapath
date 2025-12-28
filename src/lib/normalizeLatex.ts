@@ -71,7 +71,10 @@ export function fixMalformedLatex(input: string): string {
   // This catches malformed exponents where the AI incorrectly split the exponent
   result = result.replace(/\^([a-z])\+\^(\d+)/gi, '^{$1+$2}');
   result = result.replace(/\^([a-z])-\^(\d+)/gi, '^{$1-$2}');
-  
+
+  // Fix patterns already inside braces: "^{x+^2}" → "^{x+2}"
+  result = result.replace(/\^\{\s*([a-z])\+\^(\d+)\s*\}/gi, '^{$1+$2}');
+  result = result.replace(/\^\{\s*([a-z])-\^(\d+)\s*\}/gi, '^{$1-$2}');
   // Fix patterns like "^x+2" at end of expression or before = → "^{x+2}"
   // Match: base^variable+number followed by space, =, or end
   result = result.replace(/\^([a-z])([+\-])(\d+)(\s*[=\s]|$)/gi, '^{$1$2$3}$4');
@@ -90,9 +93,9 @@ export function fixMalformedLatex(input: string): string {
   // Fix subscript notation without braces: a_10 → a_{10}
   result = result.replace(/_(\d{2,})(?!\})/g, '_{$1}');
   
-  // Fix fractions written as a/b where both are single digits → \frac{a}{b}
-  // Only for simple fractions like 1/2, 3/4, etc. (not expressions)
-  result = result.replace(/(?<![a-z\d])(\d)\/(\d)(?![a-z\d])/gi, '\\frac{$1}{$2}');
+  // Fix simple numeric fractions like 1/25 → \frac{1}{25}
+  // Only applies when surrounded by non-word characters (avoids breaking expressions like x/2)
+  result = result.replace(/(?<![a-z\d])(\d+)\s*\/\s*(\d+)(?![a-z\d])/gi, '\\frac{$1}{$2}');
   
   // Ensure square root has proper braces: √x+5 → √{x+5} when followed by operation
   result = result.replace(/√([a-z])([+\-])(\d+)/gi, '\\sqrt{$1$2$3}');
@@ -251,7 +254,6 @@ export function parseContentSegments(input: string): ContentSegment[] {
   if (!input) return [];
 
   const segments: ContentSegment[] = [];
-  let remaining = input;
   let lastIndex = 0;
 
   // Pattern to match math delimiters: $$...$$ or $...$
@@ -273,16 +275,38 @@ export function parseContentSegments(input: string): ContentSegment[] {
     const cleanContent = isDisplayMode
       ? mathContent.slice(2, -2).trim()
       : mathContent.slice(1, -1).trim();
-    
+
     if (cleanContent) {
       segments.push({
         type: 'math',
-        content: normalizeLatex(cleanContent),
+        content: normalizeLatex(fixMalformedLatex(cleanContent)),
         displayMode: isDisplayMode,
       });
     }
 
     lastIndex = match.index + match[0].length;
+  }
+
+  // Heuristic: textbook-style prompts like "Solve for x: ..." without $ delimiters
+  // Split at first ":" and treat the RHS as math if it looks like a math expression.
+  if (segments.length === 0) {
+    const colonIdx = input.indexOf(':');
+    if (colonIdx !== -1) {
+      const left = input.slice(0, colonIdx + 1).trim();
+      const right = input.slice(colonIdx + 1).trim();
+
+      // RHS looks like math if it contains operators/digits/caret/root/log
+      const looksMath = /[=^\\/\d√±≤≥≠]|\blog\b|\bexp\b/i.test(right);
+      if (right && looksMath) {
+        if (left) segments.push({ type: 'text', content: left });
+        segments.push({
+          type: 'math',
+          content: normalizeLatex(fixMalformedLatex(right)),
+          displayMode: false,
+        });
+        return segments;
+      }
+    }
   }
 
   // Add remaining text
@@ -293,7 +317,7 @@ export function parseContentSegments(input: string): ContentSegment[] {
       if (containsMathContent(textContent)) {
         segments.push({
           type: 'math',
-          content: normalizeLatex(textContent),
+          content: normalizeLatex(fixMalformedLatex(textContent)),
           displayMode: false,
         });
       } else {
@@ -307,7 +331,7 @@ export function parseContentSegments(input: string): ContentSegment[] {
     if (containsMathContent(input)) {
       segments.push({
         type: 'math',
-        content: normalizeLatex(input),
+        content: normalizeLatex(fixMalformedLatex(input)),
         displayMode: false,
       });
     } else {
