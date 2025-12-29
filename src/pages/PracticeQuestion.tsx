@@ -1,0 +1,121 @@
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowLeft, Home } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePracticeExercise } from '@/hooks/usePracticeExercise';
+import {
+  PracticeQuestionCard,
+  TheoryPanel,
+  SolutionPanel
+} from '@/components/practice';
+
+export default function PracticeQuestion() {
+  const { subtopicId } = useParams<{ subtopicId: string }>();
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
+  // For demo purposes, using hardcoded values - in production, fetch from DB
+  const subtopicName = "Practice Exercise";
+  const topicName = "Mathematics";
+
+  const practice = usePracticeExercise({
+    subtopicId: subtopicId || '',
+    subtopicName,
+    topicName,
+    initialDifficulty: 'easy'
+  });
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  // Load first exercise on mount
+  useEffect(() => {
+    if (user && subtopicId && !practice.currentExercise && !practice.isLoading) {
+      practice.loadNextExercise();
+    }
+  }, [user, subtopicId]);
+
+  const handleNextExercise = () => {
+    practice.loadNextExercise();
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-warm">
+      {/* Header */}
+      <header className="p-4 border-b border-border/20">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/')}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+          <h1 className="text-lg font-semibold">{topicName}</h1>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+          >
+            <Home className="w-4 h-4" />
+          </Button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="p-4 md:p-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <PracticeQuestionCard
+            exercise={practice.currentExercise}
+            exerciseDetails={practice.exerciseDetails}
+            studentAnswer={practice.studentAnswer}
+            onAnswerChange={practice.setStudentAnswer}
+            onSubmit={practice.submitAnswer}
+            onOpenTheory={practice.openTheory}
+            onOpenSolution={practice.openSolution}
+            onRevealHint={practice.revealNextStep}
+            onNextExercise={handleNextExercise}
+            onStartWalkthrough={practice.startWalkthrough}
+            revealedStepCount={practice.revealedStepCount}
+            isCorrect={practice.isCorrect}
+            feedbackMessage={practice.feedbackMessage}
+            tutorFeedback={practice.tutorFeedback}
+            correctAnswer={practice.correctAnswer}
+            isSubmitting={practice.isSubmitting}
+            isLoading={practice.isLoading}
+            mode={practice.mode}
+            exerciseCount={practice.exerciseCount}
+            correctCount={practice.correctCount}
+          />
+        </motion.div>
+      </main>
+
+      {/* Panels */}
+      <TheoryPanel
+        isOpen={practice.isTheoryOpen}
+        onClose={practice.closeTheory}
+        theory={practice.exerciseDetails?.theory || null}
+        topicName={topicName}
+      />
+
+      <SolutionPanel
+        isOpen={practice.isSolutionOpen}
+        onClose={practice.closeSolution}
+        steps={practice.exerciseDetails?.solutionSteps || null}
+        finalAnswer={practice.exerciseDetails?.finalAnswer || null}
+        tip={practice.exerciseDetails?.tip || null}
+        question={practice.currentExercise?.question}
+      />
+    </div>
+  );
+}

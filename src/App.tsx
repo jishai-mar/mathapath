@@ -27,6 +27,7 @@ import VoiceFirstTutoring from "./pages/VoiceFirstTutoring";
 import TheoryTopic from "./pages/TheoryTopic";
 import PracticeExam from "./pages/PracticeExam";
 import ExponentialTutorDemo from "./pages/ExponentialTutorDemo";
+import PracticeQuestion from "./pages/PracticeQuestion";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -104,6 +105,7 @@ function AppRoutes() {
       <Route path="/theory/:topicId" element={<TheoryTopic />} />
       <Route path="/practice-exam" element={<PracticeExam />} />
       <Route path="/exponential-tutor" element={<ExponentialTutorDemo />} />
+      <Route path="/practice-question/:subtopicId" element={<PracticeQuestion />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
