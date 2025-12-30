@@ -124,6 +124,35 @@ export default function DiagnosticTest() {
           });
           setPhase('results');
         }
+      } else if (existingTest?.status === 'in_progress') {
+        // Resume in-progress test - load existing questions
+        const { data: existingQuestions } = await supabase.functions.invoke('generate-diagnostic', {
+          body: { topicId, userId: user!.id },
+        });
+
+        if (existingQuestions?.questions && existingQuestions.questions.length > 0) {
+          setTest(existingQuestions.test);
+          setQuestions(existingQuestions.questions);
+          setCurrentIndex(existingTest.questions_answered || 0);
+          
+          // Load existing responses to pre-fill answers
+          const { data: existingResponses } = await supabase
+            .from('diagnostic_responses')
+            .select('diagnostic_question_id, user_answer')
+            .eq('user_id', user!.id);
+          
+          if (existingResponses) {
+            const answersMap = new Map<string, string>();
+            existingResponses.forEach(r => {
+              if (r.user_answer) {
+                answersMap.set(r.diagnostic_question_id, r.user_answer);
+              }
+            });
+            setAnswers(answersMap);
+          }
+          
+          setPhase('test');
+        }
       }
     } catch (error) {
       console.error('Error loading topic:', error);
@@ -359,10 +388,13 @@ export default function DiagnosticTest() {
                 size="lg"
               >
                 {isGenerating ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
-                    Preparing your assessment...
-                  </>
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center">
+                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2" />
+                      Generating personalized questions...
+                    </div>
+                    <span className="text-xs opacity-70">This may take 15-30 seconds</span>
+                  </div>
                 ) : (
                   <>
                     Start Assessment
