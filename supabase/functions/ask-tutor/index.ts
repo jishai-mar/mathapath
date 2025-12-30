@@ -526,7 +526,7 @@ Remember: You are not just teaching math - you are building confidence, creating
         answer: fallbackAnswer,
         detectedEmotion: "neutral",
         fallback: true,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "An error occurred processing your request",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

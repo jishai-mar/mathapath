@@ -188,7 +188,7 @@ Generate personalized daily insights for this student.`;
     console.error("Error generating insights:", error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "An error occurred processing your request",
         fallback: true,
       }),
       {

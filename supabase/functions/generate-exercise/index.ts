@@ -625,7 +625,7 @@ Generate the exercise now:`;
   } catch (error) {
     console.error('Error in generate-exercise:', error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
+      JSON.stringify({ error: 'An error occurred processing your request' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

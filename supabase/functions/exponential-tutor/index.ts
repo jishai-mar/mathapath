@@ -434,7 +434,7 @@ Respond in JSON format:
   } catch (error) {
     console.error("Exponential tutor error:", error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : "Failed to process request",
+      error: "An error occurred processing your request",
       success: false
     }), {
       status: 500,

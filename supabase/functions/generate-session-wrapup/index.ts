@@ -133,7 +133,7 @@ Format: Return ONLY the wrap-up message, no JSON or formatting.`;
   } catch (error) {
     console.error("Error generating wrap-up:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "An error occurred processing your request" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

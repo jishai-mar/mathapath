@@ -259,7 +259,7 @@ IMPORTANT RULES:
       JSON.stringify({
         greeting,
         fallback: true,
-        error: error instanceof Error ? error.message : "Unknown error",
+        error: "An error occurred processing your request",
       }),
       {
         status: 200,

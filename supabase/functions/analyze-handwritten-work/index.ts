@@ -323,7 +323,7 @@ Look at the image and evaluate their solution process.`;
     console.error('Error in analyze-handwritten-work:', error);
     return new Response(
       JSON.stringify({ 
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: 'An error occurred processing your request',
         what_went_well: "Unable to analyze at this time.",
         where_it_breaks: "Please try again or use text input instead.",
         what_to_focus_on_next: "Keep practicing!",
