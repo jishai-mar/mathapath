@@ -143,8 +143,7 @@ When the notebook first opens, give a brief, warm greeting mentioning any patter
 
   } catch (error) {
     console.error('Error in notebook-tutor:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: 'An error occurred processing your request' }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

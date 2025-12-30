@@ -243,7 +243,7 @@ Respond in this exact JSON format:
   } catch (error) {
     console.error("Error generating exam:", error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : "Failed to generate exam",
+      error: "An error occurred processing your request",
       success: false
     }), {
       status: 500,
