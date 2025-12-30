@@ -196,6 +196,7 @@ serve(async (req) => {
       JSON.stringify({ 
         isCorrect,
         feedback,
+        correctAnswer: question.correct_answer,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
