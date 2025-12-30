@@ -136,7 +136,41 @@ Geef een complete uitwerking met:
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
         ],
-        max_completion_tokens: 1500,
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'return_solution',
+              description: 'Return a step-by-step math solution with final answer and a study tip.',
+              parameters: {
+                type: 'object',
+                properties: {
+                  steps: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        stepNumber: { type: 'number' },
+                        title: { type: 'string' },
+                        explanation: { type: 'string' },
+                        math: { type: 'string' },
+                        voiceover: { type: 'string' },
+                      },
+                      required: ['stepNumber', 'title', 'explanation', 'math', 'voiceover'],
+                      additionalProperties: false,
+                    },
+                  },
+                  finalAnswer: { type: 'string' },
+                  tip: { type: 'string' },
+                },
+                required: ['steps', 'finalAnswer', 'tip'],
+                additionalProperties: false,
+              },
+            },
+          },
+        ],
+        tool_choice: { type: 'function', function: { name: 'return_solution' } },
+        max_completion_tokens: 900,
       }),
     });
 
@@ -151,40 +185,55 @@ Geef een complete uitwerking met:
     }
 
     const aiResponse = await response.json();
-    const content = aiResponse.choices?.[0]?.message?.content;
+    const msg = aiResponse.choices?.[0]?.message;
 
-    if (!content) {
-      console.error('No content in AI response');
-      return new Response(
-        JSON.stringify(createFallbackSolution(question, actualCorrectAnswer, subtopicName, 0)),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Preferred: tool-calling (guarantees structured JSON)
+    const toolArgs = msg?.tool_calls?.[0]?.function?.arguments as string | undefined;
 
     let solution: SolutionResponse;
-    try {
-      // The model sometimes wraps JSON in markdown code fences; strip them.
-      let jsonText = String(content).trim();
-
-      const fenced = jsonText.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-      if (fenced?.[1]) {
-        jsonText = fenced[1].trim();
-      } else {
-        // Fallback: extract the first JSON object in the text.
-        const firstBrace = jsonText.indexOf('{');
-        const lastBrace = jsonText.lastIndexOf('}');
-        if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-          jsonText = jsonText.slice(firstBrace, lastBrace + 1);
-        }
+    if (toolArgs) {
+      try {
+        solution = JSON.parse(toolArgs);
+      } catch (e) {
+        console.error('Failed to parse tool arguments:', toolArgs.substring(0, 500));
+        return new Response(
+          JSON.stringify(createFallbackSolution(question, actualCorrectAnswer, subtopicName, 0)),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    } else {
+      // Fallback: parse content (legacy)
+      const content = msg?.content;
+      if (!content) {
+        console.error('No content in AI response');
+        return new Response(
+          JSON.stringify(createFallbackSolution(question, actualCorrectAnswer, subtopicName, 0)),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
 
-      solution = JSON.parse(jsonText);
-    } catch (parseError) {
-      console.error('Failed to parse AI response:', content.substring(0, 500));
-      return new Response(
-        JSON.stringify(createFallbackSolution(question, actualCorrectAnswer, subtopicName, 0)),
-        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      try {
+        let jsonText = String(content).trim();
+
+        const fenced = jsonText.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+        if (fenced?.[1]) {
+          jsonText = fenced[1].trim();
+        } else {
+          const firstBrace = jsonText.indexOf('{');
+          const lastBrace = jsonText.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+            jsonText = jsonText.slice(firstBrace, lastBrace + 1);
+          }
+        }
+
+        solution = JSON.parse(jsonText);
+      } catch {
+        console.error('Failed to parse AI response:', String(content).substring(0, 500));
+        return new Response(
+          JSON.stringify(createFallbackSolution(question, actualCorrectAnswer, subtopicName, 0)),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Validate response structure
