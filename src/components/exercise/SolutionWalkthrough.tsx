@@ -46,6 +46,8 @@ interface SolutionWalkthroughProps {
   question: string;
   subtopicName: string;
   correctAnswer?: string;
+  exerciseId?: string;
+  diagnosticQuestionId?: string;
 }
 
 export function SolutionWalkthrough({
@@ -54,6 +56,8 @@ export function SolutionWalkthrough({
   question,
   subtopicName,
   correctAnswer,
+  exerciseId,
+  diagnosticQuestionId,
 }: SolutionWalkthroughProps) {
   const { user } = useAuth();
   const [solution, setSolution] = useState<SolutionData | null>(null);
@@ -136,7 +140,13 @@ export function SolutionWalkthrough({
 
     try {
       const { data, error: fnError } = await supabase.functions.invoke('solve-exercise', {
-        body: { question, subtopicName, correctAnswer },
+        body: { 
+          question, 
+          subtopicName, 
+          correctAnswer,
+          exerciseId,
+          diagnosticQuestionId,
+        },
       });
 
       if (fnError) throw fnError;

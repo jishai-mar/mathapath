@@ -620,13 +620,14 @@ export default function DiagnosticTest() {
           </Card>
 
           {/* Solution Walkthrough Modal */}
-          <SolutionWalkthrough
-            isOpen={showSolutionWalkthrough}
-            onClose={() => setShowSolutionWalkthrough(false)}
-            question={currentQuestion.question}
-            subtopicName={topicName}
-            correctAnswer={currentCorrectAnswer}
-          />
+        <SolutionWalkthrough
+          isOpen={showSolutionWalkthrough}
+          onClose={() => setShowSolutionWalkthrough(false)}
+          question={currentQuestion.question}
+          subtopicName={topicName}
+          correctAnswer={currentCorrectAnswer}
+          diagnosticQuestionId={currentQuestion.id}
+        />
         </div>
       </div>
     );

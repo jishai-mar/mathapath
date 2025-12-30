@@ -26,7 +26,7 @@ serve(async (req) => {
   }
 
   try {
-    const { question, subtopicName, correctAnswer, exerciseId } = await req.json();
+    const { question, subtopicName, correctAnswer, exerciseId, diagnosticQuestionId } = await req.json();
 
     if (!question) {
       throw new Error('Question is required');
@@ -40,19 +40,38 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Fetch correct answer from database if not provided but exerciseId is
+    // Fetch correct answer from database if not provided
     let actualCorrectAnswer = correctAnswer;
-    if (!actualCorrectAnswer && exerciseId && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
+    
+    if (!actualCorrectAnswer && SUPABASE_URL && SUPABASE_SERVICE_ROLE_KEY) {
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const { data: exercise } = await supabase
-        .from('exercises')
-        .select('correct_answer')
-        .eq('id', exerciseId)
-        .single();
       
-      if (exercise?.correct_answer) {
-        actualCorrectAnswer = exercise.correct_answer;
-        console.log(`Fetched correct answer from DB: ${actualCorrectAnswer}`);
+      // Try exercises table first
+      if (exerciseId) {
+        const { data: exercise } = await supabase
+          .from('exercises')
+          .select('correct_answer')
+          .eq('id', exerciseId)
+          .single();
+        
+        if (exercise?.correct_answer) {
+          actualCorrectAnswer = exercise.correct_answer;
+          console.log(`Fetched correct answer from exercises: ${actualCorrectAnswer}`);
+        }
+      }
+      
+      // Try diagnostic_questions table if still no answer
+      if (!actualCorrectAnswer && diagnosticQuestionId) {
+        const { data: diagQuestion } = await supabase
+          .from('diagnostic_questions')
+          .select('correct_answer')
+          .eq('id', diagnosticQuestionId)
+          .single();
+        
+        if (diagQuestion?.correct_answer) {
+          actualCorrectAnswer = diagQuestion.correct_answer;
+          console.log(`Fetched correct answer from diagnostic_questions: ${actualCorrectAnswer}`);
+        }
       }
     }
 
