@@ -145,14 +145,20 @@ serve(async (req) => {
     }
 
     // Normalize answers for comparison
-    const normalize = (s: string) => 
-      s.toLowerCase()
-        .replace(/\s+/g, '')
-        .replace(/,/g, '')
+    const normalizeMathAnswer = (s: string) =>
+      String(s)
+        .toLowerCase()
+        .replace(/\$/g, "")
+        .replace(/\\/g, "")
+        .replace(/[{}]/g, "")
+        .replace(/\s+/g, "")
+        .replace(/,/g, "")
+        .replace(/−/g, "-")
+        .replace(/×/g, "*")
         .trim();
 
-    const isCorrect = userAnswer 
-      ? normalize(userAnswer) === normalize(question.correct_answer)
+    const isCorrect = userAnswer
+      ? normalizeMathAnswer(userAnswer) === normalizeMathAnswer(question.correct_answer)
       : false;
 
     // Generate AI feedback if incorrect
