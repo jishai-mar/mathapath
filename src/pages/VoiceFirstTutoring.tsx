@@ -6,14 +6,31 @@ import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import MathRenderer from '@/components/MathRenderer';
 import { useTutor } from '@/contexts/TutorContext';
 import { useVoiceSession, VoiceState } from '@/hooks/useVoiceSession';
-import { X, Mic, MicOff, Volume2, VolumeX, Sparkles, ArrowLeft } from 'lucide-react';
+import { useWakeWordDetection } from '@/hooks/useWakeWordDetection';
+import { X, Mic, MicOff, Volume2, VolumeX, Sparkles, ArrowLeft, HelpCircle, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+
+type TutorPhase = 'idle' | 'activated' | 'clarifying' | 'explaining';
+
+// Wake words the tutor responds to
+const WAKE_WORDS = [
+  'hey tutor',
+  'hey gilbert',
+  'hé tutor',
+  'hoi tutor',
+  'can i have help',
+  "i don't understand",
+  "i'm stuck",
+  'help me',
+  'ik snap het niet',
+  'ik zit vast',
+];
 
 export default function VoiceFirstTutoring() {
   const navigate = useNavigate();
@@ -22,10 +39,98 @@ export default function VoiceFirstTutoring() {
   const [currentResponse, setCurrentResponse] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(true);
+  const [tutorPhase, setTutorPhase] = useState<TutorPhase>('idle');
+  const [pendingQuestion, setPendingQuestion] = useState('');
+  const [isWakeWordActive, setIsWakeWordActive] = useState(true);
   
   const abortControllerRef = useRef<AbortController | null>(null);
   const responseRef = useRef('');
+
+  // Clarifying questions the tutor asks
+  const clarifyingQuestions = [
+    "What part of this question is unclear?",
+    "Is the problem the equation, the method, or a previous step?",
+    "Which line should we look at together?",
+    "Can you tell me what you've tried so far?",
+    "Where exactly did you get stuck?",
+  ];
+
+  // Get a random clarifying question
+  const getRandomClarifyingQuestion = () => {
+    return clarifyingQuestions[Math.floor(Math.random() * clarifyingQuestions.length)];
+  };
+
+  // Handle wake word detection
+  const handleWakeWordDetected = useCallback(async (transcript: string) => {
+    if (tutorPhase !== 'idle') return;
+    
+    console.log('Wake word detected:', transcript);
+    setIsWakeWordActive(false);
+    setTutorPhase('activated');
+    
+    // Extract potential question from wake phrase
+    const lowerTranscript = transcript.toLowerCase();
+    let extractedQuestion = '';
+    
+    for (const wakeWord of WAKE_WORDS) {
+      if (lowerTranscript.includes(wakeWord)) {
+        const afterWake = transcript.slice(lowerTranscript.indexOf(wakeWord) + wakeWord.length).trim();
+        if (afterWake.length > 3) {
+          extractedQuestion = afterWake;
+        }
+        break;
+      }
+    }
+    
+    if (extractedQuestion) {
+      // Student already asked a question with the wake word
+      setPendingQuestion(extractedQuestion);
+      setTutorPhase('clarifying');
+      
+      const clarifyingQ = getRandomClarifyingQuestion();
+      const activationMessage: Message = { 
+        role: 'assistant', 
+        content: `I heard you: "${extractedQuestion}"\n\n${clarifyingQ}` 
+      };
+      setMessages(prev => [...prev, activationMessage]);
+      
+      if (!isMuted) {
+        await speakText(`I heard you. ${clarifyingQ}`);
+      }
+    } else {
+      // Just wake word, ask what they need
+      const activationMessage: Message = { 
+        role: 'assistant', 
+        content: `Yes, I'm here! How can I help you? What are you working on?` 
+      };
+      setMessages(prev => [...prev, activationMessage]);
+      
+      if (!isMuted) {
+        await speakText("Yes, I'm here! How can I help you?");
+      }
+      
+      setTutorPhase('clarifying');
+    }
+    
+    // Auto-start listening for the response
+    setTimeout(() => {
+      if (voiceState === 'idle') {
+        startListening();
+      }
+    }, 500);
+  }, [tutorPhase, isMuted]);
+
+  // Wake word detection hook
+  const { 
+    isListening: isWakeWordListening,
+    wakeWordDetected,
+    resetDetection,
+  } = useWakeWordDetection({
+    wakeWords: WAKE_WORDS,
+    onWakeWordDetected: handleWakeWordDetected,
+    enabled: isWakeWordActive && tutorPhase === 'idle',
+  });
 
   const handleTranscription = useCallback(async (text: string) => {
     if (!text.trim()) return;
@@ -36,8 +141,18 @@ export default function VoiceFirstTutoring() {
     setCurrentResponse('');
     responseRef.current = '';
 
+    // If we're in clarifying phase, this is the student's clarification
+    const isFirstClarification = tutorPhase === 'clarifying' || tutorPhase === 'activated';
+    
+    if (isFirstClarification) {
+      setTutorPhase('explaining');
+    }
+
     try {
       abortControllerRef.current = new AbortController();
+      
+      // Build context for the tutor
+      const contextMessages = messages.slice(-6);
       
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-tutor`,
@@ -49,14 +164,14 @@ export default function VoiceFirstTutoring() {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
           },
           body: JSON.stringify({
-            message: text,
-            context: {
-              currentQuestion: null,
-              subtopicName: 'Voice Tutoring Session',
-              conversationHistory: messages.slice(-6),
-            },
+            question: pendingQuestion ? `${pendingQuestion} - Student clarification: ${text}` : text,
+            subtopicName: 'Voice Tutoring Session',
+            theoryContext: '',
+            conversationHistory: contextMessages,
             tutorName: preferences.tutorName,
             personality: preferences.personality,
+            tutoringMode: 'hint', // Start with hints, let student ask for more
+            sessionPhase: 'learning',
           }),
           signal: abortControllerRef.current.signal,
         }
@@ -84,6 +199,7 @@ export default function VoiceFirstTutoring() {
       };
       setMessages(prev => [...prev, assistantMessage]);
       setCurrentResponse('');
+      setPendingQuestion('');
 
       // Speak the response if not muted
       if (!isMuted) {
@@ -99,7 +215,7 @@ export default function VoiceFirstTutoring() {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, preferences, isMuted]);
+  }, [messages, preferences, isMuted, tutorPhase, pendingQuestion]);
 
   const {
     voiceState,
@@ -119,28 +235,44 @@ export default function VoiceFirstTutoring() {
     if (voiceState === 'listening') {
       stopListening();
     } else if (voiceState === 'idle') {
+      // Disable wake word when manually starting
+      setIsWakeWordActive(false);
+      if (tutorPhase === 'idle') {
+        setTutorPhase('clarifying');
+      }
       startListening();
     } else if (voiceState === 'speaking') {
       stopSpeaking();
     }
-  }, [voiceState, startListening, stopListening, stopSpeaking]);
+  }, [voiceState, startListening, stopListening, stopSpeaking, tutorPhase]);
 
   const handleClose = useCallback(() => {
     disconnect();
     navigate(-1);
   }, [disconnect, navigate]);
 
+  const handleReset = useCallback(() => {
+    setTutorPhase('idle');
+    setIsWakeWordActive(true);
+    setPendingQuestion('');
+    resetDetection();
+  }, [resetDetection]);
+
   const getTutorMood = () => {
+    if (wakeWordDetected) return 'curious';
     switch (voiceState) {
       case 'listening': return 'curious';
       case 'processing': return 'thinking';
       case 'thinking': return 'thinking';
       case 'speaking': return 'explaining';
-      default: return 'idle';
+      default: return tutorPhase === 'idle' ? 'idle' : 'curious';
     }
   };
 
   const getStatusText = () => {
+    if (isWakeWordListening && tutorPhase === 'idle') {
+      return `Say "Hey ${preferences.tutorName}" or "I need help" to activate`;
+    }
     switch (voiceState) {
       case 'listening': return 'Listening...';
       case 'processing': return 'Processing...';
@@ -150,9 +282,20 @@ export default function VoiceFirstTutoring() {
     }
   };
 
+  const getPhaseIndicator = () => {
+    switch (tutorPhase) {
+      case 'idle': return { icon: HelpCircle, text: 'Waiting for wake word...' };
+      case 'activated': return { icon: Sparkles, text: 'Activated!' };
+      case 'clarifying': return { icon: MessageCircle, text: 'Understanding your question...' };
+      case 'explaining': return { icon: Sparkles, text: 'Explaining...' };
+      default: return null;
+    }
+  };
+
   // Get the latest message to display
   const displayContent = currentResponse || messages[messages.length - 1]?.content || '';
   const isUserMessage = !currentResponse && messages[messages.length - 1]?.role === 'user';
+  const phaseIndicator = getPhaseIndicator();
 
   return (
     <div className="fixed inset-0 z-50 bg-background overflow-hidden">
@@ -164,6 +307,21 @@ export default function VoiceFirstTutoring() {
             background: 'radial-gradient(circle at 50% 30%, hsla(var(--primary) / 0.15) 0%, transparent 50%), radial-gradient(circle at 20% 80%, hsla(var(--secondary) / 0.1) 0%, transparent 40%), radial-gradient(circle at 80% 70%, hsla(var(--accent) / 0.08) 0%, transparent 40%)',
           }}
         />
+        
+        {/* Wake word listening indicator */}
+        <AnimatePresence>
+          {isWakeWordListening && tutorPhase === 'idle' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute top-24 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/50"
+            >
+              <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-sm text-muted-foreground">Always listening for wake word</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
         
         {/* Pulsing rings when listening */}
         <AnimatePresence>
@@ -240,6 +398,18 @@ export default function VoiceFirstTutoring() {
         </Button>
 
         <div className="flex items-center gap-2">
+          {/* Reset button - return to wake word listening */}
+          {tutorPhase !== 'idle' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 px-3 rounded-full bg-card/50 backdrop-blur-sm text-xs"
+              onClick={handleReset}
+            >
+              Reset
+            </Button>
+          )}
+          
           <Button
             variant="ghost"
             size="icon"
@@ -282,6 +452,18 @@ export default function VoiceFirstTutoring() {
 
       {/* Main content area */}
       <div className="absolute inset-0 flex flex-col items-center justify-center px-6 pt-20 pb-40">
+        {/* Phase indicator */}
+        {phaseIndicator && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm mb-4"
+          >
+            <phaseIndicator.icon className="w-4 h-4" />
+            <span>{phaseIndicator.text}</span>
+          </motion.div>
+        )}
+
         {/* Avatar */}
         <motion.div
           animate={{
@@ -302,15 +484,15 @@ export default function VoiceFirstTutoring() {
 
         {/* Status text */}
         <motion.p
-          key={voiceState}
+          key={voiceState + tutorPhase}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-8 text-lg text-muted-foreground font-medium"
+          className="mt-8 text-lg text-muted-foreground font-medium text-center max-w-md"
         >
           {getStatusText()}
         </motion.p>
 
-        {/* Response display - minimal, centered */}
+        {/* Response display with proper math rendering */}
         <AnimatePresence mode="wait">
           {displayContent && (
             <motion.div
@@ -318,16 +500,18 @@ export default function VoiceFirstTutoring() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               className={cn(
-                "mt-8 max-w-2xl w-full text-center",
-                isUserMessage ? "text-muted-foreground italic" : "text-foreground"
+                "mt-8 max-w-2xl w-full",
+                isUserMessage ? "text-muted-foreground italic text-center" : "text-foreground"
               )}
             >
               {isUserMessage ? (
                 <p className="text-lg">"{displayContent}"</p>
               ) : (
-                <div className="text-xl leading-relaxed prose prose-invert max-w-none">
-                  <MathRenderer latex={displayContent.slice(0, 300) + (displayContent.length > 300 ? '...' : '')} />
-                </div>
+                <ScrollArea className="max-h-[300px]">
+                  <div className="text-lg leading-relaxed prose prose-invert max-w-none px-4">
+                    <MathRenderer latex={displayContent} />
+                  </div>
+                </ScrollArea>
               )}
             </motion.div>
           )}
@@ -341,25 +525,37 @@ export default function VoiceFirstTutoring() {
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            className="absolute right-0 top-0 bottom-0 w-80 bg-card/90 backdrop-blur-lg border-l border-border p-4 pt-20 overflow-y-auto"
+            className="absolute right-0 top-0 bottom-0 w-96 bg-card/90 backdrop-blur-lg border-l border-border p-4 pt-20 overflow-hidden"
           >
             <h3 className="text-sm font-semibold text-muted-foreground mb-4">Conversation</h3>
-            <div className="space-y-4">
-              {messages.map((msg, i) => (
-                <div 
-                  key={i}
-                  className={cn(
-                    "text-sm",
-                    msg.role === 'user' ? "text-muted-foreground" : "text-foreground"
-                  )}
-                >
-                  <span className="font-medium block mb-1">
-                    {msg.role === 'user' ? 'You' : preferences.tutorName}:
-                  </span>
-                  <MathRenderer latex={msg.content} />
-                </div>
-              ))}
-            </div>
+            <ScrollArea className="h-[calc(100%-3rem)]">
+              <div className="space-y-4 pr-4">
+                {messages.map((msg, i) => (
+                  <div 
+                    key={i}
+                    className={cn(
+                      "text-sm",
+                      msg.role === 'user' ? "text-muted-foreground" : "text-foreground"
+                    )}
+                  >
+                    <span className="font-medium block mb-1">
+                      {msg.role === 'user' ? 'You' : preferences.tutorName}:
+                    </span>
+                    <div className="prose prose-sm prose-invert max-w-none">
+                      <MathRenderer latex={msg.content} />
+                    </div>
+                  </div>
+                ))}
+                {currentResponse && (
+                  <div className="text-sm text-foreground">
+                    <span className="font-medium block mb-1">{preferences.tutorName}:</span>
+                    <div className="prose prose-sm prose-invert max-w-none">
+                      <MathRenderer latex={currentResponse} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </motion.div>
         )}
       </AnimatePresence>
@@ -387,6 +583,8 @@ export default function VoiceFirstTutoring() {
               ? "bg-destructive text-destructive-foreground ring-4 ring-destructive/30" 
               : voiceState === 'speaking'
               ? "bg-secondary text-secondary-foreground ring-4 ring-secondary/30"
+              : tutorPhase === 'idle' && isWakeWordListening
+              ? "bg-muted text-muted-foreground ring-4 ring-muted/30"
               : "bg-primary text-primary-foreground hover:bg-primary/90",
             (voiceState === 'processing' || voiceState === 'thinking' || isLoading) && "opacity-50 cursor-not-allowed"
           )}
@@ -411,8 +609,14 @@ export default function VoiceFirstTutoring() {
           )}
         </motion.button>
 
-        <p className="mt-4 text-sm text-muted-foreground">
-          {voiceState === 'listening' ? 'Tap to stop' : voiceState === 'speaking' ? 'Tap to interrupt' : 'Tap to speak'}
+        <p className="mt-4 text-sm text-muted-foreground text-center max-w-xs">
+          {tutorPhase === 'idle' && isWakeWordListening 
+            ? 'Listening for wake word or tap to speak'
+            : voiceState === 'listening' 
+            ? 'Tap to stop' 
+            : voiceState === 'speaking' 
+            ? 'Tap to interrupt' 
+            : 'Tap to speak'}
         </p>
       </div>
     </div>
