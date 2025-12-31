@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
@@ -70,6 +70,7 @@ export default function DiagnosticTest() {
   const [lastAnswerCorrect, setLastAnswerCorrect] = useState<boolean | null>(null);
   const [showSolutionWalkthrough, setShowSolutionWalkthrough] = useState(false);
   const [currentCorrectAnswer, setCurrentCorrectAnswer] = useState<string | undefined>();
+  const [showQuickAnswer, setShowQuickAnswer] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -250,6 +251,7 @@ export default function DiagnosticTest() {
     setLastAnswerCorrect(null);
     setShowSolutionWalkthrough(false);
     setCurrentCorrectAnswer(undefined);
+    setShowQuickAnswer(false);
     
     if (currentIndex < questions.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -567,7 +569,18 @@ export default function DiagnosticTest() {
                       </>
                     )}
                     
-                    {/* Show Solution Button - Always visible */}
+                    {/* Show Answer Button - Quick reveal */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowQuickAnswer(true)}
+                      className="text-muted-foreground gap-2 hover:text-primary transition-colors"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Toon antwoord
+                    </Button>
+                    
+                    {/* Show Solution Button - Full walkthrough */}
                     <Button
                       variant="outline"
                       size="sm"
@@ -578,6 +591,21 @@ export default function DiagnosticTest() {
                       Toon uitwerking
                     </Button>
                   </div>
+
+                  {/* Quick Answer Display */}
+                  {showQuickAnswer && (
+                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="flex items-start gap-3">
+                        <Eye className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs font-medium text-primary mb-1">Correct antwoord</p>
+                          <div className="text-base font-medium">
+                            <MathRenderer latex={currentQuestion.correct_answer} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-3">
                     <Button
