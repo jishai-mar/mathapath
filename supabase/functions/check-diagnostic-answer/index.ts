@@ -144,21 +144,127 @@ serve(async (req) => {
       );
     }
 
-    // Normalize answers for comparison
-    const normalizeMathAnswer = (s: string) =>
-      String(s)
+    // Advanced math answer comparison that handles equivalent expressions
+    const normalizeMathAnswer = (s: string): string => {
+      return String(s)
         .toLowerCase()
         .replace(/\$/g, "")
         .replace(/\\/g, "")
         .replace(/[{}]/g, "")
         .replace(/\s+/g, "")
-        .replace(/,/g, "")
+        .replace(/,/g, ".")  // Standardize decimal separator
         .replace(/−/g, "-")
         .replace(/×/g, "*")
+        .replace(/÷/g, "/")
+        .replace(/\^/g, "**")
         .trim();
+    };
+
+    // Parse and normalize algebraic expressions for equivalence
+    const parseAlgebraicTerms = (expr: string): Map<string, number> => {
+      const terms = new Map<string, number>();
+      const normalized = normalizeMathAnswer(expr);
+      
+      // Handle simple numeric answers
+      const numericValue = parseFloat(normalized);
+      if (!isNaN(numericValue) && normalized === String(numericValue)) {
+        terms.set("_numeric", numericValue);
+        return terms;
+      }
+      
+      // Split by + or - while keeping the sign
+      const parts = normalized.split(/(?=[+-])/);
+      
+      for (const part of parts) {
+        if (!part) continue;
+        
+        // Match coefficient and variable(s): e.g., "2x", "-3xy", "x", "-y"
+        const match = part.match(/^([+-]?\d*\.?\d*)([a-z]+)?(\*\*(\d+))?$/);
+        if (match) {
+          let coeff = match[1] === "" || match[1] === "+" ? 1 : match[1] === "-" ? -1 : parseFloat(match[1]);
+          const vars = match[2] || "_const";
+          const power = match[4] ? parseInt(match[4]) : 1;
+          const key = vars === "_const" ? "_const" : vars.split("").sort().join("") + (power > 1 ? `**${power}` : "");
+          terms.set(key, (terms.get(key) || 0) + coeff);
+        }
+      }
+      
+      return terms;
+    };
+
+    // Check if two expressions are mathematically equivalent
+    const areExpressionsEquivalent = (expr1: string, expr2: string): boolean => {
+      const norm1 = normalizeMathAnswer(expr1);
+      const norm2 = normalizeMathAnswer(expr2);
+      
+      // Direct string match after normalization
+      if (norm1 === norm2) return true;
+      
+      // Try numeric comparison (handles "2.0" == "2", fractions, etc.)
+      const num1 = parseFloat(norm1);
+      const num2 = parseFloat(norm2);
+      if (!isNaN(num1) && !isNaN(num2) && Math.abs(num1 - num2) < 0.0001) return true;
+      
+      // Handle fraction equivalence: "1/2" == "0.5"
+      const evalFraction = (s: string): number | null => {
+        const fractionMatch = s.match(/^(-?\d+)\/(\d+)$/);
+        if (fractionMatch) {
+          return parseFloat(fractionMatch[1]) / parseFloat(fractionMatch[2]);
+        }
+        return null;
+      };
+      const frac1 = evalFraction(norm1);
+      const frac2 = evalFraction(norm2);
+      if (frac1 !== null && !isNaN(num2) && Math.abs(frac1 - num2) < 0.0001) return true;
+      if (frac2 !== null && !isNaN(num1) && Math.abs(frac2 - num1) < 0.0001) return true;
+      if (frac1 !== null && frac2 !== null && Math.abs(frac1 - frac2) < 0.0001) return true;
+      
+      // Algebraic equivalence: "2x" == "x*2" == "x+x"
+      const terms1 = parseAlgebraicTerms(expr1);
+      const terms2 = parseAlgebraicTerms(expr2);
+      
+      if (terms1.size === terms2.size) {
+        let allMatch = true;
+        for (const [key, val] of terms1) {
+          if (Math.abs((terms2.get(key) || 0) - val) > 0.0001) {
+            allMatch = false;
+            break;
+          }
+        }
+        if (allMatch) return true;
+      }
+      
+      // Handle common equivalent forms
+      const equivalentForms: [RegExp, RegExp][] = [
+        [/^(\d+)([a-z])$/, /^([a-z])\*?(\d+)$/],  // "2x" == "x*2"
+        [/^([a-z])\+([a-z])$/, /^2([a-z])$/],     // "x+x" == "2x"
+      ];
+      
+      for (const [pattern1, pattern2] of equivalentForms) {
+        const m1 = norm1.match(pattern1);
+        const m2 = norm2.match(pattern2);
+        if (m1 && m2) {
+          // Check if they represent the same thing
+          if (pattern1.source.includes("(\\d+)([a-z])")) {
+            // "2x" pattern
+            if (m1[2] === m2[1] && m1[1] === m2[2]) return true;
+          }
+        }
+        // Try reverse
+        const m1r = norm1.match(pattern2);
+        const m2r = norm2.match(pattern1);
+        if (m1r && m2r) {
+          if (pattern1.source.includes("(\\d+)([a-z])")) {
+            if (m1r[1] === m2r[2] && m1r[2] === m2r[1]) return true;
+          }
+        }
+      }
+      
+      return false;
+    };
 
     const isCorrect = userAnswer
-      ? normalizeMathAnswer(userAnswer) === normalizeMathAnswer(question.correct_answer)
+      ? areExpressionsEquivalent(userAnswer, question.correct_answer)
       : false;
 
     // Generate AI feedback if incorrect
