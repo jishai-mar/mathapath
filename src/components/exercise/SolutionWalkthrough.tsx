@@ -301,10 +301,10 @@ export function SolutionWalkthrough({
                       <Lightbulb className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-primary mb-1">Theorie opfrissen</p>
-                      <p className="text-sm text-foreground leading-relaxed">
-                        {solution.theoryReview}
-                      </p>
+                      <p className="text-sm font-semibold text-primary mb-2">Theorie opfrissen</p>
+                      <div className="text-sm text-foreground leading-relaxed">
+                        <MathRenderer latex={solution.theoryReview} />
+                      </div>
                     </div>
                   </div>
                 </motion.div>
