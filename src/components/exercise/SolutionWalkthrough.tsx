@@ -35,6 +35,7 @@ interface SolutionStep {
 }
 
 interface SolutionData {
+  theoryReview?: string;
   steps: SolutionStep[];
   finalAnswer: string;
   tip: string;
@@ -286,6 +287,28 @@ export function SolutionWalkthrough({
                   <MathRenderer latex={question} displayMode />
                 </div>
               </motion.div>
+
+              {/* Theory Review Section */}
+              {solution.theoryReview && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="p-4 rounded-xl bg-primary/10 border border-primary/20"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                      <Lightbulb className="w-4 h-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-primary mb-1">Theorie opfrissen</p>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        {solution.theoryReview}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Progress Bar */}
               <motion.div
