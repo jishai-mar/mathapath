@@ -45,6 +45,63 @@ interface TutorFeedback {
   what_to_focus_on_next: string;
 }
 
+// Helper function to detect answer format from question text
+const getAnswerFormatHint = (question: string): string | null => {
+  const q = question.toLowerCase();
+  
+  // Quadratic/polynomial equations with multiple solutions
+  if (q.includes('x²') || q.includes('x^2') || q.includes('kwadratisch') || q.includes('quadratic')) {
+    return 'Meerdere oplossingen? Schrijf: x = 2 of x = -3';
+  }
+  
+  // Equations asking for x
+  if ((q.includes('los op') || q.includes('solve')) && (q.includes('x =') || q.includes('x='))) {
+    return 'Schrijf je antwoord als: x = ...';
+  }
+  
+  // Fraction answers
+  if (q.includes('breuk') || q.includes('fraction') || q.includes('vereenvoudig')) {
+    return 'Schrijf breuken als: 3/4 of als decimaal: 0.75';
+  }
+  
+  // Coordinate answers
+  if (q.includes('coördinat') || q.includes('coordinate') || q.includes('punt')) {
+    return 'Schrijf coördinaten als: (2, 3)';
+  }
+  
+  // Algebraic expressions
+  if (q.includes('vereenvoudig') || q.includes('simplify')) {
+    return 'Gebruik x voor de variabele, bijv: 2x + 3';
+  }
+  
+  // Percentage
+  if (q.includes('procent') || q.includes('percentage') || q.includes('%')) {
+    return 'Schrijf percentages als getal: 25 (zonder %)';
+  }
+  
+  return null;
+};
+
+// Helper function to get appropriate placeholder based on question
+const getInputPlaceholder = (question: string): string => {
+  const q = question.toLowerCase();
+  
+  if (q.includes('x²') || q.includes('x^2')) {
+    return 'bijv. x = 2 of x = -3';
+  }
+  if (q.includes('los op') || q.includes('solve')) {
+    return 'bijv. x = 5';
+  }
+  if (q.includes('breuk') || q.includes('fraction')) {
+    return 'bijv. 3/4 of 0.75';
+  }
+  if (q.includes('coördinat') || q.includes('punt')) {
+    return 'bijv. (2, 3)';
+  }
+  
+  return 'Jouw antwoord...';
+};
+
 export default function DiagnosticTest() {
   const { topicId } = useParams<{ topicId: string }>();
   const { user, loading: authLoading } = useAuth();
@@ -535,10 +592,18 @@ export default function DiagnosticTest() {
               ) : (
                 // Normal question answering UI
                 <>
+                  {/* Answer format hint */}
+                  {getAnswerFormatHint(currentQuestion.question) && (
+                    <div className="text-xs text-muted-foreground bg-muted/30 px-3 py-2 rounded-lg flex items-center gap-2">
+                      <span className="text-primary">💡</span>
+                      <span>{getAnswerFormatHint(currentQuestion.question)}</span>
+                    </div>
+                  )}
+                  
                   <Input
                     value={currentAnswer}
                     onChange={(e) => setCurrentAnswer(e.target.value)}
-                    placeholder="Your answer..."
+                    placeholder={getInputPlaceholder(currentQuestion.question)}
                     onKeyDown={(e) => e.key === 'Enter' && handleAnswerSubmit()}
                     disabled={isSubmitting}
                     className="text-lg"
