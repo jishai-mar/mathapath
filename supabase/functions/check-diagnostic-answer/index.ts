@@ -192,6 +192,56 @@ serve(async (req) => {
       return terms;
     };
 
+    // Parse multi-solution answers like "x=2 or x=-3" or "x=2, x=-3"
+    const parseMultiSolutions = (expr: string): Set<string> => {
+      const solutions = new Set<string>();
+      const normalized = normalizeMathAnswer(expr);
+      
+      // Split by common separators: "or", "of", "en", ",", ";"
+      const parts = normalized.split(/\b(?:or|of|en)\b|[,;]/i);
+      
+      for (const part of parts) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        
+        // Extract value from "x=value" format
+        const eqMatch = trimmed.match(/^[a-z]\s*=\s*(.+)$/);
+        if (eqMatch) {
+          solutions.add(normalizeMathAnswer(eqMatch[1]));
+        } else {
+          // Just a value
+          solutions.add(trimmed);
+        }
+      }
+      
+      return solutions;
+    };
+
+    // Check if two solution sets are equivalent
+    const areSolutionSetsEquivalent = (set1: Set<string>, set2: Set<string>): boolean => {
+      if (set1.size !== set2.size) return false;
+      
+      for (const val of set1) {
+        let found = false;
+        for (const val2 of set2) {
+          // Compare numerically if possible
+          const num1 = parseFloat(val);
+          const num2 = parseFloat(val2);
+          if (!isNaN(num1) && !isNaN(num2) && Math.abs(num1 - num2) < 0.0001) {
+            found = true;
+            break;
+          }
+          // Direct string match
+          if (val === val2) {
+            found = true;
+            break;
+          }
+        }
+        if (!found) return false;
+      }
+      return true;
+    };
+
     // Check if two expressions are mathematically equivalent
     const areExpressionsEquivalent = (expr1: string, expr2: string): boolean => {
       const norm1 = normalizeMathAnswer(expr1);
@@ -199,6 +249,17 @@ serve(async (req) => {
       
       // Direct string match after normalization
       if (norm1 === norm2) return true;
+      
+      // Check for multi-solution answers (quadratic equations, etc.)
+      // Patterns: "x=2 or x=-3", "x=2, x=-3", "2 or -3", "2 en -3"
+      const hasMultiSolutionPattern = /\b(or|of|en)\b|[,;]/i;
+      if (hasMultiSolutionPattern.test(expr1) || hasMultiSolutionPattern.test(expr2)) {
+        const solutions1 = parseMultiSolutions(expr1);
+        const solutions2 = parseMultiSolutions(expr2);
+        if (solutions1.size > 0 && solutions2.size > 0 && areSolutionSetsEquivalent(solutions1, solutions2)) {
+          return true;
+        }
+      }
       
       // Try numeric comparison (handles "2.0" == "2", fractions, etc.)
       const num1 = parseFloat(norm1);
@@ -244,13 +305,10 @@ serve(async (req) => {
         const m1 = norm1.match(pattern1);
         const m2 = norm2.match(pattern2);
         if (m1 && m2) {
-          // Check if they represent the same thing
           if (pattern1.source.includes("(\\d+)([a-z])")) {
-            // "2x" pattern
             if (m1[2] === m2[1] && m1[1] === m2[2]) return true;
           }
         }
-        // Try reverse
         const m1r = norm1.match(pattern2);
         const m2r = norm2.match(pattern1);
         if (m1r && m2r) {
