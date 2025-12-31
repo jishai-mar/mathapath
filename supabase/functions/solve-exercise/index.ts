@@ -15,6 +15,7 @@ interface SolutionStep {
 }
 
 interface SolutionResponse {
+  theoryReview?: string;  // Brief theory explanation relevant to this problem
   steps: SolutionStep[];
   finalAnswer: string;
   tip: string;
@@ -89,18 +90,21 @@ BELANGRIJKE REGELS:
 1. Spreek de leerling direct aan (gebruik "je" en "we")
 2. Gebruik Nederlandse termen voor wiskundige concepten
 3. Wees bemoedigend en positief
-4. Elke stap moet klein en begrijpelijk zijn
+4. Elke stap moet klein en begrijpelijk zijn - LEG ELKE BEREKENING VOLLEDIG UIT
 5. De voiceover moet natuurlijk klinken wanneer voorgelezen
 6. Gebruik LaTeX notatie voor wiskundige formules in het "math" veld
-7. Geef ALTIJD minimaal 3 stappen en maximaal 6 stappen
+7. Geef ALTIJD minimaal 4 stappen en maximaal 7 stappen
 8. Je EINDANTWOORD moet EXACT overeenkomen met: ${actualCorrectAnswer || 'de oplossing die je berekent'}
 
-BELANGRIJK: Antwoord ALLEEN met geldige JSON (geen Markdown, geen codeblokken).
+KRITIEK - UITGEBREIDE UITLEG:
+- Elke stap MOET een volledige uitleg hebben (minimaal 2-3 zinnen)
+- Leg uit WAAROM je elke stap doet, niet alleen WAT je doet
+- Toon de volledige berekening, niet alleen de formule
+- Bij afgeleiden: laat zien hoe je de regel toepast op ELKE term
+- Bij vergelijkingen: toon elke omvorming expliciet
 
-ELKE OEFENING MOET EEN VOLLEDIGE UITWERKING HEBBEN:
-- Stap 1: Identificeer wat er gevraagd wordt en welke methode je gaat gebruiken
-- Stap 2-4: Werk de berekening stap voor stap uit
-- Laatste stap: Geef het eindantwoord en controleer eventueel
+THEORIE SECTIE:
+Begin ALTIJD met een theoryReview die kort de relevante theorie/regels uitlegt die nodig zijn voor dit type opgave. Dit helpt de leerling begrijpen welke kennis nodig is.
 
 MEERDERE OPLOSSINGEN - ZEER BELANGRIJK:
 Wanneer een vergelijking meerdere oplossingen heeft, moet je ELKE oplossing apart tonen:
@@ -112,12 +116,13 @@ Wanneer een vergelijking meerdere oplossingen heeft, moet je ELKE oplossing apar
 
 RESPONSE FORMAT (JSON):
 {
+  "theoryReview": "Een korte uitleg van de theorie/regels die je nodig hebt voor dit type opgave (2-4 zinnen). Bijvoorbeeld: 'Voor het differentiëren gebruiken we de kettingregel. Deze regel stelt dat...'",
   "steps": [
     {
       "stepNumber": 1,
       "title": "Korte titel van deze stap",
-      "explanation": "Uitleg in gewone woorden wat we gaan doen",
-      "math": "LaTeX formule die hoort bij deze stap",
+      "explanation": "UITGEBREIDE uitleg (minimaal 2-3 zinnen) die uitlegt wat we doen en WAAROM. Gebruik concrete getallen uit de opgave.",
+      "math": "LaTeX formule die hoort bij deze stap, met volledige berekening",
       "voiceover": "Dit is de tekst die wordt voorgelezen. Schrijf getallen uit (bijv. 'twee x plus vijf' in plaats van '2x + 5')"
     }
   ],
@@ -160,10 +165,14 @@ Geef een complete uitwerking met:
             type: 'function',
             function: {
               name: 'return_solution',
-              description: 'Return a step-by-step math solution with final answer and a study tip.',
+              description: 'Return a step-by-step math solution with theory review, detailed explanation steps, final answer, and a study tip.',
               parameters: {
                 type: 'object',
                 properties: {
+                  theoryReview: { 
+                    type: 'string',
+                    description: 'A brief explanation of the relevant theory/rules needed for this type of problem (2-4 sentences)'
+                  },
                   steps: {
                     type: 'array',
                     items: {
@@ -171,7 +180,10 @@ Geef een complete uitwerking met:
                       properties: {
                         stepNumber: { type: 'number' },
                         title: { type: 'string' },
-                        explanation: { type: 'string' },
+                        explanation: { 
+                          type: 'string',
+                          description: 'Detailed explanation (2-3 sentences minimum) explaining WHAT we do and WHY'
+                        },
                         math: { type: 'string' },
                         voiceover: { type: 'string' },
                       },
@@ -182,14 +194,14 @@ Geef een complete uitwerking met:
                   finalAnswer: { type: 'string' },
                   tip: { type: 'string' },
                 },
-                required: ['steps', 'finalAnswer', 'tip'],
+                required: ['theoryReview', 'steps', 'finalAnswer', 'tip'],
                 additionalProperties: false,
               },
             },
           },
         ],
         tool_choice: { type: 'function', function: { name: 'return_solution' } },
-        max_completion_tokens: 900,
+        max_completion_tokens: 2000,
       }),
     });
 
@@ -291,77 +303,121 @@ Geef een complete uitwerking met:
 function createFallbackSolution(question: string, correctAnswer: string | undefined, subtopicName: string | undefined, statusCode: number) {
   const isQuadratic = question.toLowerCase().includes('x²') || question.includes('x^2');
   const isDerivative = question.toLowerCase().includes("f'") || question.toLowerCase().includes('derivative') || question.toLowerCase().includes('afgeleide');
+  const hasChainRule = question.includes('(') && (question.includes('^') || question.includes('²'));
   
   let steps: SolutionStep[];
+  let theoryReview: string;
   
   if (isDerivative) {
+    theoryReview = hasChainRule 
+      ? "Bij het differentiëren van samengestelde functies gebruiken we de kettingregel. De kettingregel stelt dat als je f(g(x)) wilt differentiëren, je eerst de buitenste functie differentieert en dan vermenigvuldigt met de afgeleide van de binnenste functie. Dit schrijven we als: [f(g(x))]' = f'(g(x)) · g'(x)."
+      : "Bij het differentiëren gebruiken we de machtsregel: als f(x) = xⁿ, dan is f'(x) = n·xⁿ⁻¹. Dit betekent dat je de exponent naar voren haalt als coëfficiënt en de exponent met 1 verlaagt. Voor constanten geldt dat de afgeleide altijd 0 is.";
+    
     steps = [
       {
         stepNumber: 1,
-        title: "Identificeer de functie",
-        explanation: "We bekijken welke functie we moeten afleiden.",
+        title: "Identificeer de functie en bepaal de aanpak",
+        explanation: "Eerst bekijken we de structuur van de functie die we moeten differentiëren. We identificeren alle termen en bepalen welke regels we nodig hebben. Let op samengestelde functies waarbij de kettingregel nodig is, en op producten of quotiënten die speciale regels vereisen.",
         math: question,
-        voiceover: "Laten we eerst naar de functie kijken die we moeten afleiden."
+        voiceover: "Laten we eerst goed naar de functie kijken. We analyseren de structuur om te bepalen welke differentiatieregels we nodig hebben."
       },
       {
         stepNumber: 2,
-        title: "Pas de machtsregel toe",
-        explanation: "Voor elke term xⁿ geldt: de afgeleide is n·xⁿ⁻¹",
-        math: "\\frac{d}{dx}(x^n) = n \\cdot x^{n-1}",
-        voiceover: "We gebruiken de machtsregel: vermenigvuldig met de exponent en verlaag de exponent met één."
+        title: hasChainRule ? "Pas de kettingregel toe" : "Pas de machtsregel toe",
+        explanation: hasChainRule 
+          ? "We herkennen een samengestelde functie, dus we gebruiken de kettingregel. Dit betekent dat we eerst de buitenste functie differentiëren, en dan vermenigvuldigen met de afgeleide van de binnenste functie. Vergeet niet om de coëfficiënten correct mee te nemen in je berekening."
+          : "Nu passen we de machtsregel toe op elke term. Voor xⁿ geldt: de afgeleide is n·xⁿ⁻¹. We halen de exponent naar voren als coëfficiënt en verlagen de exponent met 1. Als er al een coëfficiënt is, vermenigvuldigen we die met de nieuwe coëfficiënt.",
+        math: hasChainRule 
+          ? "\\frac{d}{dx}[f(g(x))] = f'(g(x)) \\cdot g'(x)"
+          : "\\frac{d}{dx}(x^n) = n \\cdot x^{n-1}",
+        voiceover: hasChainRule
+          ? "We passen de kettingregel toe. Eerst differentiëren we de buitenste functie, en dan vermenigvuldigen we met de afgeleide van wat erin staat."
+          : "We gebruiken de machtsregel: vermenigvuldig met de exponent en verlaag de exponent met één. Dit doen we voor elke term."
       },
       {
         stepNumber: 3,
-        title: "Eindantwoord",
-        explanation: "Dit is de afgeleide van de oorspronkelijke functie.",
-        math: correctAnswer ? `f'(x) = ${correctAnswer}` : "f'(x) = \\text{zie berekening}",
-        voiceover: correctAnswer ? `De afgeleide is ${correctAnswer}` : "De afgeleide volgt uit de berekening."
+        title: "Voer de berekeningen uit",
+        explanation: "Nu werken we de berekening stap voor stap uit. We passen de regel(s) toe op elke term en combineren de resultaten. Let goed op de tekens en coëfficiënten, want hier worden vaak fouten gemaakt.",
+        math: correctAnswer ? `f'(x) = ${correctAnswer}` : "f'(x) = \\text{werk stap voor stap uit}",
+        voiceover: "We werken nu de berekening volledig uit. We letten goed op alle coëfficiënten en tekens."
+      },
+      {
+        stepNumber: 4,
+        title: "Vereenvoudig en controleer",
+        explanation: "Tot slot vereenvoudigen we het resultaat zo veel mogelijk. Combineer gelijke termen, haal eventueel gemeenschappelijke factoren buiten haakjes, en schrijf het antwoord op de neatste manier. Je kunt controleren door te kijken of de graad van de afgeleide één lager is dan de oorspronkelijke functie.",
+        math: correctAnswer ? `f'(x) = ${correctAnswer}` : "f'(x) = \\text{eindantwoord}",
+        voiceover: correctAnswer ? `Na vereenvoudiging krijgen we de afgeleide: ${correctAnswer}` : "We vereenvoudigen tot het eindantwoord."
       }
     ];
   } else if (isQuadratic) {
+    theoryReview = "Een kwadratische vergelijking heeft de vorm ax² + bx + c = 0. Om deze op te lossen gebruiken we de abc-formule (ook wel de discriminant-formule): x = (-b ± √(b² - 4ac)) / 2a. De discriminant D = b² - 4ac bepaalt het aantal oplossingen: D > 0 geeft twee oplossingen, D = 0 geeft één oplossing, en D < 0 betekent geen reële oplossingen.";
+    
     steps = [
       {
         stepNumber: 1,
-        title: "Herken het type vergelijking",
-        explanation: "Dit is een kwadratische vergelijking van de vorm ax² + bx + c = 0.",
+        title: "Herken het type vergelijking en schrijf in standaardvorm",
+        explanation: "Dit is een kwadratische vergelijking. We schrijven deze eerst in de standaardvorm ax² + bx + c = 0, waarbij a, b en c de coëfficiënten zijn. Zorg dat alle termen aan één kant van het = teken staan en dat de vergelijking gelijk is aan nul.",
         math: question,
-        voiceover: "We hebben hier een kwadratische vergelijking."
+        voiceover: "We hebben hier een kwadratische vergelijking. Laten we deze in de standaardvorm schrijven zodat we a, b en c kunnen aflezen."
       },
       {
         stepNumber: 2,
-        title: "Kies de juiste methode",
-        explanation: "We kunnen factoriseren, de abc-formule gebruiken, of direct oplossen als de vorm eenvoudig is.",
-        math: "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}",
-        voiceover: "We kiezen de beste methode om deze vergelijking op te lossen."
+        title: "Bepaal de coëfficiënten a, b en c",
+        explanation: "Nu lezen we de waarden van a, b en c af uit de vergelijking. a is de coëfficiënt voor x², b is de coëfficiënt voor x, en c is de constante term. Let goed op de tekens: als er een minteken voor staat, is de waarde negatief.",
+        math: "ax^2 + bx + c = 0",
+        voiceover: "We identificeren de coëfficiënten: a is het getal voor x kwadraat, b is het getal voor x, en c is het losse getal."
       },
       {
         stepNumber: 3,
-        title: "Eindantwoord",
-        explanation: "De oplossing(en) van de vergelijking.",
+        title: "Bereken de discriminant",
+        explanation: "De discriminant D = b² - 4ac vertelt ons hoeveel oplossingen de vergelijking heeft en helpt ons bij de berekening. Als D positief is, zijn er twee verschillende oplossingen. Als D nul is, is er één oplossing. Als D negatief is, zijn er geen reële oplossingen.",
+        math: "D = b^2 - 4ac",
+        voiceover: "We berekenen de discriminant door b kwadraat min vier maal a maal c uit te rekenen. Dit getal vertelt ons hoeveel oplossingen er zijn."
+      },
+      {
+        stepNumber: 4,
+        title: "Pas de abc-formule toe",
+        explanation: "Nu vullen we alles in de abc-formule in: x = (-b ± √D) / 2a. Het ± teken betekent dat we twee berekeningen doen: één keer met plus en één keer met min. Dit geeft ons (als D > 0) twee oplossingen.",
+        math: "x = \\frac{-b \\pm \\sqrt{D}}{2a}",
+        voiceover: "We vullen alles in de abc-formule in. Het plus-min teken geeft ons twee mogelijke antwoorden."
+      },
+      {
+        stepNumber: 5,
+        title: "Schrijf de oplossingen op",
+        explanation: "De oplossing(en) van de vergelijking. Bij twee oplossingen schrijven we beide waarden op, gescheiden door 'of'. Controleer je antwoord door de waarden terug te substitueren in de oorspronkelijke vergelijking.",
         math: correctAnswer ? `x = ${correctAnswer}` : "x = \\text{zie berekening}",
-        voiceover: correctAnswer ? `De oplossing is x is gelijk aan ${correctAnswer}` : "De oplossing volgt uit de berekening."
+        voiceover: correctAnswer ? `De oplossingen zijn x is gelijk aan ${correctAnswer}` : "We noteren de oplossingen van de vergelijking."
       }
     ];
   } else {
+    theoryReview = "Bij het oplossen van vergelijkingen werken we naar de onbekende toe door inverse operaties uit te voeren. De basisregel is: wat je aan de ene kant van de vergelijking doet, moet je ook aan de andere kant doen. Zo houd je de vergelijking in balans terwijl je de onbekende isoleert.";
+    
     steps = [
       {
         stepNumber: 1,
         title: "Analyseer de opgave",
-        explanation: "We bekijken wat er gevraagd wordt en welke aanpak we nodig hebben.",
+        explanation: "We bekijken eerst goed wat er gevraagd wordt en welke operaties we moeten uitvoeren. We identificeren de onbekende en bepalen welke stappen nodig zijn om deze te isoleren. Dit helpt ons een plan te maken voor de oplossing.",
         math: question,
-        voiceover: "Laten we eerst goed naar de opgave kijken."
+        voiceover: "Laten we eerst goed naar de opgave kijken en bepalen wat we moeten doen om tot de oplossing te komen."
       },
       {
         stepNumber: 2,
-        title: "Werk systematisch",
-        explanation: "We passen de juiste wiskundige operaties toe om tot de oplossing te komen.",
-        math: "\\text{Pas inverse operaties toe}",
-        voiceover: "We werken stap voor stap naar de oplossing."
+        title: "Vereenvoudig beide kanten",
+        explanation: "Als er haakjes of gelijksoortige termen zijn, werken we deze eerst uit. We combineren gelijke termen aan elke kant van het = teken apart. Dit maakt de vergelijking overzichtelijker voor de volgende stappen.",
+        math: "\\text{Combineer gelijke termen}",
+        voiceover: "We vereenvoudigen de vergelijking door haakjes weg te werken en gelijke termen bij elkaar op te tellen."
       },
       {
         stepNumber: 3,
-        title: "Eindantwoord",
-        explanation: "Dit is de oplossing van de opgave.",
+        title: "Isoleer de onbekende",
+        explanation: "Nu verplaatsen we alle termen met de onbekende naar één kant en alle getallen naar de andere kant. We doen dit door de inverse operatie toe te passen aan beide kanten: optelling wordt aftrekking, en vermenigvuldiging wordt deling.",
+        math: "\\text{Pas inverse operaties toe}",
+        voiceover: "We brengen alle termen met de onbekende naar één kant door de tegengestelde bewerking uit te voeren."
+      },
+      {
+        stepNumber: 4,
+        title: "Bereken het antwoord",
+        explanation: "Dit is de oplossing van de opgave. We hebben de onbekende geïsoleerd en kunnen nu de waarde aflezen. Het is altijd goed om je antwoord te controleren door het terug te substitueren in de oorspronkelijke vergelijking.",
         math: correctAnswer || "\\text{Zie berekening}",
         voiceover: correctAnswer ? `Het antwoord is ${correctAnswer}` : "Het antwoord volgt uit de berekening."
       }
@@ -369,6 +425,7 @@ function createFallbackSolution(question: string, correctAnswer: string | undefi
   }
 
   return {
+    theoryReview,
     steps,
     finalAnswer: correctAnswer || "Zie de uitwerking hierboven",
     tip: "Controleer altijd je antwoord door het terug te substitueren in de oorspronkelijke vergelijking.",
