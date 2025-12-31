@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Calculator, X, Minimize2, Maximize2 } from 'lucide-react';
+import { create, all } from 'mathjs';
 
 interface MathCalculatorProps {
   isOpen: boolean;
@@ -29,6 +30,9 @@ export default function MathCalculator({ isOpen, onClose, isMinimized, onToggleM
   const [expression, setExpression] = useState('');
   const [showScientific, setShowScientific] = useState(false);
 
+  // Create a restricted math.js instance for safe expression evaluation
+  const mathInstance = useMemo(() => create(all, {}), []);
+
   const handleButton = useCallback((value: string) => {
     switch (value) {
       case 'C':
@@ -37,20 +41,21 @@ export default function MathCalculator({ isOpen, onClose, isMinimized, onToggleM
         break;
       case '=':
         try {
+          // Prepare expression for mathjs evaluation
           const evalExpr = expression
             .replace(/×/g, '*')
             .replace(/÷/g, '/')
-            .replace(/π/g, Math.PI.toString())
-            .replace(/e/g, Math.E.toString())
-            .replace(/√(\d+)/g, 'Math.sqrt($1)')
-            .replace(/(\d+)²/g, 'Math.pow($1,2)')
-            .replace(/sin\(([^)]+)\)/g, 'Math.sin($1*Math.PI/180)')
-            .replace(/cos\(([^)]+)\)/g, 'Math.cos($1*Math.PI/180)')
-            .replace(/tan\(([^)]+)\)/g, 'Math.tan($1*Math.PI/180)')
-            .replace(/ln\(([^)]+)\)/g, 'Math.log($1)')
-            .replace(/log\(([^)]+)\)/g, 'Math.log10($1)');
-          const result = Function('"use strict";return (' + evalExpr + ')')();
-          setDisplay(Number.isFinite(result) ? String(parseFloat(result.toFixed(10))) : 'Error');
+            .replace(/π/g, 'pi')
+            .replace(/√\(/g, 'sqrt(')
+            .replace(/²/g, '^2')
+            // Convert trig functions to use degrees
+            .replace(/sin\(([^)]+)\)/g, 'sin($1 deg)')
+            .replace(/cos\(([^)]+)\)/g, 'cos($1 deg)')
+            .replace(/tan\(([^)]+)\)/g, 'tan($1 deg)');
+          
+          // Use mathjs for safe evaluation
+          const result = mathInstance.evaluate(evalExpr);
+          setDisplay(Number.isFinite(result) ? String(parseFloat(Number(result).toFixed(10))) : 'Error');
         } catch {
           setDisplay('Error');
         }
