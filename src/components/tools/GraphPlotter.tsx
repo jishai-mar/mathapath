@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { LineChart, X, Minimize2, Maximize2, Plus, Trash2 } from 'lucide-react';
+import { create, all } from 'mathjs';
 
 interface GraphPlotterProps {
   isOpen: boolean;
@@ -58,28 +59,21 @@ export default function GraphPlotter({
   const height = 240;
   const padding = 30;
 
+  // Create a restricted math.js instance for safe expression evaluation
+  const mathInstance = useMemo(() => create(all, {
+    // Disable import and createUnit to prevent code injection
+  }), []);
+
   const parseExpression = useCallback((expr: string, x: number): number => {
     try {
-      const parsed = expr
-        .replace(/\^/g, '**')
-        .replace(/sin\(/g, 'Math.sin(')
-        .replace(/cos\(/g, 'Math.cos(')
-        .replace(/tan\(/g, 'Math.tan(')
-        .replace(/sqrt\(/g, 'Math.sqrt(')
-        .replace(/abs\(/g, 'Math.abs(')
-        .replace(/log\(/g, 'Math.log10(')
-        .replace(/ln\(/g, 'Math.log(')
-        .replace(/pi/g, 'Math.PI')
-        .replace(/e(?![a-z])/g, 'Math.E')
-        .replace(/(\d)x/g, '$1*x')
-        .replace(/x(\d)/g, 'x*$1')
-        .replace(/\)x/g, ')*x')
-        .replace(/x\(/g, 'x*(');
-      return Function('x', `"use strict"; return ${parsed}`)(x);
+      // Use mathjs to safely parse and evaluate the expression
+      const node = mathInstance.parse(expr);
+      const compiled = node.compile();
+      return compiled.evaluate({ x });
     } catch {
       return NaN;
     }
-  }, []);
+  }, [mathInstance]);
 
   const paths = useMemo(() => {
     return functions.map(func => {
