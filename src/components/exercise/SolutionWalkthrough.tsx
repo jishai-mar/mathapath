@@ -6,6 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import MathRenderer from '@/components/MathRenderer';
 import { MultipleSolutionsRenderer } from '@/components/math/MultipleSolutionsRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
+import { TheoryDiagram } from '@/components/exercise/TheoryDiagram';
 import { useTutorTTS } from '@/hooks/useTutorTTS';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -23,7 +24,11 @@ import {
   CheckCircle2,
   ChevronRight,
   BookmarkPlus,
-  BookmarkCheck
+  BookmarkCheck,
+  AlertTriangle,
+  TrendingUp,
+  GitBranch,
+  ArrowRight
 } from 'lucide-react';
 
 interface SolutionStep {
@@ -36,6 +41,8 @@ interface SolutionStep {
 
 interface SolutionData {
   theoryReview?: string;
+  commonMistakes?: string[];
+  diagramType?: string;
   steps: SolutionStep[];
   finalAnswer: string;
   tip: string;
@@ -310,7 +317,46 @@ export function SolutionWalkthrough({
                 </motion.div>
               )}
 
-              {/* Progress Bar */}
+              {/* Common Mistakes Section */}
+              {solution.commonMistakes && solution.commonMistakes.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="p-4 rounded-xl bg-destructive/10 border border-destructive/20"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-destructive/20 flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-4 h-4 text-destructive" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-destructive mb-2">Let op! Veelgemaakte fouten</p>
+                      <ul className="space-y-2">
+                        {solution.commonMistakes.map((mistake, index) => (
+                          <li key={index} className="flex items-start gap-2 text-sm text-foreground">
+                            <span className="text-destructive font-bold shrink-0">×</span>
+                            <span>{mistake}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Visual Diagram Section */}
+              {solution.diagramType && (
+                <motion.div 
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.18 }}
+                  className="p-4 rounded-xl bg-accent/30 border border-accent/50"
+                >
+                  <TheoryDiagram type={solution.diagramType} />
+                </motion.div>
+              )}
+
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

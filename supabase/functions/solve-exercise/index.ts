@@ -16,6 +16,9 @@ interface SolutionStep {
 
 interface SolutionResponse {
   theoryReview?: string;  // Brief theory explanation relevant to this problem
+  commonMistakes?: string[];  // List of common mistakes students make
+  diagramType?: string;  // Type of visual diagram to show (e.g., 'quadratic-graph', 'chain-rule', 'number-line')
+  diagramData?: Record<string, unknown>;  // Data for the diagram
   steps: SolutionStep[];
   finalAnswer: string;
   tip: string;
@@ -106,6 +109,18 @@ KRITIEK - UITGEBREIDE UITLEG:
 THEORIE SECTIE:
 Begin ALTIJD met een theoryReview die kort de relevante theorie/regels uitlegt die nodig zijn voor dit type opgave. Dit helpt de leerling begrijpen welke kennis nodig is.
 
+VEELGEMAAKTE FOUTEN:
+Voeg ALTIJD een commonMistakes array toe met 2-3 veelgemaakte fouten die leerlingen maken bij dit type opgave. Dit helpt hen valkuilen te vermijden.
+Voorbeelden: "Vergeten de kettingregel toe te passen", "Minteken verkeerd overnemen", "Discriminant verkeerd berekenen"
+
+VISUEEL DIAGRAM:
+Voeg een diagramType toe om aan te geven welk type diagram nuttig is:
+- "quadratic-graph" voor kwadratische vergelijkingen (parabool)
+- "chain-rule" voor kettingregel (geneste functies)
+- "number-line" voor ongelijkheden
+- "derivative-slope" voor afgeleiden (raaklijn)
+- "formula-breakdown" voor formules uitleggen
+
 MEERDERE OPLOSSINGEN - ZEER BELANGRIJK:
 Wanneer een vergelijking meerdere oplossingen heeft, moet je ELKE oplossing apart tonen:
 - Gebruik altijd de variabelenaam (bijv. "x =", "y =")
@@ -117,6 +132,12 @@ Wanneer een vergelijking meerdere oplossingen heeft, moet je ELKE oplossing apar
 RESPONSE FORMAT (JSON):
 {
   "theoryReview": "Een korte uitleg van de theorie/regels die je nodig hebt voor dit type opgave (2-4 zinnen). Bijvoorbeeld: 'Voor het differentiëren gebruiken we de kettingregel. Deze regel stelt dat...'",
+  "commonMistakes": [
+    "Eerste veelgemaakte fout die leerlingen maken",
+    "Tweede veelgemaakte fout",
+    "Derde veelgemaakte fout (optioneel)"
+  ],
+  "diagramType": "quadratic-graph | chain-rule | number-line | derivative-slope | formula-breakdown",
   "steps": [
     {
       "stepNumber": 1,
@@ -165,13 +186,23 @@ Geef een complete uitwerking met:
             type: 'function',
             function: {
               name: 'return_solution',
-              description: 'Return a step-by-step math solution with theory review, detailed explanation steps, final answer, and a study tip.',
+              description: 'Return a step-by-step math solution with theory review, common mistakes, diagram type, detailed explanation steps, final answer, and a study tip.',
               parameters: {
                 type: 'object',
                 properties: {
                   theoryReview: { 
                     type: 'string',
                     description: 'A brief explanation of the relevant theory/rules needed for this type of problem (2-4 sentences)'
+                  },
+                  commonMistakes: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'List of 2-3 common mistakes students make with this type of problem'
+                  },
+                  diagramType: {
+                    type: 'string',
+                    enum: ['quadratic-graph', 'chain-rule', 'number-line', 'derivative-slope', 'formula-breakdown'],
+                    description: 'Type of visual diagram to display for this problem'
                   },
                   steps: {
                     type: 'array',
@@ -194,7 +225,7 @@ Geef een complete uitwerking met:
                   finalAnswer: { type: 'string' },
                   tip: { type: 'string' },
                 },
-                required: ['theoryReview', 'steps', 'finalAnswer', 'tip'],
+                required: ['theoryReview', 'commonMistakes', 'diagramType', 'steps', 'finalAnswer', 'tip'],
                 additionalProperties: false,
               },
             },
@@ -307,11 +338,27 @@ function createFallbackSolution(question: string, correctAnswer: string | undefi
   
   let steps: SolutionStep[];
   let theoryReview: string;
+  let commonMistakes: string[];
+  let diagramType: string;
   
   if (isDerivative) {
     theoryReview = hasChainRule 
       ? "Bij het differentiëren van samengestelde functies gebruiken we de kettingregel. De kettingregel stelt dat als je f(g(x)) wilt differentiëren, je eerst de buitenste functie differentieert en dan vermenigvuldigt met de afgeleide van de binnenste functie. Dit schrijven we als: [f(g(x))]' = f'(g(x)) · g'(x)."
       : "Bij het differentiëren gebruiken we de machtsregel: als f(x) = xⁿ, dan is f'(x) = n·xⁿ⁻¹. Dit betekent dat je de exponent naar voren haalt als coëfficiënt en de exponent met 1 verlaagt. Voor constanten geldt dat de afgeleide altijd 0 is.";
+    
+    commonMistakes = hasChainRule 
+      ? [
+          "Vergeten de binnenste functie te differentiëren (de kettingregel niet volledig toepassen)",
+          "De volgorde van vermenigvuldiging omdraaien",
+          "Tekens verkeerd overnemen bij negatieve coëfficiënten"
+        ]
+      : [
+          "De exponent niet met 1 verlagen na differentiëren",
+          "Vergeten dat de afgeleide van een constante 0 is",
+          "Coëfficiënten niet correct vermenigvuldigen met de exponent"
+        ];
+    
+    diagramType = hasChainRule ? "chain-rule" : "derivative-slope";
     
     steps = [
       {
@@ -351,6 +398,14 @@ function createFallbackSolution(question: string, correctAnswer: string | undefi
     ];
   } else if (isQuadratic) {
     theoryReview = "Een kwadratische vergelijking heeft de vorm ax² + bx + c = 0. Om deze op te lossen gebruiken we de abc-formule (ook wel de discriminant-formule): x = (-b ± √(b² - 4ac)) / 2a. De discriminant D = b² - 4ac bepaalt het aantal oplossingen: D > 0 geeft twee oplossingen, D = 0 geeft één oplossing, en D < 0 betekent geen reële oplossingen.";
+    
+    commonMistakes = [
+      "De discriminant verkeerd berekenen (let op: b² - 4ac, niet b² + 4ac)",
+      "Vergeten dat -b betekent dat je het teken van b omdraait",
+      "Slechts één oplossing geven terwijl er twee zijn (vergeet de ±)"
+    ];
+    
+    diagramType = "quadratic-graph";
     
     steps = [
       {
@@ -392,6 +447,14 @@ function createFallbackSolution(question: string, correctAnswer: string | undefi
   } else {
     theoryReview = "Bij het oplossen van vergelijkingen werken we naar de onbekende toe door inverse operaties uit te voeren. De basisregel is: wat je aan de ene kant van de vergelijking doet, moet je ook aan de andere kant doen. Zo houd je de vergelijking in balans terwijl je de onbekende isoleert.";
     
+    commonMistakes = [
+      "Vergeten beide kanten van de vergelijking aan te passen",
+      "Tekens verkeerd overnemen bij het verplaatsen van termen",
+      "Delen door een negatief getal zonder het teken om te draaien"
+    ];
+    
+    diagramType = "formula-breakdown";
+    
     steps = [
       {
         stepNumber: 1,
@@ -426,6 +489,8 @@ function createFallbackSolution(question: string, correctAnswer: string | undefi
 
   return {
     theoryReview,
+    commonMistakes,
+    diagramType,
     steps,
     finalAnswer: correctAnswer || "Zie de uitwerking hierboven",
     tip: "Controleer altijd je antwoord door het terug te substitueren in de oorspronkelijke vergelijking.",
