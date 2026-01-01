@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { MathKeyboard } from '@/components/math/MathKeyboard';
 import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye, GraduationCap, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
@@ -645,14 +646,29 @@ export default function DiagnosticTest() {
                     </div>
                   )}
                   
-                  <Input
+                  {/* Math Keyboard */}
+                  <MathKeyboard 
+                    onInsert={(symbol) => setCurrentAnswer(prev => prev + symbol)} 
+                  />
+                  
+                  {/* Multi-line Answer Input */}
+                  <Textarea
                     value={currentAnswer}
                     onChange={(e) => setCurrentAnswer(e.target.value)}
                     placeholder={getInputPlaceholder(currentQuestion.question)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAnswerSubmit()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.ctrlKey) {
+                        e.preventDefault();
+                        handleAnswerSubmit();
+                      }
+                    }}
                     disabled={isSubmitting}
-                    className="text-lg"
+                    className="text-lg min-h-[120px] resize-y font-mono"
+                    rows={4}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Druk Ctrl+Enter om je antwoord in te dienen
+                  </p>
 
                   {/* Hint and Solution section */}
                   <div className="flex flex-wrap items-center gap-2">
