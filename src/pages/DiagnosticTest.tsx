@@ -134,6 +134,10 @@ export default function DiagnosticTest() {
   const [showTheoryRefresh, setShowTheoryRefresh] = useState(false);
   const [theoryContent, setTheoryContent] = useState<string | null>(null);
   const [isLoadingTheory, setIsLoadingTheory] = useState(false);
+  
+  // Track shown questions in session to avoid repeats, and weak subtopics
+  const [shownQuestionIds, setShownQuestionIds] = useState<Set<string>>(new Set());
+  const [weakSubtopics, setWeakSubtopics] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -258,6 +262,9 @@ export default function DiagnosticTest() {
 
     setIsSubmitting(true);
     const question = questions[currentIndex];
+    
+    // Track this question as shown in session
+    setShownQuestionIds(prev => new Set(prev).add(question.id));
 
     try {
       // Call edge function to check answer (secure, server-side validation)
@@ -296,7 +303,10 @@ export default function DiagnosticTest() {
           proceedToNextQuestion();
         }, 1500);
       } else {
-        // Incorrect - show tutor feedback
+        // Incorrect - record this subtopic as needing more work
+        setWeakSubtopics(prev => new Set(prev).add(question.subtopic_id));
+        
+        // Show tutor feedback
         setCurrentFeedback(data.feedback);
         setShowingFeedback(true);
       }
