@@ -9,12 +9,13 @@ interface MathKeyboardProps {
   className?: string;
 }
 
-type KeyCategory = 'basic' | 'algebra' | 'greek' | 'functions' | 'comparison';
+type KeyCategory = 'basic' | 'algebra' | 'greek' | 'functions' | 'comparison' | 'fractions' | 'arrows';
 
 interface MathKey {
   display: string;
   insert: string;
   label?: string;
+  wide?: boolean;
 }
 
 const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
@@ -28,11 +29,17 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: '=', insert: ' = ' },
       { display: '(', insert: '(' },
       { display: ')', insert: ')' },
+      { display: '[', insert: '[' },
+      { display: ']', insert: ']' },
+      { display: '{', insert: '{' },
+      { display: '}', insert: '}' },
       { display: ',', insert: ', ' },
       { display: '.', insert: '.' },
       { display: '±', insert: ' ± ' },
       { display: '∞', insert: '∞' },
       { display: 'π', insert: 'π' },
+      { display: '!', insert: '!', label: 'faculteit' },
+      { display: '%', insert: '%' },
     ],
   },
   algebra: {
@@ -43,13 +50,41 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: 'z', insert: 'z' },
       { display: 'a', insert: 'a' },
       { display: 'b', insert: 'b' },
+      { display: 'c', insert: 'c' },
       { display: 'n', insert: 'n' },
+      { display: 'm', insert: 'm' },
       { display: 'x²', insert: 'x²', label: 'kwadraat' },
       { display: 'x³', insert: 'x³', label: 'derdemacht' },
       { display: 'xⁿ', insert: '^', label: 'macht' },
-      { display: '√', insert: '√', label: 'wortel' },
-      { display: '∛', insert: '∛', label: 'derdemachtswortel' },
+      { display: '√', insert: '√(', label: 'wortel' },
+      { display: '∛', insert: '∛(', label: 'derdemachtswortel' },
+      { display: 'ⁿ√', insert: 'ⁿ√(', label: 'n-de machtswortel' },
       { display: '|x|', insert: '|', label: 'absolute waarde' },
+      { display: 'log₁₀', insert: 'log₁₀(', label: 'logaritme basis 10' },
+      { display: 'logₐ', insert: 'log_', label: 'logaritme basis a' },
+    ],
+  },
+  fractions: {
+    name: 'Breuken',
+    keys: [
+      { display: '/', insert: '/', label: 'deelstreep' },
+      { display: '½', insert: '½' },
+      { display: '⅓', insert: '⅓' },
+      { display: '⅔', insert: '⅔' },
+      { display: '¼', insert: '¼' },
+      { display: '¾', insert: '¾' },
+      { display: '⅕', insert: '⅕' },
+      { display: '⅖', insert: '⅖' },
+      { display: '⅗', insert: '⅗' },
+      { display: '⅘', insert: '⅘' },
+      { display: '⅙', insert: '⅙' },
+      { display: '⅚', insert: '⅚' },
+      { display: '⅛', insert: '⅛' },
+      { display: '⅜', insert: '⅜' },
+      { display: '⅝', insert: '⅝' },
+      { display: '⅞', insert: '⅞' },
+      { display: 'a/b', insert: '/b', label: 'breuk invoeren', wide: true },
+      { display: '(a+b)/c', insert: '()/c', label: 'breuk met teller', wide: true },
     ],
   },
   comparison: {
@@ -61,12 +96,18 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: '≥', insert: ' ≥ ' },
       { display: '≠', insert: ' ≠ ' },
       { display: '≈', insert: ' ≈ ' },
+      { display: '≡', insert: ' ≡ ', label: 'identiek aan' },
+      { display: '∝', insert: ' ∝ ', label: 'evenredig met' },
       { display: '∈', insert: ' ∈ ' },
       { display: '∉', insert: ' ∉ ' },
       { display: '⊂', insert: ' ⊂ ' },
+      { display: '⊃', insert: ' ⊃ ' },
+      { display: '⊆', insert: ' ⊆ ' },
+      { display: '⊇', insert: ' ⊇ ' },
       { display: '∪', insert: ' ∪ ' },
       { display: '∩', insert: ' ∩ ' },
       { display: '∅', insert: '∅' },
+      { display: '∴', insert: ' ∴ ', label: 'daarom' },
     ],
   },
   functions: {
@@ -75,15 +116,43 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: 'sin', insert: 'sin(' },
       { display: 'cos', insert: 'cos(' },
       { display: 'tan', insert: 'tan(' },
+      { display: 'sin⁻¹', insert: 'arcsin(', label: 'arcsinus' },
+      { display: 'cos⁻¹', insert: 'arccos(', label: 'arccosinus' },
+      { display: 'tan⁻¹', insert: 'arctan(', label: 'arctangens' },
       { display: 'log', insert: 'log(' },
       { display: 'ln', insert: 'ln(' },
       { display: 'e', insert: 'e' },
+      { display: 'eˣ', insert: 'e^', label: 'e tot de macht' },
       { display: 'f(x)', insert: 'f(x)' },
-      { display: "f'(x)", insert: "f'(x)" },
-      { display: 'lim', insert: 'lim ' },
-      { display: '∫', insert: '∫' },
-      { display: 'Σ', insert: 'Σ' },
-      { display: '∂', insert: '∂' },
+      { display: 'g(x)', insert: 'g(x)' },
+      { display: "f'(x)", insert: "f'(x)", label: 'afgeleide' },
+      { display: "f''(x)", insert: "f''(x)", label: 'tweede afgeleide' },
+      { display: 'lim', insert: 'lim ', label: 'limiet' },
+      { display: '∫', insert: '∫', label: 'integraal' },
+      { display: '∫ᵃᵇ', insert: '∫ᵃᵇ', label: 'bepaalde integraal' },
+      { display: 'Σ', insert: 'Σ', label: 'som' },
+      { display: '∏', insert: '∏', label: 'product' },
+      { display: '∂', insert: '∂', label: 'partiële afgeleide' },
+      { display: 'd/dx', insert: 'd/dx ', label: 'differentiatie' },
+      { display: '∇', insert: '∇', label: 'nabla/gradiënt' },
+    ],
+  },
+  arrows: {
+    name: 'Pijlen',
+    keys: [
+      { display: '→', insert: ' → ', label: 'naar' },
+      { display: '←', insert: ' ← ' },
+      { display: '↔', insert: ' ↔ ', label: 'als en slechts als' },
+      { display: '⇒', insert: ' ⇒ ', label: 'impliceert' },
+      { display: '⇐', insert: ' ⇐ ' },
+      { display: '⇔', insert: ' ⇔ ', label: 'equivalent' },
+      { display: '↑', insert: '↑' },
+      { display: '↓', insert: '↓' },
+      { display: '∧', insert: ' ∧ ', label: 'en (logisch)' },
+      { display: '∨', insert: ' ∨ ', label: 'of (logisch)' },
+      { display: '¬', insert: '¬', label: 'niet (logisch)' },
+      { display: '∀', insert: '∀', label: 'voor alle' },
+      { display: '∃', insert: '∃', label: 'er bestaat' },
     ],
   },
   greek: {
@@ -93,13 +162,25 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: 'β', insert: 'β', label: 'beta' },
       { display: 'γ', insert: 'γ', label: 'gamma' },
       { display: 'δ', insert: 'δ', label: 'delta' },
+      { display: 'ε', insert: 'ε', label: 'epsilon' },
+      { display: 'ζ', insert: 'ζ', label: 'zeta' },
+      { display: 'η', insert: 'η', label: 'eta' },
       { display: 'θ', insert: 'θ', label: 'theta' },
       { display: 'λ', insert: 'λ', label: 'lambda' },
       { display: 'μ', insert: 'μ', label: 'mu' },
+      { display: 'ξ', insert: 'ξ', label: 'xi' },
+      { display: 'ρ', insert: 'ρ', label: 'rho' },
       { display: 'σ', insert: 'σ', label: 'sigma' },
+      { display: 'τ', insert: 'τ', label: 'tau' },
       { display: 'φ', insert: 'φ', label: 'phi' },
+      { display: 'ψ', insert: 'ψ', label: 'psi' },
       { display: 'ω', insert: 'ω', label: 'omega' },
       { display: 'Δ', insert: 'Δ', label: 'Delta' },
+      { display: 'Γ', insert: 'Γ', label: 'Gamma' },
+      { display: 'Θ', insert: 'Θ', label: 'Theta' },
+      { display: 'Λ', insert: 'Λ', label: 'Lambda' },
+      { display: 'Σ', insert: 'Σ', label: 'Sigma' },
+      { display: 'Φ', insert: 'Φ', label: 'Phi' },
       { display: 'Ω', insert: 'Ω', label: 'Omega' },
     ],
   },
@@ -117,6 +198,12 @@ const superscripts: MathKey[] = [
   { display: '⁷', insert: '⁷' },
   { display: '⁸', insert: '⁸' },
   { display: '⁹', insert: '⁹' },
+  { display: '⁺', insert: '⁺' },
+  { display: '⁻', insert: '⁻' },
+  { display: '⁽', insert: '⁽' },
+  { display: '⁾', insert: '⁾' },
+  { display: 'ⁿ', insert: 'ⁿ' },
+  { display: 'ˣ', insert: 'ˣ' },
 ];
 
 const subscripts: MathKey[] = [
@@ -130,18 +217,12 @@ const subscripts: MathKey[] = [
   { display: '₇', insert: '₇' },
   { display: '₈', insert: '₈' },
   { display: '₉', insert: '₉' },
-];
-
-const fractions: MathKey[] = [
-  { display: '½', insert: '½' },
-  { display: '⅓', insert: '⅓' },
-  { display: '¼', insert: '¼' },
-  { display: '⅕', insert: '⅕' },
-  { display: '⅔', insert: '⅔' },
-  { display: '¾', insert: '¾' },
-  { display: '⅖', insert: '⅖' },
-  { display: '⅗', insert: '⅗' },
-  { display: '/', insert: '/' },
+  { display: '₊', insert: '₊' },
+  { display: '₋', insert: '₋' },
+  { display: '₍', insert: '₍' },
+  { display: '₎', insert: '₎' },
+  { display: 'ₓ', insert: 'ₓ' },
+  { display: 'ₙ', insert: 'ₙ' },
 ];
 
 export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
@@ -273,24 +354,6 @@ export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
                     </div>
                   </div>
 
-                  {/* Fractions */}
-                  <div>
-                    <p className="text-xs text-muted-foreground mb-1">Breuken</p>
-                    <div className="flex flex-wrap gap-1">
-                      {fractions.map((key, index) => (
-                        <Button
-                          key={index}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleKeyClick(key)}
-                          className="h-8 w-8 text-base font-medium"
-                        >
-                          {key.display}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
