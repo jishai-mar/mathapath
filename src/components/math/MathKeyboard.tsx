@@ -354,6 +354,48 @@ export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
                     </div>
                   </div>
 
+                  {/* Common separators */}
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1">Leestekens</p>
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onInsert(',')}
+                        className="h-8 px-4 text-base font-medium"
+                      >
+                        ,
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onInsert('.')}
+                        className="h-8 px-4 text-base font-medium"
+                      >
+                        .
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onInsert(';')}
+                        className="h-8 px-4 text-base font-medium"
+                      >
+                        ;
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onInsert(':')}
+                        className="h-8 px-4 text-base font-medium"
+                      >
+                        :
+                      </Button>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
