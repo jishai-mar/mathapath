@@ -143,10 +143,22 @@ RESPONSE FORMAT (JSON):
       "stepNumber": 1,
       "title": "Korte titel van deze stap",
       "explanation": "UITGEBREIDE uitleg (minimaal 2-3 zinnen) die uitlegt wat we doen en WAAROM. Gebruik concrete getallen uit de opgave.",
-      "math": "LaTeX formule die hoort bij deze stap, met volledige berekening",
+      "math": "g'(x) = \\\\frac{1}{2}(4x^2 + 1)^{-\\\\frac{1}{2}} \\\\cdot 8x",
       "voiceover": "Dit is de tekst die wordt voorgelezen. Schrijf getallen uit (bijv. 'twee x plus vijf' in plaats van '2x + 5')"
     }
   ],
+  
+LATEX FORMULES - ZEER BELANGRIJK:
+In het "math" veld gebruik je CORRECTE LaTeX syntax met dubbele backslashes voor JSON escaping:
+- Breuken: "\\\\frac{teller}{noemer}" geeft een echte breuk
+- Vermenigvuldiging: "\\\\cdot" voor een puntje, "\\\\times" voor een kruisje  
+- Wortels: "\\\\sqrt{x}" voor vierkantswortels
+- Machten: "x^{2}" of "x^{-\\\\frac{1}{2}}" voor negatieve of breuk exponenten
+- Gelijk aan: "=" werkt gewoon
+- Grieks: "\\\\alpha", "\\\\beta", etc.
+
+VOORBEELD goede math formule voor kettingregel:
+"math": "g'(x) = \\\\frac{1}{2}(4x^2 + 1)^{-\\\\frac{1}{2}} \\\\cdot 8x = \\\\frac{8x}{2\\\\sqrt{4x^2 + 1}} = \\\\frac{4x}{\\\\sqrt{4x^2 + 1}}"
   "finalAnswer": "${actualCorrectAnswer || 'Het uiteindelijke antwoord'}",
   "tip": "Een handige tip die de leerling kan onthouden voor soortgelijke opgaven"
 }`;
