@@ -667,9 +667,24 @@ export default function DiagnosticTest() {
                     className="text-lg min-h-[120px] resize-y font-mono"
                     rows={4}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Druk Ctrl+Enter om je antwoord in te dienen
-                  </p>
+                  <Button
+                    onClick={handleAnswerSubmit}
+                    disabled={isSubmitting || !currentAnswer.trim()}
+                    className="w-full gap-2"
+                    size="lg"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Controleren...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        Controleer antwoord
+                      </>
+                    )}
+                  </Button>
 
                   {/* Handwriting Canvas */}
                   <HandwritingCanvas />
