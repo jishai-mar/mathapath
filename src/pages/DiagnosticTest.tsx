@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { MathKeyboard } from '@/components/math/MathKeyboard';
+import { HandwritingCanvas } from '@/components/math/HandwritingCanvas';
 import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye, GraduationCap, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
@@ -669,6 +670,9 @@ export default function DiagnosticTest() {
                   <p className="text-xs text-muted-foreground">
                     Druk Ctrl+Enter om je antwoord in te dienen
                   </p>
+
+                  {/* Handwriting Canvas */}
+                  <HandwritingCanvas />
 
                   {/* Hint and Solution section */}
                   <div className="flex flex-wrap items-center gap-2">
