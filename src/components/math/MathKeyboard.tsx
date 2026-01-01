@@ -198,12 +198,18 @@ const superscripts: MathKey[] = [
   { display: '⁷', insert: '⁷' },
   { display: '⁸', insert: '⁸' },
   { display: '⁹', insert: '⁹' },
-  { display: '⁺', insert: '⁺' },
-  { display: '⁻', insert: '⁻' },
-  { display: '⁽', insert: '⁽' },
-  { display: '⁾', insert: '⁾' },
+  { display: '⁺', insert: '⁺', label: 'plus' },
+  { display: '⁻', insert: '⁻', label: 'min (negatief)' },
+  { display: '⁼', insert: '⁼', label: 'gelijk aan' },
+  { display: '⁽', insert: '⁽', label: 'haakje openen' },
+  { display: '⁾', insert: '⁾', label: 'haakje sluiten' },
+  { display: '⁄', insert: '⁄', label: 'breukstreep' },
+  { display: '·', insert: '·', label: 'decimaalpunt' },
   { display: 'ⁿ', insert: 'ⁿ' },
   { display: 'ˣ', insert: 'ˣ' },
+  { display: 'ʸ', insert: 'ʸ' },
+  { display: 'ᵃ', insert: 'ᵃ' },
+  { display: 'ᵇ', insert: 'ᵇ' },
 ];
 
 const subscripts: MathKey[] = [
@@ -217,12 +223,16 @@ const subscripts: MathKey[] = [
   { display: '₇', insert: '₇' },
   { display: '₈', insert: '₈' },
   { display: '₉', insert: '₉' },
-  { display: '₊', insert: '₊' },
-  { display: '₋', insert: '₋' },
-  { display: '₍', insert: '₍' },
-  { display: '₎', insert: '₎' },
+  { display: '₊', insert: '₊', label: 'plus' },
+  { display: '₋', insert: '₋', label: 'min' },
+  { display: '₌', insert: '₌', label: 'gelijk aan' },
+  { display: '₍', insert: '₍', label: 'haakje openen' },
+  { display: '₎', insert: '₎', label: 'haakje sluiten' },
   { display: 'ₓ', insert: 'ₓ' },
   { display: 'ₙ', insert: 'ₙ' },
+  { display: 'ₐ', insert: 'ₐ' },
+  { display: 'ₑ', insert: 'ₑ' },
+  { display: 'ₘ', insert: 'ₘ' },
 ];
 
 export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
