@@ -395,6 +395,27 @@ export function SolutionWalkthrough({
                 </div>
                 
                 <div className="flex items-center gap-2">
+                  {/* Stop Speaking Button - prominent when speaking */}
+                  <AnimatePresence>
+                    {isSpeaking && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8 }}
+                      >
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={stopSpeaking}
+                          className="gap-2"
+                        >
+                          <VolumeX className="w-4 h-4" />
+                          Stop praten
+                        </Button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
                   <Button
                     variant="outline"
                     size="icon"
