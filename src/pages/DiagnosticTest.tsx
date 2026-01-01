@@ -4,10 +4,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye, GraduationCap, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
@@ -128,6 +129,9 @@ export default function DiagnosticTest() {
   const [showSolutionWalkthrough, setShowSolutionWalkthrough] = useState(false);
   const [currentCorrectAnswer, setCurrentCorrectAnswer] = useState<string | undefined>();
   const [showQuickAnswer, setShowQuickAnswer] = useState(false);
+  const [showTheoryRefresh, setShowTheoryRefresh] = useState(false);
+  const [theoryContent, setTheoryContent] = useState<string | null>(null);
+  const [isLoadingTheory, setIsLoadingTheory] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -371,6 +375,47 @@ export default function DiagnosticTest() {
 
   const goToPractice = () => {
     navigate(`/practice/${topicId}`);
+  };
+
+  const loadTheoryRefresh = async () => {
+    if (!questions[currentIndex]) return;
+    
+    setIsLoadingTheory(true);
+    setShowTheoryRefresh(true);
+    
+    try {
+      // Use the solve-exercise function to get theory for this question type
+      const { data, error } = await supabase.functions.invoke('solve-exercise', {
+        body: {
+          question: questions[currentIndex].question,
+          subtopicName: topicName,
+          correctAnswer: questions[currentIndex].correct_answer,
+        },
+      });
+
+      if (error) throw error;
+      
+      // Combine theory review and common mistakes into a comprehensive theory section
+      let theoryText = '';
+      
+      if (data?.theoryReview) {
+        theoryText = data.theoryReview;
+      }
+      
+      if (data?.commonMistakes && data.commonMistakes.length > 0) {
+        theoryText += '\n\n**Let op deze veelgemaakte fouten:**\n';
+        data.commonMistakes.forEach((mistake: string, index: number) => {
+          theoryText += `${index + 1}. ${mistake}\n`;
+        });
+      }
+      
+      setTheoryContent(theoryText || 'Theorie wordt geladen...');
+    } catch (error) {
+      console.error('Error loading theory:', error);
+      setTheoryContent('Kon theorie niet laden. Probeer het opnieuw.');
+    } finally {
+      setIsLoadingTheory(false);
+    }
   };
 
   if (authLoading || isLoading) {
@@ -655,6 +700,17 @@ export default function DiagnosticTest() {
                       <BookOpen className="w-4 h-4" />
                       Toon uitwerking
                     </Button>
+                    
+                    {/* Theory Refresh Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={loadTheoryRefresh}
+                      className="text-muted-foreground gap-2 hover:text-primary hover:border-primary/50 transition-colors"
+                    >
+                      <GraduationCap className="w-4 h-4" />
+                      Theorie opfrissen
+                    </Button>
                   </div>
 
                   {/* Quick Answer Display */}
@@ -713,14 +769,55 @@ export default function DiagnosticTest() {
           </Card>
 
           {/* Solution Walkthrough Modal */}
-        <SolutionWalkthrough
-          isOpen={showSolutionWalkthrough}
-          onClose={() => setShowSolutionWalkthrough(false)}
-          question={currentQuestion.question}
-          subtopicName={topicName}
-          correctAnswer={currentCorrectAnswer}
-          diagnosticQuestionId={currentQuestion.id}
-        />
+          <SolutionWalkthrough
+            isOpen={showSolutionWalkthrough}
+            onClose={() => setShowSolutionWalkthrough(false)}
+            question={currentQuestion.question}
+            subtopicName={topicName}
+            correctAnswer={currentCorrectAnswer}
+            diagnosticQuestionId={currentQuestion.id}
+          />
+
+          {/* Theory Refresh Modal */}
+          <Dialog open={showTheoryRefresh} onOpenChange={setShowTheoryRefresh}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <GraduationCap className="w-5 h-5 text-primary" />
+                  Theorie opfrissen
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {isLoadingTheory ? (
+                  <div className="flex flex-col items-center justify-center py-8 gap-3">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    <p className="text-sm text-muted-foreground">Theorie wordt geladen...</p>
+                  </div>
+                ) : theoryContent ? (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
+                      <div className="flex items-start gap-3">
+                        <Lightbulb className="w-5 h-5 text-primary mt-0.5 shrink-0" />
+                        <div className="text-sm leading-relaxed">
+                          <MathRenderer latex={theoryContent} />
+                        </div>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={() => setShowTheoryRefresh(false)} 
+                      className="w-full"
+                    >
+                      Begrepen, terug naar de vraag
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Geen theorie beschikbaar voor deze vraag.
+                  </p>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
     );
