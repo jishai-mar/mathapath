@@ -529,6 +529,18 @@ export default function DiagnosticTest() {
   // Test phase
   if (phase === 'test' && questions.length > 0) {
     const currentQuestion = questions[currentIndex];
+    
+    // Guard against undefined currentQuestion (can happen if currentIndex is out of bounds)
+    if (!currentQuestion) {
+      return (
+        <div className="min-h-screen bg-background p-4 sm:p-6">
+          <div className="max-w-2xl mx-auto text-center">
+            <p className="text-muted-foreground">Loading question...</p>
+          </div>
+        </div>
+      );
+    }
+    
     const progress = ((currentIndex + 1) / questions.length) * 100;
 
     return (
