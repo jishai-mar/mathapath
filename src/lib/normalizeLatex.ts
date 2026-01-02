@@ -58,7 +58,7 @@ const textToLatexMap: [RegExp, string][] = [
 
 /**
  * Fixes corrupted LaTeX commands where backslash was stripped
- * Examples: "rac{1}{2}" → "\\frac{1}{2}", "qrt{x}" → "\\sqrt{x}"
+ * Examples: "rac{1}{2}" → "\\frac{1}{2}", "qrt{x}" → "\\sqrt{x}", "f32" → "\\frac{3}{2}"
  */
 export function fixCorruptedLatexCommands(input: string): string {
   if (!input || typeof input !== 'string') {
@@ -66,6 +66,10 @@ export function fixCorruptedLatexCommands(input: string): string {
   }
 
   let result = input;
+
+  // Fix ultra-corrupted fractions like "f32" → "\frac{3}{2}" or "\f21" → "\frac{1}{2}"
+  // Pattern: f or \f followed by two single digits (no braces)
+  result = result.replace(/\\?f(\d)(\d)(?![0-9{])/g, '\\frac{$1}{$2}');
 
   // Fix corrupted LaTeX commands (backslash was stripped)
   // These patterns match corrupted commands that should have a backslash
