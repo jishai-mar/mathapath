@@ -200,27 +200,39 @@ export default function DiagnosticTest() {
         });
 
         if (existingQuestions?.questions && existingQuestions.questions.length > 0) {
-          setTest(existingQuestions.test);
-          setQuestions(existingQuestions.questions);
-          setCurrentIndex(existingTest.questions_answered || 0);
+          const totalQuestions = existingQuestions.questions.length;
+          const answeredCount = existingTest.questions_answered || 0;
           
-          // Load existing responses to pre-fill answers
-          const { data: existingResponses } = await supabase
-            .from('diagnostic_responses')
-            .select('diagnostic_question_id, user_answer')
-            .eq('user_id', user!.id);
-          
-          if (existingResponses) {
-            const answersMap = new Map<string, string>();
-            existingResponses.forEach(r => {
-              if (r.user_answer) {
-                answersMap.set(r.diagnostic_question_id, r.user_answer);
-              }
-            });
-            setAnswers(answersMap);
+          // If all questions answered, trigger analysis instead of showing test
+          if (answeredCount >= totalQuestions) {
+            setTest(existingQuestions.test);
+            setQuestions(existingQuestions.questions);
+            // Trigger analysis
+            setPhase('analyzing');
+            analyzeResultsAfterResume(existingQuestions.test.id, existingQuestions.questions);
+          } else {
+            setTest(existingQuestions.test);
+            setQuestions(existingQuestions.questions);
+            setCurrentIndex(answeredCount);
+            
+            // Load existing responses to pre-fill answers
+            const { data: existingResponses } = await supabase
+              .from('diagnostic_responses')
+              .select('diagnostic_question_id, user_answer')
+              .eq('user_id', user!.id);
+            
+            if (existingResponses) {
+              const answersMap = new Map<string, string>();
+              existingResponses.forEach(r => {
+                if (r.user_answer) {
+                  answersMap.set(r.diagnostic_question_id, r.user_answer);
+                }
+              });
+              setAnswers(answersMap);
+            }
+            
+            setPhase('test');
           }
-          
-          setPhase('test');
         }
       }
     } catch (error) {
@@ -362,6 +374,36 @@ export default function DiagnosticTest() {
       setPhase('test');
     } finally {
       setIsAnalyzing(false);
+    }
+  };
+
+  // Helper for analyzing when resuming a completed test
+  const analyzeResultsAfterResume = async (testId: string, resumedQuestions: DiagnosticQuestion[]) => {
+    setIsAnalyzing(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('analyze-diagnostic', {
+        body: {
+          diagnosticTestId: testId,
+          userId: user!.id,
+          topicId,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.profile) {
+        setProfile(data.profile);
+        setPhase('results');
+      }
+    } catch (error) {
+      console.error('Error analyzing results:', error);
+      toast.error('Failed to analyze your results. Please try again.');
+      // Fall back to intro phase since we can't resume test
+      setPhase('intro');
+    } finally {
+      setIsAnalyzing(false);
+      setIsLoading(false);
     }
   };
 
