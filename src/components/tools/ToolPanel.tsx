@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Calculator, LineChart, Ruler, ChevronRight } from 'lucide-react';
 import MathCalculator from './MathCalculator';
-import GraphPlotter from './GraphPlotter';
+import AdvancedGraphCalculator from './AdvancedGraphCalculator';
 import GeometryTools from './GeometryTools';
 
 export interface ToolSuggestion {
@@ -199,7 +199,7 @@ export default function ToolPanel({ subtopicName, suggestion, onToolUsed }: Tool
           isMinimized={minimizedTools.calculator}
           onToggleMinimize={() => setMinimizedTools(m => ({ ...m, calculator: !m.calculator }))}
         />
-        <GraphPlotter
+        <AdvancedGraphCalculator
           isOpen={showGraph}
           onClose={() => setShowGraph(false)}
           isMinimized={minimizedTools.graph}
