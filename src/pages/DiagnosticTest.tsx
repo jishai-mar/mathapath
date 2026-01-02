@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
+import ToolPanel from '@/components/tools/ToolPanel';
 
 interface DiagnosticQuestion {
   id: string;
@@ -698,6 +699,9 @@ export default function DiagnosticTest() {
 
                   {/* Handwriting Canvas */}
                   <HandwritingCanvas />
+
+                  {/* Math Tools Panel */}
+                  <ToolPanel subtopicName={topicName} />
 
                   {/* Hint and Solution section */}
                   <div className="flex flex-wrap items-center gap-2">
