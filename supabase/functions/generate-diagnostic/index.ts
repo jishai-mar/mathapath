@@ -301,11 +301,12 @@ STRICT REQUIREMENTS:
       
       // Fix common LaTeX escaping issues in JSON
       // The AI often uses \( and \) for inline math which breaks JSON
-      // Replace problematic escape sequences
+      // Only replace the problematic parentheses escapes, NOT double backslashes
+      // Double backslashes (\\) are valid JSON escapes for single backslash
       jsonStr = jsonStr
-        .replace(/\\+\(/g, "(")  // \( or \\( -> (
-        .replace(/\\+\)/g, ")")  // \) or \\) -> )
-        .replace(/\\\\/g, "\\"); // \\\\ -> \\ (normalize double escapes)
+        .replace(/\\\(/g, "(")   // \( -> (
+        .replace(/\\\)/g, ")");  // \) -> )
+      // DO NOT replace \\\\ with \\ - this corrupts LaTeX commands like \frac -> rac
       
       parsedQuestions = JSON.parse(jsonStr);
     } catch (parseError) {

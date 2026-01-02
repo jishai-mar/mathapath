@@ -298,10 +298,13 @@ STRICT REQUIREMENTS:
       }
       
       let jsonStr = jsonMatch[0];
+      // Fix common LaTeX escaping issues in JSON
+      // Only replace the problematic parentheses escapes, NOT double backslashes
+      // Double backslashes (\\) are valid JSON escapes for single backslash
       jsonStr = jsonStr
-        .replace(/\\+\(/g, "(")
-        .replace(/\\+\)/g, ")")
-        .replace(/\\\\/g, "\\");
+        .replace(/\\\(/g, "(")   // \( -> (
+        .replace(/\\\)/g, ")");  // \) -> )
+      // DO NOT replace \\\\ with \\ - this corrupts LaTeX commands like \frac -> rac
       
       parsedQuestions = JSON.parse(jsonStr);
     } catch (parseError) {
