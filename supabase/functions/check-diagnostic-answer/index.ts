@@ -242,6 +242,17 @@ serve(async (req) => {
       return true;
     };
 
+    // Extract just the value from "x=5" or "y = 3" format
+    const extractValueFromEquation = (expr: string): string => {
+      const normalized = normalizeMathAnswer(expr);
+      // Match patterns like "x=5", "y=-3", "a=1/2"
+      const eqMatch = normalized.match(/^[a-z]\s*=\s*(.+)$/);
+      if (eqMatch) {
+        return eqMatch[1];
+      }
+      return normalized;
+    };
+
     // Check if two expressions are mathematically equivalent
     const areExpressionsEquivalent = (expr1: string, expr2: string): boolean => {
       const norm1 = normalizeMathAnswer(expr1);
@@ -249,6 +260,16 @@ serve(async (req) => {
       
       // Direct string match after normalization
       if (norm1 === norm2) return true;
+      
+      // Extract values from equations (x=5 -> 5)
+      const val1 = extractValueFromEquation(expr1);
+      const val2 = extractValueFromEquation(expr2);
+      
+      // Compare extracted values
+      if (val1 === val2) return true;
+      
+      // Also try comparing extracted vs original (handles "x=5" vs "5")
+      if (val1 === norm2 || val2 === norm1) return true;
       
       // Check for multi-solution answers (quadratic equations, etc.)
       // Patterns: "x=2 or x=-3", "x=2, x=-3", "2 or -3", "2 en -3"
@@ -262,8 +283,8 @@ serve(async (req) => {
       }
       
       // Try numeric comparison (handles "2.0" == "2", fractions, etc.)
-      const num1 = parseFloat(norm1);
-      const num2 = parseFloat(norm2);
+      const num1 = parseFloat(val1);
+      const num2 = parseFloat(val2);
       if (!isNaN(num1) && !isNaN(num2) && Math.abs(num1 - num2) < 0.0001) return true;
       
       // Handle fraction equivalence: "1/2" == "0.5"
@@ -274,8 +295,8 @@ serve(async (req) => {
         }
         return null;
       };
-      const frac1 = evalFraction(norm1);
-      const frac2 = evalFraction(norm2);
+      const frac1 = evalFraction(val1);
+      const frac2 = evalFraction(val2);
       if (frac1 !== null && !isNaN(num2) && Math.abs(frac1 - num2) < 0.0001) return true;
       if (frac2 !== null && !isNaN(num1) && Math.abs(frac2 - num1) < 0.0001) return true;
       if (frac1 !== null && frac2 !== null && Math.abs(frac1 - frac2) < 0.0001) return true;
