@@ -10,6 +10,7 @@ import MathRenderer from '@/components/MathRenderer';
 import { ElevenLabsAgent } from '@/components/tutor/ElevenLabsAgent';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import { TalkToTutorButton } from '@/components/tutor/TalkToTutorButton';
+import ToolPanel from '@/components/tools/ToolPanel';
 import { 
   Send, 
   Volume2, 
@@ -1002,6 +1003,12 @@ export function GuidedTutoringSession({
           correctAnswer={lastCorrectAnswer}
         />
       )}
+
+      {/* Graph Calculator - Always available */}
+      <ToolPanel 
+        subtopicName={subtopicName} 
+        suggestion={{ graph: true, calculator: true }}
+      />
     </div>
   );
 }

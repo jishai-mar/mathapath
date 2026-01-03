@@ -18,6 +18,7 @@ import MathRenderer from '@/components/MathRenderer';
 import { Exercise, ExerciseDetails, PracticeMode } from './types';
 import { HintStepper } from './HintStepper';
 import { FeedbackBanner } from './FeedbackBanner';
+import ToolPanel from '@/components/tools/ToolPanel';
 
 interface PracticeQuestionCardProps {
   exercise: Exercise | null;
@@ -220,6 +221,12 @@ export function PracticeQuestionCard({
           />
         )}
       </CardContent>
+      
+      {/* Graph Calculator */}
+      <ToolPanel 
+        subtopicName={exercise?.subtopicName || ''} 
+        suggestion={{ graph: true, calculator: true }}
+      />
     </Card>
   );
 }
