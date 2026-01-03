@@ -9,6 +9,7 @@ interface MathCalculatorProps {
   onClose: () => void;
   isMinimized?: boolean;
   onToggleMinimize?: () => void;
+  onInsertResult?: (result: string) => void;
 }
 
 const buttons = [
@@ -25,10 +26,11 @@ const scientificButtons = [
   ['log', 'e', '|x|', '%'],
 ];
 
-export default function MathCalculator({ isOpen, onClose, isMinimized, onToggleMinimize }: MathCalculatorProps) {
+export default function MathCalculator({ isOpen, onClose, isMinimized, onToggleMinimize, onInsertResult }: MathCalculatorProps) {
   const [display, setDisplay] = useState('0');
   const [expression, setExpression] = useState('');
   const [showScientific, setShowScientific] = useState(false);
+  const [lastResult, setLastResult] = useState<string | null>(null);
 
   // Create a restricted math.js instance for safe expression evaluation
   const mathInstance = useMemo(() => create(all, {}), []);
@@ -55,7 +57,11 @@ export default function MathCalculator({ isOpen, onClose, isMinimized, onToggleM
           
           // Use mathjs for safe evaluation
           const result = mathInstance.evaluate(evalExpr);
-          setDisplay(Number.isFinite(result) ? String(parseFloat(Number(result).toFixed(10))) : 'Error');
+          const resultStr = Number.isFinite(result) ? String(parseFloat(Number(result).toFixed(10))) : 'Error';
+          setDisplay(resultStr);
+          if (resultStr !== 'Error') {
+            setLastResult(resultStr);
+          }
         } catch {
           setDisplay('Error');
         }
@@ -144,8 +150,21 @@ export default function MathCalculator({ isOpen, onClose, isMinimized, onToggleM
               <div className="text-xs text-muted-foreground h-4 overflow-hidden text-right font-mono">
                 {expression || ' '}
               </div>
-              <div className="text-2xl font-mono text-right text-foreground truncate">
-                {display}
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-2xl font-mono text-right text-foreground truncate flex-1">
+                  {display}
+                </div>
+                {lastResult && onInsertResult && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 px-2 text-primary hover:bg-primary/10"
+                    onClick={() => onInsertResult(lastResult)}
+                    title="Voeg resultaat in antwoord"
+                  >
+                    Invoegen →
+                  </Button>
+                )}
               </div>
             </div>
 
