@@ -12,9 +12,10 @@ const EXAM_STRUCTURE = {
   questionCount: 5
 };
 
-// Question type definitions with exact patterns from the 2021 exam
+// Question type definitions matching the Reichman Mechina Exercise Booklet
 const QUESTION_TEMPLATES = `
 You are generating a practice final exam for Reichman Mechina math preparation.
+The questions must match the EXACT style of the Reichman Mechina Exercise Booklet.
 
 EXAM FORMAT:
 - 5 questions totaling 100 points
@@ -22,7 +23,26 @@ EXAM FORMAT:
 - Questions progress from easier to harder
 - Time allowed: 3 hours
 
-QUESTION TYPES (based on 2021 exam):
+BOOKLET TOPICS TO COVER (these are the ONLY topics in the Reichman course):
+1. First-Degree Equations (One & Two Variables, with Parameters)
+2. Fractions (Multiplication, Division, Addition, Subtraction)
+3. Quadratic Equations (Standard, Two Variables, Parameters)
+4. Biquadratic Equations
+5. Radical Equations (Equations containing square roots)
+6. Higher-Degree Equations (Cubic, Polynomial)
+7. Inequalities (First-degree, Second-degree, Quotient, Higher-degree)
+8. Exponents (Simplification & Comparison)
+9. Exponential Equations
+10. Logarithms
+11. Linear Functions
+12. Quadratic Functions (Parabolas)
+13. Limits
+14. Derivatives of Polynomials
+15. Using Derivatives (Tangent Lines, Extrema)
+16. Chain Rule
+17. Rational Functions (Domain, Asymptotes, Graphing)
+
+QUESTION STRUCTURE (based on 2021 exam format):
 
 QUESTION 1 (20 points) - Parabola and Line Analysis:
 Context: Given parabola y = ax² + bx + c AND line y = mx + n
@@ -30,73 +50,59 @@ Part a (8 pts): Draw both graphs and find the parabola's negativity interval
 Part b (6 pts): Find where parabola is above/below the line
 Part c (6 pts): Find tangent line to parabola with given slope
 
-Example:
-"Given: Parabola y = x² - 6x + 5 and line y = -3x + 5
-a. Draw both graphs and find the parabola's negativity interval.
-b. For which values of x is the parabola above the line?
-c. Find the equation of the tangent line to the parabola with slope m = 2."
-
-QUESTION 2 (15 points) - Parametric Equation:
+QUESTION 2 (15 points) - Equation with Parameter:
 Context: Equation with parameter "a"
 Part a (8 pts): Solve the equation for x in terms of a
 Part b (7 pts): Find values of a for unique/no solution
 
-Example:
-"Given the equation: (a - 2)x² + (2a - 4)x + a = 0
-a. Solve the equation for x (express your answer in terms of a).
-b. For which values of a does the equation have exactly one solution?"
-
-QUESTION 3 (20 points) - Exponential Function:
-Context: Function involving e^x (often requires substitution u = e^x)
-Part a (10 pts): Find x-axis intersections
-Part b (10 pts): Find tangent line at extreme point
-
-Example:
-"Given the function: y = e^(2x) - 5e^x + 6
-Hint: Use substitution u = e^x
-a. Does the function intersect the x-axis? If so, find the intersection point(s).
-b. Find the equation of the tangent line at the function's extreme point."
+QUESTION 3 (20 points) - Exponential or Logarithmic:
+Context: Function involving e^x or logarithms
+Part a (10 pts): Find x-axis intersections or solve equation
+Part b (10 pts): Find tangent line at extreme point or solve related equation
 
 QUESTION 4 (20 points) - Domain and Extrema:
 Context: Rational or polynomial function
 Part a (5 pts): Find the domain
 Part b (15 pts): Find ALL extreme points
 
-Example:
-"Given the function: y = (x² - 4)/(x² - 9)
-a. Find the domain of the function.
-b. Find all extreme points of the function."
-
 QUESTION 5 (25 points) - Complete Function Analysis:
-Context: Rational function with parameter, multi-part analysis
-Part a (6 pts): Find parameter value from given condition
+Context: Rational function, multi-part analysis
+Part a (6 pts): Find specific value (like y-intercept or slope at a point)
 Part b (5 pts): Find vertical asymptotes and discontinuities
 Part c (7 pts): Find increase/decrease intervals  
 Part d (7 pts): Find positivity interval
 
-Example:
-"Given the function: y = (x - a)²/(x² - 9)
-a. The slope of the tangent line at x = 0 equals 1. Find the value of a.
-b. Using a = 3 (even if you got a different value in part a), find vertical asymptotes and discontinuity points.
-c. Find the intervals where the function is increasing and decreasing.
-d. Find the interval where the function is positive."
-
-STRICT REQUIREMENTS:
-1. Use ONLY algebraic notation (x, y, a as parameter)
-2. NO trigonometry (sin, cos, tan, etc.)
-3. NO word problems or story contexts
-4. Use proper math notation: ², ³, √, ≤, ≥
-5. Include e^x exponential functions in Question 3
-6. All coefficients should be reasonable integers (mostly -10 to 10)
-7. Ensure questions have clean, solvable answers
-8. Point values must sum to exactly 100
+QUESTION FORMATTING - BOOKLET STYLE:
+- Use ONLY formal command phrases: "Solve for x:", "Find:", "Calculate:", "Simplify:"
+- NO motivational phrases (Let's, Try, Can you, etc.)
+- Use proper LaTeX: $\\frac{a}{b}$, $x^{n}$, $\\sqrt{x}$, $\\log_{a}(x)$, $e^{x}$
+- Multi-character exponents MUST use braces: $5^{x+2}$ not $5^x+2$
 
 FORBIDDEN CONTENT:
-- Trigonometric functions
+- Trigonometric functions (sin, cos, tan, etc.)
 - Greek letters for variables (θ, α, β) - only "a" as parameter name
-- Word problems
-- Interval notation with π
+- Word problems or story contexts
+- Any topics NOT in the booklet list above
 `;
+
+const BOOKLET_TOPICS = [
+  "First-Degree Equations",
+  "Fractions", 
+  "Quadratic Equations",
+  "Biquadratic Equations",
+  "Radical Equations",
+  "Higher-Degree Equations",
+  "Inequalities",
+  "Exponents",
+  "Exponential Equations",
+  "Logarithms",
+  "Linear Functions",
+  "Quadratic Functions",
+  "Limits",
+  "Derivatives",
+  "Chain Rule",
+  "Rational Functions"
+];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
