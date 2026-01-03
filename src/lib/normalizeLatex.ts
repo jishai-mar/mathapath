@@ -67,15 +67,25 @@ export function fixCorruptedLatexCommands(input: string): string {
 
   let result = input;
 
-  // Fix ultra-corrupted fractions like "f32" → "\frac{3}{2}" or "\f21" → "\frac{1}{2}"
-  // Pattern: f or \f followed by two single digits (no braces)
-  result = result.replace(/\\?f(\d)(\d)(?![0-9{])/g, '\\frac{$1}{$2}');
+  // FIRST: Fix corrupted "\f" that should be "\frac" - the backslash got partially preserved
+  // Pattern: \f followed by rac{ or just \f before a { → should be \frac
+  result = result.replace(/\\f\\frac\{/g, '\\frac{');  // \f\frac{ → \frac{
+  result = result.replace(/\\frac\{/g, '\\frac{');     // Already correct, ensure consistency
+  
+  // Fix "\f" followed by digits (like \f32 → \frac{3}{2})
+  result = result.replace(/\\f(\d)(\d)(?![0-9{])/g, '\\frac{$1}{$2}');
+  
+  // Fix standalone "f" followed by two digits (like f32 → \frac{3}{2})
+  result = result.replace(/(?<![\\a-zA-Z])f(\d)(\d)(?![0-9{])/g, '\\frac{$1}{$2}');
 
   // Fix corrupted LaTeX commands (backslash was stripped)
   // These patterns match corrupted commands that should have a backslash
   const corruptedCommands: [RegExp, string][] = [
+    // Stray \f before proper commands - remove it
+    [/\\f\\frac/g, '\\frac'],
+    [/\\f\\sqrt/g, '\\sqrt'],
     // Fractions: rac{ → \frac{
-    [/(?<!\\)rac\{/g, '\\frac{'],
+    [/(?<!\\f)(?<!\\)rac\{/g, '\\frac{'],
     // Square roots: qrt{ or qrt[ → \sqrt{ or \sqrt[
     [/(?<!\\)qrt\{/g, '\\sqrt{'],
     [/(?<!\\)qrt\[/g, '\\sqrt['],
