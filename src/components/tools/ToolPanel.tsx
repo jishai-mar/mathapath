@@ -43,7 +43,13 @@ export default function ToolPanel({ subtopicName, suggestion, onToolUsed }: Tool
   const [graphFunctions, setGraphFunctions] = useState<string[]>([]);
 
   const detectedTools = detectToolsFromTopic(subtopicName);
-  const tools = suggestion || detectedTools;
+  // Merge suggestion with detected, ensuring graph and calculator are always available if suggested
+  const tools = {
+    calculator: suggestion?.calculator || detectedTools.calculator || true, // Always show calculator
+    graph: suggestion?.graph || detectedTools.graph || true, // Always show graph
+    geometry: suggestion?.geometry || detectedTools.geometry,
+    message: suggestion?.message
+  };
   
   const hasTools = tools.calculator || tools.graph || tools.geometry;
 
