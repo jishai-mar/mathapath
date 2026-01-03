@@ -34,6 +34,7 @@ interface TheoryContent {
   formula: string;
   when_to_use: string;
   worked_example: WorkedExample;
+  additional_examples?: WorkedExample[];
   common_mistake: CommonMistake;
   needs_graph: boolean;
 }
@@ -255,7 +256,7 @@ export default function LearnView({
           className="mb-8"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Example</span>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Example 1</span>
             <BookmarkButton
               subtopicName={subtopicName}
               bookmarkType="example"
@@ -311,6 +312,80 @@ export default function LearnView({
               </span>
             </div>
           </div>
+        </motion.section>
+      )}
+
+      {/* Additional Examples */}
+      {content?.additional_examples && content.additional_examples.length > 0 && (
+        <motion.section
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-8 space-y-4"
+        >
+          {content.additional_examples.map((example, exampleIdx) => (
+            <div key={exampleIdx}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Example {exampleIdx + 2}
+                </span>
+                <BookmarkButton
+                  subtopicName={subtopicName}
+                  bookmarkType="example"
+                  content={`${example.problem} → ${example.answer}`}
+                />
+              </div>
+              
+              <div className="mt-3 bg-card border border-border rounded-xl p-6">
+                {/* Problem */}
+                <div className="text-lg font-medium text-foreground mb-5">
+                  <MathRenderer latex={example.problem} />
+                </div>
+                
+                {/* Steps */}
+                <div className="space-y-3">
+                  {example.steps.map((step, idx) => {
+                    const parts = step.split('→');
+                    const action = parts[0]?.trim();
+                    const result = parts[1]?.trim();
+                    
+                    return (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.35 + exampleIdx * 0.1 + idx * 0.05 }}
+                        className="flex items-start gap-3"
+                      >
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-secondary/10 text-secondary text-sm flex items-center justify-center font-medium">
+                          {idx + 1}
+                        </span>
+                        <div className="flex-1 flex items-center gap-2 text-foreground">
+                          <span><MathRenderer latex={action} /></span>
+                          {result && (
+                            <>
+                              <span className="text-muted-foreground">→</span>
+                              <span className="text-secondary font-medium">
+                                <MathRenderer latex={result} />
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+                
+                {/* Answer */}
+                <div className="mt-5 pt-4 border-t border-border flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Answer:</span>
+                  <span className="text-lg font-semibold text-foreground">
+                    <MathRenderer latex={example.answer} />
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
         </motion.section>
       )}
 
