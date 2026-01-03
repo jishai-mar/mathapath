@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Keyboard, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Keyboard, X, ChevronDown, ChevronUp, Calculator, LineChart } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MathCalculator from '@/components/tools/MathCalculator';
+import AdvancedGraphCalculator from '@/components/tools/AdvancedGraphCalculator';
 
 interface MathKeyboardProps {
   onInsert: (symbol: string) => void;
@@ -239,6 +241,8 @@ export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<KeyCategory>('basic');
   const [showExtras, setShowExtras] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [showGraph, setShowGraph] = useState(false);
 
   const handleKeyClick = (key: MathKey) => {
     onInsert(key.insert);
@@ -246,21 +250,71 @@ export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
 
   return (
     <div className={cn("relative", className)}>
-      {/* Toggle Button */}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "gap-2 transition-colors",
-          isOpen && "bg-primary text-primary-foreground hover:bg-primary/90"
-        )}
-      >
-        <Keyboard className="w-4 h-4" />
-        Wiskundetoetsenbord
-        {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-      </Button>
+      {/* Tool Buttons Row */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {/* Math Keyboard Toggle */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setIsOpen(!isOpen)}
+          className={cn(
+            "gap-2 transition-colors",
+            isOpen && "bg-primary text-primary-foreground hover:bg-primary/90"
+          )}
+        >
+          <Keyboard className="w-4 h-4" />
+          Wiskundetoetsenbord
+          {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </Button>
+
+        {/* Calculator Button */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCalculator(!showCalculator)}
+          className={cn(
+            "gap-2 transition-colors",
+            showCalculator && "bg-primary text-primary-foreground hover:bg-primary/90"
+          )}
+        >
+          <Calculator className="w-4 h-4" />
+          Rekenmachine
+        </Button>
+
+        {/* Graph Calculator Button */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowGraph(!showGraph)}
+          className={cn(
+            "gap-2 transition-colors",
+            showGraph && "bg-primary text-primary-foreground hover:bg-primary/90"
+          )}
+        >
+          <LineChart className="w-4 h-4" />
+          Grafiek
+        </Button>
+      </div>
+
+      {/* Calculator Component */}
+      <div className="fixed bottom-20 right-4 z-50">
+        <MathCalculator
+          isOpen={showCalculator}
+          onClose={() => setShowCalculator(false)}
+        />
+      </div>
+
+      {/* Graph Calculator Component */}
+      <div className="fixed bottom-20 right-4 z-50">
+        <AdvancedGraphCalculator
+          isOpen={showGraph}
+          onClose={() => setShowGraph(false)}
+          initialFunctions={['x^2']}
+        />
+      </div>
 
       {/* Keyboard Panel */}
       <AnimatePresence>
