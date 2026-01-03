@@ -143,74 +143,72 @@ serve(async (req) => {
       diagnosticTest = newTest;
     }
 
-    // Generate questions using AI
-    const systemPrompt = `You are a mathematics educator creating a diagnostic assessment in the style of a high-quality printed textbook.
+    // Generate questions using AI - Using Reichman Mechina Booklet Style
+    const systemPrompt = `You are a mathematics educator creating a diagnostic assessment matching the Reichman Mechina Exercise Booklet.
 
-QUESTION FORMATTING - STRICT TEXTBOOK STYLE:
-- Write questions EXACTLY as they would appear in a professional printed mathematics textbook
-- Use ONLY formal, neutral command language:
-  • "Solve for x:"
-  • "Find all real solutions:"
-  • "Simplify:"
-  • "Determine the value of:"
-  • "Calculate:"
-  • "Factor completely:"
-  • "Evaluate:"
-- ABSOLUTELY NO motivational phrases: never use "Let's", "Try", "Can you", "Here's", "Now", "Great", etc.
-- ABSOLUTELY NO commentary or context: just state the mathematical task directly
-- ABSOLUTELY NO styling cues, colors, emphasis markers, or UI hints
-- Questions must be concise, direct, and unambiguous
+QUESTION FORMATTING - EXACT BOOKLET STYLE:
+- Questions must match EXACTLY how they appear in the Reichman Mechina booklet
+- Use ONLY these instruction phrases (and nothing else):
+  • "Solve for x:" (equations)
+  • "Solve:" (systems of equations)
+  • "Simplify:" (expressions, fractions)
+  • "Find the domain:" (functions)
+  • "Calculate:" (limits, derivatives)
+  • "Differentiate:" (derivative problems)
+  • "Solve these inequalities:" (inequalities)
+  • "Reduce the following expression:" (exponents)
+  • "For each pair, determine which is greater:" (exponent comparison)
+- NO motivational phrases: never use "Let's", "Try", "Can you", "Great", etc.
+- NO explanatory text - just state the mathematical task directly
+- Questions should be SHORT and DIRECT like textbook problems
 
 === MATHEMATICAL NOTATION RULES (CRITICAL) ===
 
-You MUST use PROPER LaTeX syntax with these rules:
+Use PROPER LaTeX syntax with these rules:
+
+FRACTIONS - Always use \\frac:
+✓ CORRECT: $\\frac{3}{x-5}$, $\\frac{x^2-4}{x^2-9}$
+✗ WRONG: $3/(x-5)$, rac{, f32
 
 EXPONENTS - ALWAYS use braces for multi-character exponents:
-✓ CORRECT: $5^{x+2}$, $3^{2x-1}$, $2^{x+1}$
-✗ WRONG: $5^x+2$, $5^x+^2$, 5ˣ⁺², $5^x+^2$
+✓ CORRECT: $5^{x+2}$, $3^{2x-1}$, $e^{2x}$
+✗ WRONG: $5^x+2$, $5^x+^2$, $e^2x$
 
-FRACTIONS:
-✓ CORRECT: $\\frac{1}{25}$, $\\frac{3}{4}$
-✓ ALSO OK: Simple inline like 1/25
-✗ WRONG: mixing notations inconsistently
+SYSTEMS OF EQUATIONS - Use cases environment:
+✓ CORRECT: $\\begin{cases} 8x + 3y = 28 \\\\ 2x + y = 8 \\end{cases}$
 
 LOGARITHMS:
 ✓ CORRECT: $\\log_{2}(x)$, $\\log_{10}(x)$
-✗ WRONG: log_2(x), log₂x
 
 SQUARE ROOTS:
 ✓ CORRECT: $\\sqrt{x+5}$, $\\sqrt{2x-1}$
-✗ WRONG: √(x+5), sqrt(x+5)
 
-WRAP ALL MATH in $ delimiters:
-✓ CORRECT: "Solve for x: $5^{x+2} = \\frac{1}{25}$"
-✗ WRONG: "Solve for x: 5^x+2 = 1/25"
+WRAP ALL MATH in $ delimiters.
 
-FORBIDDEN PATTERNS (never include these):
-- "Let's solve...", "Try to...", "Can you find..."
-- "Here is a problem...", "Consider the following..."
-- Any emoji or decorative characters
-- Malformed exponents like $5^x+^2$ or $5^x+2$ (should be $5^{x+2}$)
-- Unicode superscripts like ˣ⁺² (use proper LaTeX)
+=== TOPIC-SPECIFIC PATTERNS FROM BOOKLET ===
 
-CORRECT EXAMPLES:
-✓ "Solve for x: $3x^2 - 12 = 0$"
-✓ "Solve for x: $5^{x+2} = \\frac{1}{25}$"
-✓ "Find all real solutions: $\\sqrt{x + 5} = 3$"
-✓ "Simplify: $\\frac{2x^3 + 6x^2}{2x}$"
-✓ "Evaluate: $\\log_{2}(32)$"
-
-INCORRECT EXAMPLES (never do this):
-✗ "Let's solve this equation: $3x^2 - 12 = 0$"
-✗ "Try to find x in: $\\sqrt{x+5} = 3$"
-✗ "Solve for x: $5^x+^2 = 1/25$" (malformed exponent!)
-✗ "Solve for x: 5ˣ⁺² = 1/25" (Unicode won't render)
+First-Degree Equations: "Solve for x: $7x + 40 = 58 - 2x$"
+Two-Variable Systems: "Solve: $\\begin{cases} ... \\end{cases}$"
+Fractions: "Simplify: $\\frac{2a^2}{3} \\cdot \\frac{7}{a}$"
+Quadratic Equations: "Solve for x: $x^2 + 5x - 150 = 0$"
+Biquadratic: "Solve for x: $x^4 - 13x^2 + 36 = 0$"
+Radical Equations: "Solve for x: $\\sqrt{9-x} = 2$"
+Higher Degree: "Solve for x: $x^3 + 4x^2 = 0$"
+Inequalities: "Solve: $x^2 > 25$"
+Exponents: "Simplify: $\\frac{3^{75}}{3^{71}}$"
+Exponential Equations: "Solve for x: $3^x = 27$"
+Logarithms: "Calculate: $\\log_3(9)$"
+Linear Functions: "Find the equation of the line passing through (2,5) with slope 3"
+Quadratic Functions: "Find the vertex of $y = x^2 - 6x + 5$"
+Limits: "Calculate: $\\lim_{x \\to 2} \\frac{x^2-4}{x-2}$"
+Derivatives: "Differentiate: $y = x^3 + 6x^2 + x$"
+Tangent Lines: "Find the equation of the tangent line to $y = x^2$ at $x = 1$"
+Chain Rule: "Differentiate: $y = (2x+1)^5$"
+Rational Functions: "Find the domain and asymptotes of $y = \\frac{x-2}{x^2-9}$"
 
 HINTS - GUIDING, NOT REVEALING:
-- Hints should guide thinking, NOT give away the answer
-- First hint: Identify what type of problem or what concept applies
-- Second hint: Suggest a starting approach without showing steps
-- Use proper LaTeX in hints as well`;
+- First hint: What concept or technique applies
+- Second hint: First step approach without showing work`;
 
     const userPrompt = `Create a diagnostic assessment for the topic "${topic.name}" (${topic.description || ""}).
 
