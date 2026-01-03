@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Keyboard, X, ChevronDown, ChevronUp, Calculator, LineChart } from 'lucide-react';
+import { Keyboard, X, ChevronDown, ChevronUp, Calculator, LineChart, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import MathCalculator from '@/components/tools/MathCalculator';
 import AdvancedGraphCalculator from '@/components/tools/AdvancedGraphCalculator';
+import FormulaSheet from '@/components/tools/FormulaSheet';
 
 interface MathKeyboardProps {
   onInsert: (symbol: string) => void;
   className?: string;
+  topicName?: string;
 }
 
 type KeyCategory = 'basic' | 'algebra' | 'greek' | 'functions' | 'comparison' | 'fractions' | 'arrows';
@@ -237,12 +239,13 @@ const subscripts: MathKey[] = [
   { display: 'ₘ', insert: 'ₘ' },
 ];
 
-export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
+export function MathKeyboard({ onInsert, className, topicName }: MathKeyboardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<KeyCategory>('basic');
   const [showExtras, setShowExtras] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
+  const [showFormulas, setShowFormulas] = useState(false);
 
   const handleKeyClick = (key: MathKey) => {
     onInsert(key.insert);
@@ -297,6 +300,21 @@ export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
           <LineChart className="w-4 h-4" />
           Grafiek
         </Button>
+
+        {/* Formula Sheet Button */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowFormulas(!showFormulas)}
+          className={cn(
+            "gap-2 transition-colors",
+            showFormulas && "bg-primary text-primary-foreground hover:bg-primary/90"
+          )}
+        >
+          <BookOpen className="w-4 h-4" />
+          Formules
+        </Button>
       </div>
 
       {/* Calculator Component */}
@@ -304,15 +322,32 @@ export function MathKeyboard({ onInsert, className }: MathKeyboardProps) {
         <MathCalculator
           isOpen={showCalculator}
           onClose={() => setShowCalculator(false)}
+          onInsertResult={(result) => {
+            onInsert(result);
+            setShowCalculator(false);
+          }}
         />
       </div>
 
       {/* Graph Calculator Component */}
-      <div className="fixed bottom-20 right-4 z-50">
+      <div className="fixed bottom-20 left-4 z-50">
         <AdvancedGraphCalculator
           isOpen={showGraph}
           onClose={() => setShowGraph(false)}
           initialFunctions={['x^2']}
+        />
+      </div>
+
+      {/* Formula Sheet Component */}
+      <div className="fixed bottom-20 right-80 z-50">
+        <FormulaSheet
+          isOpen={showFormulas}
+          onClose={() => setShowFormulas(false)}
+          onInsert={(formula) => {
+            onInsert(formula);
+            setShowFormulas(false);
+          }}
+          topicName={topicName}
         />
       </div>
 
