@@ -7,6 +7,7 @@ import {
   PracticeState, 
   PracticeMode 
 } from '@/components/practice/types';
+import { validateExercise } from '@/lib/exerciseValidator';
 
 interface UsePracticeExerciseProps {
   subtopicId: string;
@@ -142,16 +143,29 @@ export function usePracticeExercise({
         ex => ex.id && !usedExerciseIds.includes(ex.id)
       ) || [];
 
-      if (availableExercises.length > 0) {
-        const randomExercise = availableExercises[Math.floor(Math.random() * availableExercises.length)];
-        
-        setUsedExerciseIds(prev => [...prev, randomExercise.id!]);
+      // Find a valid exercise (validate and auto-fix if needed)
+      let selectedExercise = null;
+      for (const exercise of availableExercises) {
+        const validation = validateExercise(exercise.question || '');
+        if (validation.isValid) {
+          selectedExercise = {
+            ...exercise,
+            question: validation.fixedQuestion || exercise.question,
+          };
+          break;
+        } else {
+          console.warn(`[usePracticeExercise] Skipping invalid exercise ${exercise.id}: ${validation.reason}`);
+        }
+      }
+
+      if (selectedExercise) {
+        setUsedExerciseIds(prev => [...prev, selectedExercise.id!]);
         setCurrentExercise({
-          id: randomExercise.id!,
-          question: randomExercise.question!,
+          id: selectedExercise.id!,
+          question: selectedExercise.question!,
           correctAnswer: '', // Hidden from client
-          difficulty: randomExercise.difficulty as 'easy' | 'medium' | 'hard',
-          hints: randomExercise.hints || null,
+          difficulty: selectedExercise.difficulty as 'easy' | 'medium' | 'hard',
+          hints: selectedExercise.hints || null,
           subtopicId,
           subtopicName
         });

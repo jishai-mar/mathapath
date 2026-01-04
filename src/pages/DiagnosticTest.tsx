@@ -17,6 +17,7 @@ import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import type { ContentSegment } from '@/lib/normalizeLatex';
+import { filterValidExercises } from '@/lib/exerciseValidator';
 
 // Khan Academy–style: caller explicitly types text vs math
 const LATEX_TRIGGER = /\\left|\\begin\{|\\frac|\\sqrt|\\\(|\\\[|\\pm|\\times|\\\\|\$/;
@@ -286,19 +287,24 @@ export default function DiagnosticTest() {
         });
 
         if (existingQuestions?.questions && existingQuestions.questions.length > 0) {
-          const totalQuestions = existingQuestions.questions.length;
+          // Filter and auto-fix questions before use
+          const validQuestions = filterValidExercises<DiagnosticQuestion>(
+            existingQuestions.questions as DiagnosticQuestion[], 
+            'DiagnosticTest'
+          );
+          const totalQuestions = validQuestions.length;
           const answeredCount = existingTest.questions_answered || 0;
           
           // If all questions answered, trigger analysis instead of showing test
           if (answeredCount >= totalQuestions) {
             setTest(existingQuestions.test);
-            setQuestions(existingQuestions.questions);
+            setQuestions(validQuestions);
             // Trigger analysis
             setPhase('analyzing');
-            analyzeResultsAfterResume(existingQuestions.test.id, existingQuestions.questions);
+            analyzeResultsAfterResume(existingQuestions.test.id, validQuestions);
           } else {
             setTest(existingQuestions.test);
-            setQuestions(existingQuestions.questions);
+            setQuestions(validQuestions);
             setCurrentIndex(answeredCount);
             
             // Load existing responses to pre-fill answers
@@ -338,8 +344,13 @@ export default function DiagnosticTest() {
       if (error) throw error;
 
       if (data?.test && data?.questions) {
+        // Filter and auto-fix questions before use
+        const validQuestions = filterValidExercises<DiagnosticQuestion>(
+          data.questions as DiagnosticQuestion[], 
+          'DiagnosticTest'
+        );
         setTest(data.test);
-        setQuestions(data.questions);
+        setQuestions(validQuestions);
         setPhase('test');
 
         // Update test status to in_progress

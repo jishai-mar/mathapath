@@ -341,18 +341,58 @@ STRICT REQUIREMENTS:
       }
     }
 
-    // Prepare questions for insertion
-    const questionsToInsert: DiagnosticQuestion[] = parsedQuestions.questions.map(
-      (q: any, index: number) => ({
-        diagnostic_test_id: diagnosticTest.id,
-        subtopic_id: q.subtopic_id,
-        question: q.question,
-        correct_answer: q.correct_answer,
-        difficulty: q.difficulty || "medium",
-        hints: q.hints || [],
-        order_index: index,
+    // Auto-fix function for common LaTeX corruptions
+    function autoFixQuestion(question: string): string {
+      let fixed = question;
+      
+      // Fix corrupted \neq patterns (m\neq0 where \n became newline -> "m" + newline + "eq0")
+      fixed = fixed.replace(/([a-zA-Z])\s*\n\s*eq\s*(\d)/g, '$1 \\neq $2');
+      fixed = fixed.replace(/([a-zA-Z])eq(\d)/g, '$1 \\neq $2');
+      fixed = fixed.replace(/([a-zA-Z])\s+eq\s+(\d)/g, '$1 \\neq $2');
+      
+      // Fix double-prefixed commands
+      fixed = fixed.replace(/\\f\\frac/g, '\\frac');
+      fixed = fixed.replace(/\\s\\sqrt/g, '\\sqrt');
+      
+      // Fix missing backslash on commands
+      fixed = fixed.replace(/(?<!\\)rac\{/g, '\\frac{');
+      fixed = fixed.replace(/(?<!\\)qrt\{/g, '\\sqrt{');
+      
+      return fixed;
+    }
+    
+    // Validate question has no unfixable corruption
+    function isValidQuestion(question: string): boolean {
+      const unfixablePatterns = [
+        /\bTODO\b/i,
+        /\?\?\?/,
+        /\.\.\.\.+/,
+        /\[INSERT\]|\[PLACEHOLDER\]/i,
+      ];
+      return !unfixablePatterns.some(p => p.test(question));
+    }
+
+    // Prepare questions for insertion with validation and auto-fix
+    const questionsToInsert: DiagnosticQuestion[] = parsedQuestions.questions
+      .map((q: any, index: number) => {
+        const fixedQuestion = autoFixQuestion(q.question);
+        
+        if (!isValidQuestion(fixedQuestion)) {
+          console.warn(`Rejecting invalid question: ${q.question.substring(0, 50)}...`);
+          return null;
+        }
+        
+        return {
+          diagnostic_test_id: diagnosticTest.id,
+          subtopic_id: q.subtopic_id,
+          question: fixedQuestion,
+          correct_answer: q.correct_answer,
+          difficulty: q.difficulty || "medium",
+          hints: q.hints || [],
+          order_index: index,
+        };
       })
-    );
+      .filter((q: DiagnosticQuestion | null): q is DiagnosticQuestion => q !== null);
 
     // Insert questions
     const { data: insertedQuestions, error: insertError } = await supabase
