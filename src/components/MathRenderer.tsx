@@ -19,7 +19,8 @@ export default function MathRenderer({ latex, displayMode = false, className = '
     const fixedLatex = fixMalformedLatex(latex);
     
     // Check if this is pure LaTeX (contains LaTeX commands without delimiters)
-    const isPureLatex = /\\(frac|sqrt|cdot|times|div|pm|log|sin|cos|tan|int|sum|prod|lim|alpha|beta|gamma|delta|theta|pi|sigma|phi|omega|left|right|text|mathbf|mathit|mathrm)\b/.test(fixedLatex) && 
+    // Also check for begin/end environments like cases, array, matrix
+    const isPureLatex = /\\(frac|sqrt|cdot|times|div|pm|log|sin|cos|tan|int|sum|prod|lim|alpha|beta|gamma|delta|theta|pi|sigma|phi|omega|left|right|text|mathbf|mathit|mathrm|begin|end)\b/.test(fixedLatex) && 
                         !fixedLatex.includes('$');
     
     // Clear the container
@@ -30,7 +31,7 @@ export default function MathRenderer({ latex, displayMode = false, className = '
       try {
         const normalizedLatex = normalizeLatex(fixedLatex);
         katex.render(normalizedLatex, containerRef.current, {
-          displayMode,
+          displayMode: displayMode || fixedLatex.includes('\\begin{cases}'),
           throwOnError: false,
           trust: true,
           strict: false,
@@ -71,8 +72,12 @@ export default function MathRenderer({ latex, displayMode = false, className = '
             
             try {
               const normalizedContent = normalizeLatex(segment.content);
+              // Use display mode for cases/array environments to render properly
+              const useDisplayMode = segment.displayMode || displayMode || 
+                                     normalizedContent.includes('\\begin{cases}') ||
+                                     normalizedContent.includes('\\begin{array}');
               katex.render(normalizedContent, mathSpan, {
-                displayMode: segment.displayMode || displayMode,
+                displayMode: useDisplayMode,
                 throwOnError: false,
                 trust: true,
                 strict: false,
