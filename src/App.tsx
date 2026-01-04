@@ -26,7 +26,7 @@ import Bookmarks from "./pages/Bookmarks";
 import VoiceFirstTutoring from "./pages/VoiceFirstTutoring";
 import TheoryTopic from "./pages/TheoryTopic";
 import PracticeExam from "./pages/PracticeExam";
-import TestYourself from "./pages/TestYourself";
+import PracticeQuiz from "./pages/TestYourself";
 import ExponentialTutorDemo from "./pages/ExponentialTutorDemo";
 import PracticeQuestion from "./pages/PracticeQuestion";
 import NotFound from "./pages/NotFound";
@@ -105,7 +105,7 @@ function AppRoutes() {
       <Route path="/voice-tutor" element={<VoiceFirstTutoring />} />
       <Route path="/theory/:topicId" element={<TheoryTopic />} />
       <Route path="/practice-exam" element={<PracticeExam />} />
-      <Route path="/test-yourself" element={<TestYourself />} />
+      <Route path="/practice-quiz" element={<PracticeQuiz />} />
       <Route path="/exponential-tutor" element={<ExponentialTutorDemo />} />
       <Route path="/practice-question/:subtopicId" element={<PracticeQuestion />} />
       <Route path="*" element={<NotFound />} />
