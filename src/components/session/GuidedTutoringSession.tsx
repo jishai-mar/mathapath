@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useExerciseContext } from '@/contexts/ExerciseContext';
 import { useTutorTTS } from '@/hooks/useTutorTTS';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { ElevenLabsAgent } from '@/components/tutor/ElevenLabsAgent';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import { TalkToTutorButton } from '@/components/tutor/TalkToTutorButton';
@@ -769,7 +770,7 @@ export function GuidedTutoringSession({
               {/* Question Card */}
               <div className="p-8 rounded-3xl bg-card/60 border border-border/30 shadow-soft">
                 <div className="text-center text-2xl md:text-3xl leading-relaxed">
-                  <MathRenderer latex={currentExercise.question} displayMode />
+                  <MathRenderer segments={createSegmentsFromSolution(currentExercise.question)} />
                 </div>
               </div>
 

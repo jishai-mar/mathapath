@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, X, Copy, Check } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface FormulaSheetProps {
   isOpen: boolean;
@@ -206,7 +207,7 @@ export default function FormulaSheet({ isOpen, onClose, onInsert, topicName }: F
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-foreground mb-1">{formula.name}</p>
                             <div className="text-sm overflow-x-auto">
-                              <MathRenderer latex={formula.formula} />
+                              <MathRenderer segments={createSegmentsFromSolution(formula.formula)} />
                             </div>
                             {formula.description && (
                               <p className="text-xs text-muted-foreground mt-1">{formula.description}</p>

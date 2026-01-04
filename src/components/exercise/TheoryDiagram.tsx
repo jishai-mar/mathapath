@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, GitBranch, ArrowRight, Minus, Plus, Target } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface TheoryDiagramProps {
   type: string;
@@ -151,7 +152,7 @@ function ChainRuleDiagram() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.8 }}
       >
-        <MathRenderer latex="[f(g(x))]' = f'(g(x)) \cdot g'(x)" />
+        <MathRenderer segments={createSegmentsFromSolution("[f(g(x))]' = f'(g(x)) \\cdot g'(x)")} />
       </motion.div>
       
       <p className="text-xs text-muted-foreground text-center">

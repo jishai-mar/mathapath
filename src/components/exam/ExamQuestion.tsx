@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { ChevronDown, ChevronUp, CheckCircle, Circle, BookOpen } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -77,7 +78,7 @@ export function ExamQuestion({
           <div className="flex items-start gap-2">
             <BookOpen className="h-5 w-5 text-primary mt-0.5 shrink-0" />
             <div className="prose prose-sm dark:prose-invert max-w-none">
-              <MathRenderer latex={context} />
+              <MathRenderer segments={createSegmentsFromSolution(context)} />
             </div>
           </div>
         </div>
@@ -121,7 +122,7 @@ export function ExamQuestion({
                   <div className="px-4 pb-4 space-y-4">
                     {/* Part Prompt */}
                     <div className="pl-8">
-                      <MathRenderer latex={part.prompt} />
+                      <MathRenderer segments={createSegmentsFromSolution(part.prompt)} />
                     </div>
                     
                     {/* Answer Input */}
@@ -144,12 +145,12 @@ export function ExamQuestion({
                         <div className="space-y-2">
                           {part.solution.steps.map((step, idx) => (
                             <div key={idx} className="text-sm">
-                              <MathRenderer latex={`${idx + 1}. ${step}`} />
+                              <MathRenderer segments={createSegmentsFromSolution(`${idx + 1}. ${step}`)} />
                             </div>
                           ))}
                           <div className="mt-3 pt-3 border-t border-green-500/30">
                             <span className="font-semibold">Answer: </span>
-                            <MathRenderer latex={part.solution.answer} />
+                            <MathRenderer segments={createSegmentsFromSolution(part.solution.answer)} />
                           </div>
                         </div>
                       </div>

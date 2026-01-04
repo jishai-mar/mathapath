@@ -4,6 +4,7 @@ import { TutorAvatar, TutorMood } from '@/components/tutor/TutorAvatar';
 import { useTutorTTS, VoiceContext } from '@/hooks/useTutorTTS';
 import { useTutor } from '@/contexts/TutorContext';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import {
@@ -185,7 +186,7 @@ export default function TutorVideoPlayer({
           <motion.div variants={baseVariants} initial="hidden" animate="visible" exit="exit" className="space-y-2">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Definition</span>
             <p className="text-xl font-medium text-foreground">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </p>
           </motion.div>
         );
@@ -202,7 +203,7 @@ export default function TutorVideoPlayer({
             <div className="flex items-center gap-3">
               <span className="text-2xl">💡</span>
               <p className="text-lg font-semibold text-primary">
-                <MathRenderer latex={step.content} />
+                <MathRenderer segments={createSegmentsFromSolution(step.content)} />
               </p>
             </div>
           </motion.div>
@@ -218,7 +219,7 @@ export default function TutorVideoPlayer({
             className="p-8 rounded-xl bg-card border-2 border-primary/30 text-center"
           >
             <div className="text-3xl">
-              <MathRenderer latex={step.content} displayMode />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
           </motion.div>
         );
@@ -228,7 +229,7 @@ export default function TutorVideoPlayer({
           <motion.div variants={baseVariants} initial="hidden" animate="visible" exit="exit" className="text-center">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Example</span>
             <p className="text-xl font-medium text-foreground mt-2">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </p>
           </motion.div>
         );
@@ -250,7 +251,7 @@ export default function TutorVideoPlayer({
               <span className="text-primary font-medium">→</span>
             </motion.div>
             <p className="text-lg text-foreground flex-1">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </p>
           </motion.div>
         );
@@ -267,7 +268,7 @@ export default function TutorVideoPlayer({
             <div className="flex items-start gap-3">
               <span className="text-xl">⚠️</span>
               <p className="text-foreground">
-                <MathRenderer latex={step.content} />
+                <MathRenderer segments={createSegmentsFromSolution(step.content)} />
               </p>
             </div>
           </motion.div>
@@ -285,7 +286,7 @@ export default function TutorVideoPlayer({
             </motion.div>
             <h3 className="text-xl font-bold text-foreground mb-2">Great job!</h3>
             <p className="text-muted-foreground">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </p>
           </motion.div>
         );
@@ -293,7 +294,7 @@ export default function TutorVideoPlayer({
       default:
         return (
           <motion.div variants={baseVariants} initial="hidden" animate="visible" exit="exit">
-            <p className="text-foreground"><MathRenderer latex={step.content} /></p>
+            <p className="text-foreground"><MathRenderer segments={createSegmentsFromSolution(step.content)} /></p>
           </motion.div>
         );
     }

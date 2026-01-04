@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import MathRenderer from './MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import TutorChat from './TutorChat';
 import InteractiveMathGraph from './InteractiveMathGraph';
 import { WatchVideoButton } from './learning/TheoryVideoView';
@@ -138,7 +139,7 @@ export default function LearnView({
             />
           </div>
           <p className="mt-2 text-xl font-semibold text-foreground leading-relaxed">
-            <MathRenderer latex={content.definition} />
+            <MathRenderer segments={createSegmentsFromSolution(content.definition)} />
           </p>
         </motion.section>
       )}
@@ -169,7 +170,7 @@ export default function LearnView({
               <Lightbulb className="w-6 h-6 text-primary flex-shrink-0" />
             </motion.div>
             <p className="text-xl font-semibold text-primary flex-1">
-              <MathRenderer latex={content.key_rule} />
+              <MathRenderer segments={createSegmentsFromSolution(content.key_rule)} />
             </p>
             <BookmarkButton
               subtopicName={subtopicName}
@@ -219,7 +220,7 @@ export default function LearnView({
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3, duration: 0.6 }}
             >
-              <MathRenderer latex={content.formula} displayMode />
+              <MathRenderer segments={createSegmentsFromSolution(content.formula)} />
             </motion.div>
           </motion.div>
           {content.when_to_use && (
@@ -267,7 +268,7 @@ export default function LearnView({
           <div className="mt-3 bg-card border border-border rounded-xl p-6">
             {/* Problem */}
             <div className="text-lg font-medium text-foreground mb-5">
-              <MathRenderer latex={content.worked_example.problem} />
+              <MathRenderer segments={createSegmentsFromSolution(content.worked_example.problem)} />
             </div>
             
             {/* Steps */}
@@ -289,12 +290,12 @@ export default function LearnView({
                       {idx + 1}
                     </span>
                     <div className="flex-1 flex items-center gap-2 text-foreground">
-                      <span><MathRenderer latex={action} /></span>
+                      <span><MathRenderer segments={createSegmentsFromSolution(action)} /></span>
                       {result && (
                         <>
                           <span className="text-muted-foreground">→</span>
                           <span className="text-primary font-medium">
-                            <MathRenderer latex={result} />
+                            <MathRenderer segments={createSegmentsFromSolution(result)} />
                           </span>
                         </>
                       )}
@@ -308,7 +309,7 @@ export default function LearnView({
             <div className="mt-5 pt-4 border-t border-border flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Answer:</span>
               <span className="text-lg font-semibold text-foreground">
-                <MathRenderer latex={content.worked_example.answer} />
+                <MathRenderer segments={createSegmentsFromSolution(content.worked_example.answer)} />
               </span>
             </div>
           </div>
@@ -339,7 +340,7 @@ export default function LearnView({
               <div className="mt-3 bg-card border border-border rounded-xl p-6">
                 {/* Problem */}
                 <div className="text-lg font-medium text-foreground mb-5">
-                  <MathRenderer latex={example.problem} />
+                  <MathRenderer segments={createSegmentsFromSolution(example.problem)} />
                 </div>
                 
                 {/* Steps */}
@@ -361,12 +362,12 @@ export default function LearnView({
                           {idx + 1}
                         </span>
                         <div className="flex-1 flex items-center gap-2 text-foreground">
-                          <span><MathRenderer latex={action} /></span>
+                          <span><MathRenderer segments={createSegmentsFromSolution(action)} /></span>
                           {result && (
                             <>
                               <span className="text-muted-foreground">→</span>
                               <span className="text-secondary font-medium">
-                                <MathRenderer latex={result} />
+                                <MathRenderer segments={createSegmentsFromSolution(result)} />
                               </span>
                             </>
                           )}
@@ -380,7 +381,7 @@ export default function LearnView({
                 <div className="mt-5 pt-4 border-t border-border flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">Answer:</span>
                   <span className="text-lg font-semibold text-foreground">
-                    <MathRenderer latex={example.answer} />
+                    <MathRenderer segments={createSegmentsFromSolution(example.answer)} />
                   </span>
                 </div>
               </div>

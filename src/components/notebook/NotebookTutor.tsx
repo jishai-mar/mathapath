@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { NotebookEntry } from '@/hooks/useNotebook';
 
 interface Message {
@@ -212,7 +213,7 @@ export function NotebookTutor({ selectedEntry, allEntries, onPracticeRequest }: 
                 >
                   {msg.role === 'assistant' ? (
                     <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-                      <MathRenderer latex={msg.content} />
+                      <MathRenderer segments={createSegmentsFromSolution(msg.content)} />
                     </div>
                   ) : (
                     <p className="text-sm">{msg.content}</p>

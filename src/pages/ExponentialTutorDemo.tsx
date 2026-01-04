@@ -26,6 +26,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { ExponentialTutorChat } from '@/components/tutor/ExponentialTutorChat';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { 
   EXPONENTIAL_CURRICULUM, 
   STUDENT_PROFILES,
@@ -524,7 +525,7 @@ export default function ExponentialTutorDemo() {
                           </div>
                           
                           <div className="mb-2">
-                            <MathRenderer latex={`Solve: $${q.problem}$`} />
+                            <MathRenderer segments={createSegmentsFromSolution(`Solve: $${q.problem}$`)} />
                           </div>
                           
                           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -574,7 +575,7 @@ export default function ExponentialTutorDemo() {
                         </CardHeader>
                         <CardContent className="space-y-3">
                           <div className="p-3 rounded-lg bg-muted">
-                            <MathRenderer latex={`Solve: $${q.problem}$`} />
+                            <MathRenderer segments={createSegmentsFromSolution(`Solve: $${q.problem}$`)} />
                           </div>
                           <div>
                             <Label htmlFor={q.id}>Your Answer:</Label>

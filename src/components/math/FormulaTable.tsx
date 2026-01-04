@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { cn } from '@/lib/utils';
 
 interface FormulaEntry {
@@ -130,7 +131,7 @@ export function FormulaTable({ topic, className }: FormulaTableProps) {
           >
             <span className="text-xs text-muted-foreground w-28 shrink-0">{entry.name}</span>
             <div className="flex-1 overflow-x-auto">
-              <MathRenderer latex={`$${entry.formula}$`} />
+              <MathRenderer segments={createSegmentsFromSolution(`$${entry.formula}$`)} />
             </div>
             {entry.notes && (
               <span className="text-xs text-muted-foreground italic shrink-0">{entry.notes}</span>

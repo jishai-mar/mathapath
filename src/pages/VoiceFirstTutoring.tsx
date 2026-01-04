@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { useTutor } from '@/contexts/TutorContext';
 import { useVoiceSession, VoiceState } from '@/hooks/useVoiceSession';
 import { useWakeWordDetection } from '@/hooks/useWakeWordDetection';
@@ -509,7 +510,7 @@ export default function VoiceFirstTutoring() {
               ) : (
                 <ScrollArea className="max-h-[300px]">
                   <div className="text-lg leading-relaxed prose prose-invert max-w-none px-4">
-                    <MathRenderer latex={displayContent} />
+                    <MathRenderer segments={createSegmentsFromSolution(displayContent)} />
                   </div>
                 </ScrollArea>
               )}
@@ -542,7 +543,7 @@ export default function VoiceFirstTutoring() {
                       {msg.role === 'user' ? 'You' : preferences.tutorName}:
                     </span>
                     <div className="prose prose-sm prose-invert max-w-none">
-                      <MathRenderer latex={msg.content} />
+                      <MathRenderer segments={createSegmentsFromSolution(msg.content)} />
                     </div>
                   </div>
                 ))}
@@ -550,7 +551,7 @@ export default function VoiceFirstTutoring() {
                   <div className="text-sm text-foreground">
                     <span className="font-medium block mb-1">{preferences.tutorName}:</span>
                     <div className="prose prose-sm prose-invert max-w-none">
-                      <MathRenderer latex={currentResponse} />
+                      <MathRenderer segments={createSegmentsFromSolution(currentResponse)} />
                     </div>
                   </div>
                 )}

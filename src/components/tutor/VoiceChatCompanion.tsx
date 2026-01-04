@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExerciseContext } from '@/contexts/ExerciseContext';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { 
   X, 
   Send, 
@@ -295,7 +296,7 @@ export function VoiceChatCompanion() {
                             }`}
                           >
                             <div className="text-sm whitespace-pre-wrap">
-                              <MathRenderer latex={message.content} />
+                              <MathRenderer segments={createSegmentsFromSolution(message.content)} />
                             </div>
                             {message.isStreaming && (
                               <span className="inline-block w-1.5 h-3 bg-current animate-pulse ml-0.5" />

@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import MathRenderer from './MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { 
   Play, 
   Pause, 
@@ -163,7 +164,7 @@ export default function AnimatedMathVideo({
             <motion.p 
               className="text-base text-foreground/90 leading-relaxed"
             >
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </motion.p>
             {/* Subtle indicator showing this is being "spoken" */}
             <motion.div 
@@ -213,7 +214,7 @@ export default function AnimatedMathVideo({
                 transition={{ duration: 0.6, delay: 0.3 }}
               >
                 <span className="text-2xl font-medium">
-                  <MathRenderer latex={step.content} displayMode />
+                  <MathRenderer segments={createSegmentsFromSolution(step.content)} />
                 </span>
               </motion.div>
               {/* Underline emphasis */}
@@ -251,7 +252,7 @@ export default function AnimatedMathVideo({
               </motion.span>
             </motion.div>
             <div className="text-sm text-foreground leading-relaxed pt-1">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
           </motion.div>
         );

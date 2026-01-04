@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MathRenderer from './MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import ImageUploader from './ImageUploader';
 import FeedbackCard from './FeedbackCard';
 import ToolPanel from './tools/ToolPanel';
@@ -231,7 +232,7 @@ export default function ExerciseView({
         >
           <div className="text-center">
             <div className="text-2xl md:text-4xl leading-relaxed">
-              <MathRenderer latex={exercise.question} displayMode />
+              <MathRenderer segments={createSegmentsFromSolution(exercise.question)} />
             </div>
           </div>
         </motion.div>
@@ -255,7 +256,7 @@ export default function ExerciseView({
                     <div className="text-sm text-muted-foreground">
                       {exercise.hints.slice(0, revealedHints).map((hint, i) => (
                         <p key={i} className="mb-1">
-                          <MathRenderer latex={hint} />
+                          <MathRenderer segments={createSegmentsFromSolution(hint)} />
                         </p>
                       ))}
                     </div>
@@ -405,7 +406,7 @@ export default function ExerciseView({
                 
                 {feedback.explanation && (
                   <div className="text-sm text-muted-foreground pt-4 border-t border-border/50">
-                    <MathRenderer latex={feedback.explanation} />
+                    <MathRenderer segments={createSegmentsFromSolution(feedback.explanation)} />
                   </div>
                 )}
 

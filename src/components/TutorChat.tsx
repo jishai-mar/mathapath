@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from './MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { supabase } from '@/integrations/supabase/client';
 import { Send, User, Loader2, Calculator, LineChart, Ruler, X, MessageCircle, Target, Sparkles, Image as ImageIcon } from 'lucide-react';
 import ToolPanel, { ToolSuggestion, detectToolsFromTopic } from './tools/ToolPanel';
@@ -507,7 +508,7 @@ export default function TutorChat({ subtopicName, theoryContext = '', onClose }:
                           <span>Uploaded work</span>
                         </div>
                       )}
-                      <MathRenderer latex={message.content} />
+                      <MathRenderer segments={createSegmentsFromSolution(message.content)} />
                     </div>
                     
                     {/* Tool suggestion badge */}
