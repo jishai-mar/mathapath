@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { NotebookEntry } from '@/hooks/useNotebook';
 import { toast } from 'sonner';
 
@@ -212,7 +213,7 @@ export function NotebookEntryCard({
                   {workedExampleSections[0].content && (
                     <div className="mt-1">
                       {hasMath ? (
-                        <MathRenderer latex={workedExampleSections[0].content} />
+                        <MathRenderer segments={createSegmentsFromSolution(workedExampleSections[0].content)} />
                       ) : (
                         <p>{workedExampleSections[0].content}</p>
                       )}
@@ -276,7 +277,7 @@ export function NotebookEntryCard({
                         {section.content && (
                           <div className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                             {hasMath || /\$.*?\$|\\\[.*?\\\]|\\\(.*?\\\)/s.test(section.content) ? (
-                              <MathRenderer latex={section.content} />
+                              <MathRenderer segments={createSegmentsFromSolution(section.content)} />
                             ) : (
                               section.content
                             )}
@@ -289,9 +290,9 @@ export function NotebookEntryCard({
               </AnimatePresence>
             </div>
           ) : (
-            <div className="text-sm text-foreground leading-relaxed">
+          <div className="text-sm text-foreground leading-relaxed">
               {hasMath ? (
-                <MathRenderer latex={entry.content} />
+                <MathRenderer segments={createSegmentsFromSolution(entry.content)} />
               ) : (
                 <p className="line-clamp-3">{entry.content}</p>
               )}

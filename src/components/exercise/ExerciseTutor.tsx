@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { useTutor } from '@/contexts/TutorContext';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import { VoiceControls } from '@/components/voice/VoiceControls';
@@ -191,7 +192,7 @@ export function ExerciseTutor({
                     ? 'bg-primary text-primary-foreground' 
                     : 'bg-muted/50'
                 )}>
-                  <MathRenderer latex={msg.content} />
+                  <MathRenderer segments={createSegmentsFromSolution(msg.content)} />
                 </div>
               </motion.div>
             ))}

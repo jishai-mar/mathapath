@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -292,7 +293,7 @@ export function ExponentialTutorChat({ learningStyle, onProblemComplete }: Expon
                   )}
                 >
                   <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <MathRenderer latex={message.content} />
+                    <MathRenderer segments={createSegmentsFromSolution(message.content)} />
                   </div>
                 </div>
               </div>

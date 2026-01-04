@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, XCircle, ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface TutorFeedback {
   what_went_well?: string;
@@ -146,7 +147,7 @@ export function FeedbackBanner({
         <div className="p-3 rounded-lg bg-muted/30 border border-border">
           <p className="text-xs text-muted-foreground mb-1">Correct answer:</p>
           <div className="font-medium">
-            <MathRenderer latex={correctAnswer} />
+            <MathRenderer segments={createSegmentsFromSolution(correctAnswer)} />
           </div>
         </div>
       )}

@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { useBookmarks, Bookmark, BookmarkType } from '@/hooks/useBookmarks';
 import { 
   Bookmark as BookmarkIcon, 
@@ -189,7 +190,7 @@ export function BookmarksList({
                     </div>
 
                     <div className="text-sm text-foreground">
-                      <MathRenderer latex={bookmark.content} />
+                      <MathRenderer segments={createSegmentsFromSolution(bookmark.content)} />
                     </div>
 
                     {editingId === bookmark.id ? (

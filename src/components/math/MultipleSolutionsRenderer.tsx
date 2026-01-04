@@ -1,4 +1,5 @@
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface MultipleSolutionsRendererProps {
   answer: string;
@@ -37,7 +38,7 @@ export function MultipleSolutionsRenderer({ answer, className = '' }: MultipleSo
   if (!hasMultiple || solutions.length <= 1) {
     return (
       <div className={className}>
-        <MathRenderer latex={answer} displayMode />
+        <MathRenderer segments={createSegmentsFromSolution(answer)} />
       </div>
     );
   }
@@ -54,7 +55,7 @@ export function MultipleSolutionsRenderer({ answer, className = '' }: MultipleSo
             {index + 1}.
           </span>
           <div className="flex-1 p-2 rounded-lg bg-muted/30">
-            <MathRenderer latex={solution} displayMode />
+            <MathRenderer segments={createSegmentsFromSolution(solution)} />
           </div>
         </div>
       ))}

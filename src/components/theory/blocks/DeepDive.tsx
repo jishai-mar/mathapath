@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HelpCircle, ChevronDown } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { DeepDiveBlock, DeepDiveQuestion } from '../types';
 
 interface DeepDiveProps {
@@ -37,7 +38,7 @@ function DeepDiveItem({ question, answer }: DeepDiveQuestion) {
           >
             <div className="pb-4 pl-7 pr-4">
               <div className="text-sm text-muted-foreground leading-relaxed">
-                <MathRenderer latex={answer} />
+                <MathRenderer segments={createSegmentsFromSolution(answer)} />
               </div>
             </div>
           </motion.div>

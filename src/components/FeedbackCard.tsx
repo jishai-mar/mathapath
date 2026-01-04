@@ -1,6 +1,7 @@
 import { CheckCircle2, XCircle, Lightbulb, Target, BookOpen } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import MathRenderer from './MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface MiniExercise {
   question: string;
@@ -51,7 +52,7 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <div>
                 <h4 className="font-medium text-primary mb-1">What went well</h4>
                 <div className="text-sm text-muted-foreground">
-                  <MathRenderer latex={feedback.what_went_well} />
+                  <MathRenderer segments={createSegmentsFromSolution(feedback.what_went_well)} />
                 </div>
               </div>
             </div>
@@ -68,7 +69,7 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <div>
                 <h4 className="font-medium text-destructive mb-1">Where it went wrong</h4>
                 <div className="text-sm text-muted-foreground">
-                  <MathRenderer latex={feedback.where_it_breaks} />
+                  <MathRenderer segments={createSegmentsFromSolution(feedback.where_it_breaks)} />
                 </div>
               </div>
             </div>
@@ -85,7 +86,7 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <div>
                 <h4 className="font-medium text-accent mb-1">Try this approach</h4>
                 <div className="text-sm text-muted-foreground">
-                  <MathRenderer latex={feedback.alternative_approach} />
+                  <MathRenderer segments={createSegmentsFromSolution(feedback.alternative_approach)} />
                 </div>
               </div>
             </div>
@@ -102,7 +103,7 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <div className="space-y-2">
                 <h4 className="font-medium text-[hsl(var(--warning))]">Quick practice step</h4>
                 <div className="text-sm text-foreground">
-                  <MathRenderer latex={feedback.mini_exercise.question} />
+                  <MathRenderer segments={createSegmentsFromSolution(feedback.mini_exercise.question)} />
                 </div>
                 <p className="text-xs text-muted-foreground italic">
                   Hint: {feedback.mini_exercise.hint}
@@ -122,7 +123,7 @@ export default function FeedbackCard({ feedback }: FeedbackCardProps) {
               <div>
                 <h4 className="font-medium text-[hsl(var(--info))] mb-1">Focus on next</h4>
                 <div className="text-sm text-muted-foreground">
-                  <MathRenderer latex={feedback.what_to_focus_on_next} />
+                  <MathRenderer segments={createSegmentsFromSolution(feedback.what_to_focus_on_next)} />
                 </div>
               </div>
             </div>

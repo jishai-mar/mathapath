@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Lightbulb } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { IntuitiveExplanationBlock } from '../types';
 
 interface IntuitiveExplanationProps {
@@ -30,7 +31,7 @@ export function IntuitiveExplanation({ block }: IntuitiveExplanationProps) {
       <div className="space-y-4 text-muted-foreground leading-relaxed">
         {block.paragraphs.map((paragraph, index) => (
           <div key={index}>
-            <MathRenderer latex={paragraph} />
+            <MathRenderer segments={createSegmentsFromSolution(paragraph)} />
           </div>
         ))}
       </div>

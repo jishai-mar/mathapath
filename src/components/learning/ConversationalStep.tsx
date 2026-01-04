@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { TutorAvatar, TutorMood } from '@/components/tutor/TutorAvatar';
 import { useTutor } from '@/contexts/TutorContext';
 import { CheckCircle2, XCircle, ArrowRight, Lightbulb, PlayCircle, Clock, Target, Sparkles } from 'lucide-react';
@@ -152,7 +153,7 @@ export default function ConversationalStep({
         return (
           <div className="space-y-4">
             <div className="text-foreground leading-relaxed">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
             {isActive && !step.isComplete && (
               <Button 
@@ -171,7 +172,7 @@ export default function ConversationalStep({
         return (
           <div className="space-y-4">
             <div className="text-foreground leading-relaxed italic">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
             {isActive && !step.isComplete && (
               <div className="flex gap-2">
@@ -190,7 +191,7 @@ export default function ConversationalStep({
         return (
           <div className="space-y-4">
             <div className="text-foreground leading-relaxed mb-3">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
             {step.formula && (
               <motion.div 
@@ -199,7 +200,7 @@ export default function ConversationalStep({
                 className="bg-card border border-primary/30 rounded-xl p-6 text-center"
               >
                 <div className="text-2xl text-foreground">
-                  <MathRenderer latex={step.formula} displayMode />
+                  <MathRenderer segments={createSegmentsFromSolution(step.formula)} />
                 </div>
               </motion.div>
             )}
@@ -220,7 +221,7 @@ export default function ConversationalStep({
         return (
           <div className="space-y-4">
             <div className="text-foreground leading-relaxed">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
             {isActive && !step.isComplete && (
               <Button 
@@ -239,7 +240,7 @@ export default function ConversationalStep({
         return (
           <div className="space-y-4">
             <div className="text-foreground leading-relaxed font-medium">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
             
             {step.checkQuestion && (
@@ -248,7 +249,7 @@ export default function ConversationalStep({
                   Quick check:
                 </div>
                 <div className="text-foreground mb-4">
-                  <MathRenderer latex={step.checkQuestion} />
+                  <MathRenderer segments={createSegmentsFromSolution(step.checkQuestion)} />
                 </div>
 
                 {/* Options-based answer */}
@@ -268,7 +269,7 @@ export default function ConversationalStep({
                             : "border-border hover:border-primary/50 hover:bg-primary/5"
                         )}
                       >
-                        <MathRenderer latex={option} />
+                        <MathRenderer segments={createSegmentsFromSolution(option)} />
                       </button>
                     ))}
                   </div>
@@ -362,7 +363,7 @@ export default function ConversationalStep({
             <div className="flex items-start gap-2">
               <Lightbulb className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
               <div className="text-foreground">
-                <MathRenderer latex={step.content} />
+                <MathRenderer segments={createSegmentsFromSolution(step.content)} />
               </div>
             </div>
             {isActive && !step.isComplete && (
@@ -389,7 +390,7 @@ export default function ConversationalStep({
         return (
           <div className="space-y-4">
             <div className="text-foreground leading-relaxed">
-              <MathRenderer latex={step.content} />
+              <MathRenderer segments={createSegmentsFromSolution(step.content)} />
             </div>
             
             {/* Practice Plan Card */}
