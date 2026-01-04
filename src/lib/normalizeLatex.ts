@@ -474,27 +474,26 @@ export function parseContentSegments(input: string): ContentSegment[] {
   // Split at first ":" and treat the RHS as math if it looks like a math expression.
   // Also detect LaTeX commands like \left\{, \begin{...}, \frac, etc.
   if (segments.length === 0) {
-    // First, detect LaTeX commands embedded in prose (e.g., "Solve: \left\{...")
-    const latexCommandPattern =
-      /(.*?)(\s*)(\\left\\?\{\\begin\{aligned\}[\s\S]+\\end\{aligned\}\\right\.?|\\left\\?\{\\begin\{cases\}[\s\S]+\\end\{cases\}\\right\.?|\\begin\{aligned\}[\s\S]+\\end\{aligned\}|\\begin\{cases\}[\s\S]+\\end\{cases\}|\\left\\?\{[\s\S]+\\right\.?)$/;
+    // 1) Prose + raw LaTeX (no $ delimiters): split at the first obvious math command.
+    // This prevents KaTeX from trying to render English prose (which causes red errors).
+    const mathStartIdx = input.search(/\\left\\\{|\\left\{|\\begin\{aligned\}|\\begin\{cases\}|\\begin\{array\}/);
 
-    const latexMatch = input.match(latexCommandPattern);
-    if (latexMatch && latexMatch[3]) {
-      const textBefore = latexMatch[1].trim();
-      const mathPart = latexMatch[3].trim();
+    if (mathStartIdx > 0) {
+      const textBefore = input.slice(0, mathStartIdx).trim();
+      const mathPart = input.slice(mathStartIdx).trim();
 
-      if (textBefore) {
-        segments.push({ type: 'text', content: textBefore });
+      if (/[a-zA-Z]{3,}/.test(textBefore) && /\\(left|begin|frac|sqrt|cdot|times|pm|div|text)\b/.test(mathPart)) {
+        if (textBefore) segments.push({ type: 'text', content: textBefore });
+        segments.push({
+          type: 'math',
+          content: normalizeLatex(fixMalformedLatex(mathPart)),
+          displayMode: true,
+        });
+        return segments;
       }
-      segments.push({
-        type: 'math',
-        content: normalizeLatex(fixMalformedLatex(mathPart)),
-        displayMode: true, // Systems of equations should be display mode
-      });
-      return segments;
     }
 
-    // Fallback: split at first ":" and treat RHS as math if it looks like a math expression.
+    // 2) Fallback: split at first ":" and treat RHS as math if it looks like a math expression.
     const colonIdx = input.indexOf(':');
     if (colonIdx !== -1) {
       const left = input.slice(0, colonIdx + 1).trim();
