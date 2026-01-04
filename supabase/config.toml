@@ -74,3 +74,6 @@ verify_jwt = true
 
 [functions.exponential-tutor]
 verify_jwt = false
+
+[functions.generate-test-yourself]
+verify_jwt = false
