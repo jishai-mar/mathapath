@@ -284,7 +284,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
           )}
         >
           <Calculator className="w-4 h-4" />
-          Rekenmachine
+          Calculator
         </Button>
 
         {/* Graph Calculator Button */}
@@ -299,7 +299,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
           )}
         >
           <LineChart className="w-4 h-4" />
-          Grafiek
+          Graph
         </Button>
 
         {/* Formula Sheet Button */}
@@ -314,7 +314,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
           )}
         >
           <BookOpen className="w-4 h-4" />
-          Formules
+          Formulas
         </Button>
       </div>
 
