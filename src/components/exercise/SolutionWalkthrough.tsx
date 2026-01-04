@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { MultipleSolutionsRenderer } from '@/components/math/MultipleSolutionsRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { TheoryDiagram } from '@/components/exercise/TheoryDiagram';
@@ -291,7 +292,7 @@ export function SolutionWalkthrough({
               >
                 <p className="text-sm text-muted-foreground mb-2">Problem:</p>
                 <div className="text-lg">
-                  <MathRenderer latex={question} displayMode />
+                  <MathRenderer segments={createSegmentsFromSolution(question)} />
                 </div>
               </motion.div>
 
@@ -310,7 +311,7 @@ export function SolutionWalkthrough({
                     <div>
                       <p className="text-sm font-semibold text-primary mb-2">Theory Refresher</p>
                       <div className="text-sm text-foreground leading-relaxed">
-                        <MathRenderer latex={solution.theoryReview} />
+                        <MathRenderer segments={createSegmentsFromSolution(solution.theoryReview ?? '')} />
                       </div>
                     </div>
                   </div>
@@ -570,14 +571,14 @@ export function SolutionWalkthrough({
                         {currentStep.explanation}
                       </motion.p>
                       
-                      {currentStep.math && (
+                        {currentStep.math && (
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.25 }}
                           className="p-4 rounded-xl bg-gradient-to-br from-muted/50 to-muted/30 text-center border border-border/30"
                         >
-                          <MathRenderer latex={currentStep.math} displayMode />
+                          <MathRenderer segments={createSegmentsFromSolution(currentStep.math)} />
                         </motion.div>
                       )}
 

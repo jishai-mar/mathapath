@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { SolutionStep } from './types';
 
 interface SolutionPanelProps {
@@ -70,7 +71,7 @@ export function SolutionPanel({
                   <div className="p-4 rounded-xl bg-muted/50 border border-border">
                     <p className="text-sm text-muted-foreground mb-2">Question:</p>
                     <div className="font-medium">
-                      <MathRenderer latex={question} />
+                      <MathRenderer segments={createSegmentsFromSolution(question ?? '')} />
                     </div>
                   </div>
                 )}
@@ -104,7 +105,7 @@ export function SolutionPanel({
                             <div className="p-3 rounded-lg bg-muted/30 border border-border mb-2">
                               <p className="text-sm text-muted-foreground mb-1">{step.action}</p>
                               <div className="font-mono text-sm">
-                                <MathRenderer latex={step.calculation} />
+                                <MathRenderer segments={createSegmentsFromSolution(step.calculation)} />
                               </div>
                             </div>
                             
@@ -135,7 +136,7 @@ export function SolutionPanel({
                       <h4 className="font-semibold text-green-700 dark:text-green-400">Final Answer</h4>
                     </div>
                     <div className="text-lg font-medium">
-                      <MathRenderer latex={finalAnswer} />
+                      <MathRenderer segments={createSegmentsFromSolution(finalAnswer ?? '')} />
                     </div>
                   </motion.div>
                 )}
