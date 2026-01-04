@@ -194,7 +194,7 @@ export function HandwritingCanvas({ onClear, className = '' }: HandwritingCanvas
       </div>
       
       <p className="text-xs text-muted-foreground text-center">
-        Schrijf hier je uitwerking met muis of touch
+        Write your work here with mouse or touch
       </p>
     </div>
   );

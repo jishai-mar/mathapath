@@ -116,10 +116,10 @@ export function SolutionWalkthrough({
     try {
       // Format the solution steps for storage
       const stepsContent = solution.steps.map(step => 
-        `**Stap ${step.stepNumber}: ${step.title}**\n${step.explanation}\n${step.math ? `$$${step.math}$$` : ''}`
+        `**Step ${step.stepNumber}: ${step.title}**\n${step.explanation}\n${step.math ? `$$${step.math}$$` : ''}`
       ).join('\n\n');
       
-      const fullContent = `**Opgave:** ${question}\n\n${stepsContent}\n\n**Eindantwoord:** ${solution.finalAnswer}${solution.tip ? `\n\n**Tip:** ${solution.tip}` : ''}`;
+      const fullContent = `**Problem:** ${question}\n\n${stepsContent}\n\n**Final Answer:** ${solution.finalAnswer}${solution.tip ? `\n\n**Tip:** ${solution.tip}` : ''}`;
       
       const { error: insertError } = await supabase
         .from('student_session_notes')
@@ -133,10 +133,10 @@ export function SolutionWalkthrough({
       if (insertError) throw insertError;
       
       setIsSavedToNotebook(true);
-      toast.success('Uitwerking opgeslagen in je notitieboek!');
+      toast.success('Solution saved to your notebook!');
     } catch (err) {
       console.error('Error saving to notebook:', err);
-      toast.error('Kon uitwerking niet opslaan');
+      toast.error('Could not save solution');
     } finally {
       setIsSaving(false);
     }
@@ -163,7 +163,7 @@ export function SolutionWalkthrough({
       setSolution(data);
     } catch (err) {
       console.error('Error fetching solution:', err);
-      setError(err instanceof Error ? err.message : 'Kon oplossing niet laden');
+      setError(err instanceof Error ? err.message : 'Could not load solution');
     } finally {
       setIsLoading(false);
     }
@@ -234,7 +234,7 @@ export function SolutionWalkthrough({
               >
                 <Lightbulb className="w-5 h-5 text-primary" />
               </motion.div>
-              Stap-voor-Stap Uitwerking
+              Step-by-Step Solution
             </DialogTitle>
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="w-5 h-5" />
@@ -269,7 +269,7 @@ export function SolutionWalkthrough({
                 animate={{ opacity: [0.5, 1, 0.5] }}
                 transition={{ duration: 2, repeat: Infinity }}
               >
-                Oplossing wordt voorbereid...
+                Preparing solution...
               </motion.p>
             </motion.div>
           ) : error ? (
@@ -279,7 +279,7 @@ export function SolutionWalkthrough({
               className="flex flex-col items-center justify-center py-16 gap-4"
             >
               <p className="text-destructive">{error}</p>
-              <Button onClick={fetchSolution}>Opnieuw proberen</Button>
+              <Button onClick={fetchSolution}>Try Again</Button>
             </motion.div>
           ) : solution ? (
             <div className="space-y-6">
@@ -289,7 +289,7 @@ export function SolutionWalkthrough({
                 animate={{ opacity: 1, y: 0 }}
                 className="p-4 rounded-xl bg-muted/30 border border-border/50"
               >
-                <p className="text-sm text-muted-foreground mb-2">Opgave:</p>
+                <p className="text-sm text-muted-foreground mb-2">Problem:</p>
                 <div className="text-lg">
                   <MathRenderer latex={question} displayMode />
                 </div>
@@ -308,7 +308,7 @@ export function SolutionWalkthrough({
                       <Lightbulb className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-primary mb-2">Theorie opfrissen</p>
+                      <p className="text-sm font-semibold text-primary mb-2">Theory Refresher</p>
                       <div className="text-sm text-foreground leading-relaxed">
                         <MathRenderer latex={solution.theoryReview} />
                       </div>
@@ -330,7 +330,7 @@ export function SolutionWalkthrough({
                       <AlertTriangle className="w-4 h-4 text-destructive" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-semibold text-destructive mb-2">Let op! Veelgemaakte fouten</p>
+                      <p className="text-sm font-semibold text-destructive mb-2">Watch out! Common mistakes</p>
                       <ul className="space-y-2">
                         {solution.commonMistakes.map((mistake, index) => (
                           <li key={index} className="flex items-start gap-2 text-sm text-foreground">
@@ -364,9 +364,9 @@ export function SolutionWalkthrough({
                 className="space-y-2"
               >
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Voortgang</span>
+                  <span className="text-muted-foreground">Progress</span>
                   <span className="font-medium text-primary">
-                    {completedSteps.size} / {solution.steps.length} stappen
+                    {completedSteps.size} / {solution.steps.length} steps
                   </span>
                 </div>
                 <Progress value={progressPercent} className="h-2" />
@@ -390,7 +390,7 @@ export function SolutionWalkthrough({
                     />
                   </motion.div>
                   <div className="text-sm text-muted-foreground">
-                    Stap <span className="font-semibold text-foreground">{currentStepIndex + 1}</span> van {solution.steps.length}
+                    Step <span className="font-semibold text-foreground">{currentStepIndex + 1}</span> of {solution.steps.length}
                   </div>
                 </div>
                 
@@ -410,7 +410,7 @@ export function SolutionWalkthrough({
                           className="gap-2"
                         >
                           <VolumeX className="w-4 h-4" />
-                          Stop praten
+                          Stop speaking
                         </Button>
                       </motion.div>
                     )}
@@ -420,7 +420,7 @@ export function SolutionWalkthrough({
                     variant="outline"
                     size="icon"
                     onClick={handleRestart}
-                    title="Opnieuw beginnen"
+                    title="Restart"
                     className="transition-transform hover:scale-105"
                   >
                     <RotateCcw className="w-4 h-4" />
@@ -429,7 +429,7 @@ export function SolutionWalkthrough({
                     variant="outline"
                     size="icon"
                     onClick={() => setIsMuted(!isMuted)}
-                    title={isMuted ? 'Geluid aan' : 'Geluid uit'}
+                    title={isMuted ? 'Sound on' : 'Sound off'}
                     className="transition-transform hover:scale-105"
                   >
                     {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
@@ -439,7 +439,7 @@ export function SolutionWalkthrough({
                     size="icon"
                     onClick={handleSkipStep}
                     disabled={currentStepIndex >= solution.steps.length - 1}
-                    title="Volgende stap"
+                    title="Next step"
                     className="transition-transform hover:scale-105"
                   >
                     <SkipForward className="w-4 h-4" />
@@ -454,12 +454,12 @@ export function SolutionWalkthrough({
                     ) : isPlaying || isSpeaking ? (
                       <>
                         <Pause className="w-4 h-4" />
-                        Pauzeren
+                        Pause
                       </>
                     ) : (
                       <>
                         <Play className="w-4 h-4" />
-                        Afspelen
+                        Play
                       </>
                     )}
                   </Button>
@@ -528,7 +528,7 @@ export function SolutionWalkthrough({
                         transition={{ type: "spring", stiffness: 500, damping: 30 }}
                         className="absolute top-0 right-0 bg-primary text-primary-foreground px-3 py-1 rounded-bl-xl text-sm font-semibold"
                       >
-                        Stap {currentStep.stepNumber}
+                        Step {currentStep.stepNumber}
                       </motion.div>
 
                       <div className="flex items-start gap-4 mb-4">
@@ -590,7 +590,7 @@ export function SolutionWalkthrough({
                           onClick={handleSkipStep}
                           className="mt-4 flex items-center gap-2 text-sm text-primary hover:underline group"
                         >
-                          <span>Volgende stap</span>
+                          <span>Next step</span>
                           <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                         </motion.button>
                       )}
@@ -632,7 +632,7 @@ export function SolutionWalkthrough({
                       >
                         <CheckCircle2 className="w-6 h-6 text-green-500" />
                       </motion.div>
-                      Eindantwoord
+                      Final Answer
                     </h3>
                     <MultipleSolutionsRenderer answer={solution.finalAnswer} className="text-xl" />
                   </div>
@@ -647,7 +647,7 @@ export function SolutionWalkthrough({
                       <p className="text-sm flex items-start gap-2">
                         <Lightbulb className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
                         <span>
-                          <strong className="text-amber-600 dark:text-amber-400">Onthoud:</strong>{' '}
+                          <strong className="text-amber-600 dark:text-amber-400">Remember:</strong>{' '}
                           {solution.tip}
                         </span>
                       </p>
@@ -674,10 +674,10 @@ export function SolutionWalkthrough({
                       ) : (
                         <BookmarkPlus className="w-4 h-4" />
                       )}
-                      {isSavedToNotebook ? 'Opgeslagen' : 'Opslaan in notitieboek'}
+                      {isSavedToNotebook ? 'Saved' : 'Save to notebook'}
                     </Button>
                     <Button onClick={onClose} className="flex-1" size="lg">
-                      Sluiten
+                      Close
                     </Button>
                   </motion.div>
                 </motion.div>

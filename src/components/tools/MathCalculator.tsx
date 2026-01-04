@@ -160,9 +160,9 @@ export default function MathCalculator({ isOpen, onClose, isMinimized, onToggleM
                     size="sm"
                     className="text-xs h-7 px-2 text-primary hover:bg-primary/10"
                     onClick={() => onInsertResult(lastResult)}
-                    title="Voeg resultaat in antwoord"
+                    title="Insert result into answer"
                   >
-                    Invoegen →
+                    Insert →
                   </Button>
                 )}
               </div>

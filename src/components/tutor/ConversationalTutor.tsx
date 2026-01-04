@@ -75,7 +75,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
     if (!exerciseContext) {
       return {
         current_question: '',
-        subtopic_name: 'wiskunde',
+        subtopic_name: 'math',
         topic_name: '',
         difficulty: '',
         student_answer: '',
@@ -91,7 +91,7 @@ export function ConversationalTutor({ isOpen, onClose }: ConversationalTutorProp
 
     return {
       current_question: exerciseContext.currentQuestion || '',
-      subtopic_name: exerciseContext.subtopicName || 'wiskunde',
+      subtopic_name: exerciseContext.subtopicName || 'math',
       topic_name: exerciseContext.topicName || '',
       difficulty: exerciseContext.difficulty || 'medium',
       student_answer: exerciseContext.currentAnswer || '',

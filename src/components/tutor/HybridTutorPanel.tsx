@@ -65,8 +65,8 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
       const hasExercise = exerciseContext?.currentQuestion;
       
       const greeting = hasExercise
-        ? `Hallo! Ik zie dat je werkt aan een opgave over ${exerciseContext?.subtopicName || 'wiskunde'}. Waar loop je tegenaan? Vertel me wat je al hebt geprobeerd.`
-        : 'Hallo! Ik ben je wiskundige tutor. Hoe kan ik je helpen?';
+        ? `Hello! I see you're working on an exercise about ${exerciseContext?.subtopicName || 'math'}. Where are you stuck? Tell me what you've already tried.`
+        : "Hello! I'm your math tutor. How can I help you?";
       
       setMessages([{
         id: 'greeting',
@@ -182,7 +182,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
       console.error('Error getting tutor response:', error);
       setMessages(prev => prev.map(m => 
         m.id === streamingId 
-          ? { ...m, content: 'Sorry, er ging iets mis. Probeer het opnieuw.', isStreaming: false }
+          ? { ...m, content: 'Sorry, something went wrong. Please try again.', isStreaming: false }
           : m
       ));
     } finally {
@@ -194,18 +194,18 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
     let message = '';
     switch (action) {
       case 'hint':
-        message = 'Kun je me een hint geven?';
+        message = 'Can you give me a hint?';
         break;
       case 'explain':
-        message = 'Kun je uitleggen hoe ik dit moet aanpakken?';
+        message = 'Can you explain how I should approach this?';
         break;
       case 'stuck':
-        message = 'Ik zit vast en weet niet waar te beginnen.';
+        message = "I'm stuck and don't know where to start.";
         break;
       case 'check':
         message = exerciseContext?.currentAnswer 
-          ? `Is mijn antwoord "${exerciseContext.currentAnswer}" correct?`
-          : 'Kun je mijn aanpak controleren?';
+          ? `Is my answer "${exerciseContext.currentAnswer}" correct?`
+          : 'Can you check my approach?';
         break;
     }
     setInput(message);
@@ -232,7 +232,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
             <div>
               <h3 className="font-semibold">Tutor Chat</h3>
               <p className="text-xs text-muted-foreground">
-                {exerciseContext?.subtopicName || 'Hulp beschikbaar'}
+                {exerciseContext?.subtopicName || 'Help available'}
               </p>
             </div>
           </div>
@@ -253,7 +253,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
               onClick={() => setShowContext(!showContext)}
               className="w-full p-3 flex items-center justify-between text-sm hover:bg-muted/50 transition-colors"
             >
-              <span className="text-muted-foreground">Huidige opgave context</span>
+              <span className="text-muted-foreground">Current exercise context</span>
               {showContext ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
             <AnimatePresence>
@@ -265,13 +265,13 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
                   className="px-3 pb-3 overflow-hidden"
                 >
                   <div className="p-3 rounded-lg bg-muted/30 text-sm space-y-2">
-                    <p className="font-medium">Vraag:</p>
+                    <p className="font-medium">Question:</p>
                     <div className="text-muted-foreground">
                       <MathRenderer latex={exerciseContext.currentQuestion} />
                     </div>
                     {exerciseContext.currentAnswer && (
                       <>
-                        <p className="font-medium mt-2">Jouw antwoord:</p>
+                        <p className="font-medium mt-2">Your answer:</p>
                         <p className="text-muted-foreground">{exerciseContext.currentAnswer}</p>
                       </>
                     )}
@@ -329,7 +329,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
             className="shrink-0 gap-1.5"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            Uitleg
+            Explain
           </Button>
           <Button
             variant="outline"
@@ -338,7 +338,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
             className="shrink-0 gap-1.5"
           >
             <HelpCircle className="w-3.5 h-3.5" />
-            Ik zit vast
+            I'm Stuck
           </Button>
         </div>
 
@@ -352,7 +352,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
               ref={inputRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Stel je vraag..."
+              placeholder="Ask your question..."
               disabled={isLoading}
               className="flex-1"
             />

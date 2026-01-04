@@ -71,7 +71,7 @@ export default function Practice() {
       }
     } catch (error) {
       console.error('Error loading topic:', error);
-      toast.error('Kon onderwerp niet laden.');
+      toast.error('Could not load topic.');
       navigate('/');
     } finally {
       setIsLoading(false);
@@ -121,7 +121,7 @@ export default function Practice() {
           className="gap-2"
         >
           <ArrowLeft className="w-4 h-4" />
-          Terug
+          Back
         </Button>
       </header>
 
@@ -138,15 +138,15 @@ export default function Practice() {
           {/* Topic Info */}
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold">{topic?.name}</h1>
-            <p className="text-muted-foreground">
-              {topic?.description || 'Laten we samen oefenen!'}
+          <p className="text-muted-foreground">
+              {topic?.description || "Let's practice together!"}
             </p>
           </div>
 
           {/* Subtopic Selection */}
           {subtopics.length > 1 && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">Kies een onderwerp:</p>
+              <p className="text-sm text-muted-foreground">Choose a subtopic:</p>
               <div className="grid gap-2">
                 {subtopics.map((subtopic) => (
                   <button
@@ -176,11 +176,11 @@ export default function Practice() {
             className="w-full h-14 text-lg gap-3 rounded-2xl"
           >
             <Play className="w-5 h-5" />
-            Start sessie
+            Start Session
           </Button>
 
           <p className="text-xs text-muted-foreground/70">
-            Je tutor leidt je door 5 oefeningen
+            Your tutor will guide you through 5 exercises
           </p>
         </motion.div>
       </main>

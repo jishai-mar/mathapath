@@ -250,7 +250,7 @@ export function GuidedTutoringSession({
 
       if (error) throw error;
 
-      const greeting = data?.greeting || `Hallo! Vandaag gaan we samen werken aan ${subtopicName}. We doen ${exerciseGoal} oefeningen. Ben je er klaar voor?`;
+      const greeting = data?.greeting || `Hello! Today we're going to work on ${subtopicName}. We'll do ${exerciseGoal} exercises. Are you ready?`;
       setGreetingMessage(greeting);
       setTutorMood('explaining');
 
@@ -261,7 +261,7 @@ export function GuidedTutoringSession({
       }
     } catch (error) {
       console.error('Error starting session:', error);
-      const fallbackGreeting = `Hallo! Laten we beginnen met ${subtopicName}. We doen ${exerciseGoal} oefeningen samen.`;
+      const fallbackGreeting = `Hello! Let's get started with ${subtopicName}. We'll do ${exerciseGoal} exercises together.`;
       setGreetingMessage(fallbackGreeting);
       if (!isMuted) {
         speak(fallbackGreeting, 'encouraging');
@@ -393,8 +393,8 @@ export function GuidedTutoringSession({
         // Announce exercise
         if (!isMuted) {
           const intro = stats.total === 0 
-            ? 'Hier is je eerste opgave.' 
-            : `Goed, hier is opgave ${stats.total + 1}.`;
+            ? 'Here is your first exercise.' 
+            : `Good, here is exercise ${stats.total + 1}.`;
           speak(intro, 'explaining');
         }
       } else {
@@ -440,8 +440,8 @@ export function GuidedTutoringSession({
           // Announce exercise
           if (!isMuted) {
             const intro = stats.total === 0 
-              ? 'Hier is je eerste opgave.' 
-              : `Goed, hier is opgave ${stats.total + 1}.`;
+              ? 'Here is your first exercise.' 
+              : `Good, here is exercise ${stats.total + 1}.`;
             speak(intro, 'explaining');
           }
         }
@@ -497,10 +497,10 @@ export function GuidedTutoringSession({
       if (isCorrect) {
         setTutorMood('celebrating');
         const celebrationMessages = [
-          'Uitstekend! Helemaal goed!',
-          'Perfect! Je snapt het helemaal!',
-          'Geweldig gedaan!',
-          'Precies goed! Knap werk!',
+          'Excellent! Completely correct!',
+          'Perfect! You totally get it!',
+          'Great job!',
+          'Exactly right! Nice work!',
         ];
         const message = celebrationMessages[Math.floor(Math.random() * celebrationMessages.length)];
         setCurrentFeedback({ isCorrect: true, message });
@@ -513,12 +513,12 @@ export function GuidedTutoringSession({
         setTutorMood('encouraging');
         setCurrentFeedback({ 
           isCorrect: false, 
-          message: 'Dat klopt niet helemaal, maar geen zorgen.',
+          message: "That's not quite right, but don't worry.",
           tutorFeedback 
         });
         
         if (!isMuted) {
-          speak('Dat klopt niet helemaal. Laten we kijken wat er gebeurde.', 'correcting');
+          speak("That's not quite right. Let's see what happened.", 'correcting');
         }
       }
     } catch (error) {
@@ -596,7 +596,7 @@ export function GuidedTutoringSession({
         },
       });
 
-      const wrapUp = data?.wrapUp || `Goed gedaan! Je hebt ${stats.correct} van de ${stats.total} oefeningen goed. Je hebt ${stats.xpEarned} XP verdiend. Tot de volgende keer!`;
+      const wrapUp = data?.wrapUp || `Great job! You got ${stats.correct} out of ${stats.total} exercises correct. You earned ${stats.xpEarned} XP. See you next time!`;
       setWrapUpMessage(wrapUp);
 
       if (!isMuted) {
@@ -605,7 +605,7 @@ export function GuidedTutoringSession({
         setTimeout(() => setPhase('completed'), 3000);
       }
     } catch (error) {
-      const fallback = `Goed gedaan! Je hebt ${stats.correct} van de ${stats.total} oefeningen goed. Tot de volgende keer!`;
+      const fallback = `Great job! You got ${stats.correct} out of ${stats.total} exercises correct. See you next time!`;
       setWrapUpMessage(fallback);
       if (!isMuted) {
         speak(fallback, 'celebrating');
@@ -649,13 +649,13 @@ export function GuidedTutoringSession({
           >
             <Button variant="ghost" size="sm" onClick={onEndSession} className="gap-2">
               <Home className="w-4 h-4" />
-              Terug
+              Back
             </Button>
             
             <div className="text-center">
               <p className="text-sm text-muted-foreground">{subtopicName}</p>
               <p className="text-xs text-muted-foreground/70">
-                Oefening {Math.min(stats.total + 1, exerciseGoal)} van {exerciseGoal}
+                Exercise {Math.min(stats.total + 1, exerciseGoal)} of {exerciseGoal}
               </p>
             </div>
 
@@ -665,7 +665,7 @@ export function GuidedTutoringSession({
                 size="icon" 
                 onClick={() => setFocusMode(!focusMode)}
                 className={focusMode ? 'text-primary' : ''}
-                title={focusMode ? 'Focus mode uit' : 'Focus mode aan'}
+                title={focusMode ? 'Focus mode off' : 'Focus mode on'}
               >
                 {focusMode ? <Eye className="w-4 h-4" /> : <Focus className="w-4 h-4" />}
               </Button>
@@ -691,7 +691,7 @@ export function GuidedTutoringSession({
               size="icon" 
               onClick={() => setFocusMode(false)}
               className="bg-card/50 backdrop-blur-sm"
-              title="Focus mode uit"
+              title="Focus mode off"
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -725,11 +725,11 @@ export function GuidedTutoringSession({
             >
               <ElevenLabsAgent size="lg" />
               <div className="p-6 rounded-2xl bg-card/50 border border-border/30 max-w-md">
-                <p className="text-lg leading-relaxed">{greetingMessage || 'Welkom! We gaan zo beginnen...'}</p>
+                <p className="text-lg leading-relaxed">{greetingMessage || 'Welcome! We will start shortly...'}</p>
               </div>
               {isMuted && (
                 <Button onClick={() => loadNextExercise()} className="gap-2">
-                  Beginnen
+                  Start
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               )}
@@ -760,9 +760,9 @@ export function GuidedTutoringSession({
                   className="gap-1.5 px-3 py-1"
                 >
                   <Zap className="w-3 h-3" />
-                  {currentDifficulty === 'easy' && 'Makkelijk'}
-                  {currentDifficulty === 'medium' && 'Gemiddeld'}
-                  {currentDifficulty === 'hard' && 'Moeilijk'}
+                  {currentDifficulty === 'easy' && 'Easy'}
+                  {currentDifficulty === 'medium' && 'Medium'}
+                  {currentDifficulty === 'hard' && 'Hard'}
                 </Badge>
               </div>
 
@@ -779,7 +779,7 @@ export function GuidedTutoringSession({
                   <Input
                     value={answer}
                     onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Typ je antwoord..."
+                    placeholder="Type your answer..."
                     className="flex-1 h-14 text-lg bg-card/50 border-border/30 rounded-2xl"
                     disabled={isSubmitting}
                     autoFocus
@@ -840,7 +840,7 @@ export function GuidedTutoringSession({
                     <XCircle className="w-8 h-8 text-primary" />
                   )}
                   <span className="text-xl font-semibold">
-                    {currentFeedback.isCorrect ? 'Goed gedaan!' : 'Niet helemaal'}
+                    {currentFeedback.isCorrect ? 'Well done!' : 'Not quite'}
                   </span>
                 </div>
                 <p className="text-muted-foreground">{currentFeedback.message}</p>
@@ -864,14 +864,14 @@ export function GuidedTutoringSession({
                     className="flex-1 gap-2 h-12 rounded-2xl"
                   >
                     <PlayCircle className="w-4 h-4" />
-                    Bekijk uitwerking
+                    View Solution
                   </Button>
                 )}
                 <Button 
                   onClick={handleContinue}
                   className={`gap-2 h-12 rounded-2xl ${currentFeedback.isCorrect ? 'flex-1' : ''}`}
                 >
-                  Volgende
+                  Next
                   <ArrowRight className="w-4 h-4" />
                 </Button>
               </div>
@@ -890,17 +890,17 @@ export function GuidedTutoringSession({
               <ElevenLabsAgent size="lg" />
               
               <div className="p-6 rounded-3xl bg-card/60 border border-border/30 space-y-6">
-                <h2 className="text-2xl font-semibold">Sessie voltooid!</h2>
+                <h2 className="text-2xl font-semibold">Session completed!</h2>
                 
                 {/* Main Stats */}
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div className="p-3 rounded-2xl bg-secondary/10">
                     <p className="text-2xl font-bold text-secondary">{stats.correct}</p>
-                    <p className="text-xs text-muted-foreground">Goed</p>
+                    <p className="text-xs text-muted-foreground">Correct</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-muted/30">
                     <p className="text-2xl font-bold">{stats.total}</p>
-                    <p className="text-xs text-muted-foreground">Totaal</p>
+                    <p className="text-xs text-muted-foreground">Total</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-accent/10">
                     <p className="text-2xl font-bold text-accent">{stats.xpEarned}</p>
@@ -913,7 +913,7 @@ export function GuidedTutoringSession({
                   <div className="p-4 rounded-2xl bg-muted/20 space-y-3">
                     <div className="flex items-center justify-center gap-2 text-sm font-medium">
                       <Timer className="w-4 h-4 text-primary" />
-                      <span>Tijd per opgave</span>
+                      <span>Time per exercise</span>
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
                       {exerciseTimings.map((timing, idx) => (
@@ -930,7 +930,7 @@ export function GuidedTutoringSession({
                       ))}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Gemiddeld: {Math.round(exerciseTimings.reduce((sum, t) => sum + t.timeSpentSeconds, 0) / exerciseTimings.length)}s per opgave
+                      Average: {Math.round(exerciseTimings.reduce((sum, t) => sum + t.timeSpentSeconds, 0) / exerciseTimings.length)}s per exercise
                     </p>
                   </div>
                 )}
@@ -940,20 +940,20 @@ export function GuidedTutoringSession({
                   <div className="p-4 rounded-2xl bg-muted/20 space-y-3">
                     <div className="flex items-center justify-center gap-2 text-sm font-medium">
                       <TrendingUp className="w-4 h-4 text-secondary" />
-                      <span>Moeilijkheid progressie</span>
+                      <span>Difficulty progression</span>
                     </div>
                     <div className="flex flex-wrap justify-center gap-2">
                       {difficultyProgressions.map((prog, idx) => (
                         <div key={idx} className="flex items-center gap-1 text-xs">
                           <Badge variant="outline" className="text-xs px-1.5">
-                            {prog.fromDifficulty === 'easy' ? 'Makkelijk' : prog.fromDifficulty === 'medium' ? 'Gemiddeld' : 'Moeilijk'}
+                            {prog.fromDifficulty === 'easy' ? 'Easy' : prog.fromDifficulty === 'medium' ? 'Medium' : 'Hard'}
                           </Badge>
                           <ArrowRight className="w-3 h-3" />
                           <Badge 
                             variant={prog.toDifficulty === 'hard' ? 'destructive' : prog.toDifficulty === 'medium' ? 'default' : 'secondary'}
                             className="text-xs px-1.5"
                           >
-                            {prog.toDifficulty === 'easy' ? 'Makkelijk' : prog.toDifficulty === 'medium' ? 'Gemiddeld' : 'Moeilijk'}
+                            {prog.toDifficulty === 'easy' ? 'Easy' : prog.toDifficulty === 'medium' ? 'Medium' : 'Hard'}
                           </Badge>
                         </div>
                       ))}
@@ -964,17 +964,17 @@ export function GuidedTutoringSession({
                 {/* Final Difficulty Level */}
                 <div className="flex items-center justify-center gap-2">
                   <BarChart3 className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Eindniveau:</span>
+                  <span className="text-sm text-muted-foreground">Final level:</span>
                   <Badge 
                     variant={currentDifficulty === 'hard' ? 'destructive' : currentDifficulty === 'medium' ? 'default' : 'secondary'}
                   >
-                    {currentDifficulty === 'easy' ? 'Makkelijk' : currentDifficulty === 'medium' ? 'Gemiddeld' : 'Moeilijk'}
+                    {currentDifficulty === 'easy' ? 'Easy' : currentDifficulty === 'medium' ? 'Medium' : 'Hard'}
                   </Badge>
                 </div>
 
                 {/* Session Duration */}
                 <p className="text-xs text-muted-foreground">
-                  Totale sessietijd: {Math.round((Date.now() - sessionStartTime) / 60000)} minuten
+                  Total session time: {Math.round((Date.now() - sessionStartTime) / 60000)} minutes
                 </p>
 
                 {wrapUpMessage && (
@@ -984,7 +984,7 @@ export function GuidedTutoringSession({
                 {phase === 'completed' && (
                   <Button onClick={onEndSession} size="lg" className="gap-2 rounded-2xl w-full">
                     <Home className="w-4 h-4" />
-                    Terug naar overzicht
+                    Back to overview
                   </Button>
                 )}
               </div>

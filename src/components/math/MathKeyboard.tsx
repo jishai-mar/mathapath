@@ -268,7 +268,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
           )}
         >
           <Keyboard className="w-4 h-4" />
-          Wiskundetoetsenbord
+          Math Keyboard
           {isOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
         </Button>
 
