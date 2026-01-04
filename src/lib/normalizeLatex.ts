@@ -205,7 +205,15 @@ export function convertSystemOfEquations(input: string): string {
   const equations = collectEquations(mathPart);
   if (equations.length < 2) return input;
 
-  const alignedBody = equations.map((eq) => eq.trim()).join(' \\\\ ');
+  const alignedBody = equations
+    .map((eq) => {
+      // KaTeX-friendly booklet look: align on "=" using &
+      // Only replace the first "=" in each equation.
+      const normalizedEq = eq.trim().replace(/\s*=\s*/, ' &= ');
+      return normalizedEq;
+    })
+    .join(' \\\\ ');
+
   const systemLatex = `$\\left\\{\\begin{aligned} ${alignedBody} \\end{aligned}\\right.$`;
 
   return prefix ? `${prefix}${systemLatex}` : systemLatex;
@@ -219,9 +227,16 @@ export function fixMalformedLatex(input: string): string {
 
   // First fix any corrupted commands (missing backslashes)
   let result = fixCorruptedLatexCommands(input);
-  
-  // Convert system of equations to cases environment
+
+  // Fix common brace delimiter mistakes that cause KaTeX errors
+  // "\\left{" -> "\\left\\{" (missing escape on curly brace)
+  result = result.replace(/\\left\{/g, '\\left\\{');
+
+  // Convert system of equations to booklet-style brace + stacked equations
   result = convertSystemOfEquations(result);
+
+  // Re-apply in case the system conversion introduced/kept an unescaped brace
+  result = result.replace(/\\left\{/g, '\\left\\{');
 
   // Fix patterns like "^x+^2" or "^x-^3" → "^{x+2}" or "^{x-3}"
   // This catches malformed exponents where the AI incorrectly split the exponent
