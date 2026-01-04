@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calculator, 
   Divide, 
@@ -15,7 +16,8 @@ import {
   ArrowRight,
   Sigma,
   Play,
-  CheckCircle2
+  CheckCircle2,
+  Shuffle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -215,6 +217,65 @@ function TopicCard({
   );
 }
 
+// Practice Quiz Card Component
+function PracticeQuizCard({ index }: { index: number }) {
+  const navigate = useNavigate();
+  
+  return (
+    <motion.button
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.03, duration: 0.4 }}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => navigate('/practice-quiz')}
+      className="group relative text-left p-5 rounded-xl border transition-all duration-300 bg-gradient-to-br from-primary/10 to-accent/10 backdrop-blur-sm hover:from-primary/20 hover:to-accent/20 border-primary/30 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+    >
+      {/* Gradient accent line */}
+      <div className="absolute -top-px left-4 right-4 h-0.5 bg-gradient-to-r from-primary via-accent to-primary" />
+      
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-primary/20 text-primary">
+          <Shuffle className="w-5 h-5" />
+        </div>
+        
+        {/* Badge */}
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-primary/20 text-primary">
+          Mixed
+        </div>
+      </div>
+      
+      {/* Content */}
+      <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
+        Practice Quiz
+      </h3>
+      <p className="text-xs text-muted-foreground line-clamp-2 mb-4 min-h-[32px]">
+        Mixed questions from all topics. Perfect for exam prep!
+      </p>
+      
+      {/* Info */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="text-muted-foreground">All Topics</span>
+          <span className="font-medium text-primary">100 pts</span>
+        </div>
+        <div className="h-1.5 bg-primary/20 rounded-full overflow-hidden">
+          <div className="h-full w-full bg-gradient-to-r from-primary to-accent rounded-full" />
+        </div>
+      </div>
+      
+      {/* Action hint */}
+      <div className="mt-4 flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">5 questions</span>
+        <div className="flex items-center gap-1 text-xs font-medium text-primary">
+          Start <Play className="w-3 h-3" />
+        </div>
+      </div>
+    </motion.button>
+  );
+}
+
 export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses, onTopicClick }: TopicGridProps) {
   // Find current topic (first incomplete)
   const currentTopicId = topics.find(t => {
@@ -258,6 +319,9 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
 
       {/* Topics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Practice Quiz Card - First in grid */}
+        <PracticeQuizCard index={0} />
+        
         {topics.map((topic, index) => {
           const progress = getTopicProgress(topic.id);
           const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
@@ -272,7 +336,7 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
               isCurrent={isCurrent}
               isCompleted={isCompleted}
               onClick={() => onTopicClick(topic.id)}
-              index={index}
+              index={index + 1}
             />
           );
         })}

@@ -45,7 +45,7 @@ interface Exam {
   questions: ExamQuestionData[];
 }
 
-export default function TestYourself() {
+export default function PracticeQuiz() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [exam, setExam] = useState<Exam | null>(null);
@@ -151,7 +151,7 @@ export default function TestYourself() {
             <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold">Test Yourself</h1>
+            <h1 className="text-xl font-bold">Practice Quiz</h1>
           </div>
         </header>
 
@@ -162,7 +162,7 @@ export default function TestYourself() {
                 <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Shuffle className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">Test Yourself - Mixed Topics</CardTitle>
+                <CardTitle className="text-2xl">Practice Quiz - Mixed Topics</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="text-muted-foreground space-y-2">

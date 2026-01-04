@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import TopicGrid from '@/components/TopicGrid';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import TutorChat from '@/components/TutorChat';
-import { Sparkles, Star, Flame, Target, TrendingUp, AlertTriangle, ArrowRight, Play, MessageCircle, Pentagon, Lightbulb, BookOpen, Mic, Bookmark, Shuffle } from 'lucide-react';
+import { Sparkles, Star, Flame, Target, TrendingUp, AlertTriangle, ArrowRight, Play, MessageCircle, Pentagon, Lightbulb, BookOpen, Mic, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 interface Topic {
   id: string;
@@ -441,10 +441,6 @@ export default function Dashboard() {
                 <Button variant="outline" onClick={() => navigate('/bookmarks')} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
                   <Bookmark className="w-4 h-4 mr-2" />
                   Bookmarks
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/test-yourself')} className="px-6 py-3 h-auto rounded-xl bg-accent/10 border-accent/30 text-accent hover:bg-accent/20">
-                  <Shuffle className="w-4 h-4 mr-2" />
-                  Test Yourself
                 </Button>
               </div>
             </div>
