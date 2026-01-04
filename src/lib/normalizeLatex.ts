@@ -137,15 +137,20 @@ export function convertSystemOfEquations(input: string): string {
   if (!input || typeof input !== "string") return input;
 
   // Already formatted as a multi-line system
-  if (input.includes("\\begin{cases}") || input.includes("\\begin{aligned}") || input.includes("\\left\\{")) {
+  if (
+    input.includes("\\begin{cases}") ||
+    input.includes("\\begin{aligned}") ||
+    input.includes("\\left\\{") ||
+    input.includes("\\left{")
+  ) {
     return input;
   }
 
   const systemPrefixes = [
-    /^(.*?solve\s+the\s+system\s+of\s+equations\s*:?(\s*))/i,
-    /^(.*?system\s+of\s+equations\s*:?(\s*))/i,
-    /^(.*?solve\s+the\s+following\s+system\s*:?(\s*))/i,
-    /^(.*?solve\s*:?(\s*))/i,
+    /^(.*?solve\s+the\s+system\s+of\s+equations\s*:?\s*)/i,
+    /^(.*?system\s+of\s+equations\s*:?\s*)/i,
+    /^(.*?solve\s+the\s+following\s+system\s*:?\s*)/i,
+    /^(.*?solve\s*:?\s*)/i,
   ];
 
   let prefix = "";
@@ -210,7 +215,9 @@ export function convertSystemOfEquations(input: string): string {
     })
     .join(" \\\\ ");
 
-  const systemLatex = `$\\left\\{\\begin{aligned} ${alignedBody} \\end{aligned}\\right.$`;
+  // Create + immediately sanitize so KaTeX never receives an unescaped "\\left{".
+  const systemLatexRaw = `$\\left\\{\\begin{aligned} ${alignedBody} \\end{aligned}\\right.$`;
+  const systemLatex = systemLatexRaw.replace(/\\left\{/g, "\\left\\{");
 
   return prefix ? `${prefix}${systemLatex}` : systemLatex;
 }
