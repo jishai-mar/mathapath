@@ -141,9 +141,9 @@
 
   /* KaTeX: avoid scary red error styling in questions; keep it readable */
   .katex .katex-error {
-    color: hsl(var(--foreground));
-    background: transparent;
-    border: 0;
+    color: hsl(var(--foreground)) !important;
+    background: transparent !important;
+    border: 0 !important;
   }
 
 
