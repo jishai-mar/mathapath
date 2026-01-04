@@ -614,7 +614,7 @@ export default function DiagnosticTest() {
                   {currentQuestion.difficulty}
                 </span>
               </div>
-              <CardTitle className="text-lg leading-relaxed">
+              <CardTitle className="text-lg leading-relaxed font-math">
                 <MathRenderer latex={currentQuestion.question} />
               </CardTitle>
             </CardHeader>
