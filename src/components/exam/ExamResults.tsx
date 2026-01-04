@@ -11,6 +11,7 @@ import {
   RotateCcw
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface ExamQuestion {
   questionNumber: number;
@@ -124,7 +125,7 @@ export function ExamResults({
             <CardContent className="pt-4 space-y-4">
               {/* Context */}
               <div className="p-3 rounded-lg bg-muted/30 border">
-                <MathRenderer latex={question.context} />
+                <MathRenderer segments={createSegmentsFromSolution(question.context)} />
               </div>
 
               {/* Parts with solutions */}
@@ -147,7 +148,7 @@ export function ExamResults({
                     </div>
 
                     <div className="text-muted-foreground">
-                      <MathRenderer latex={part.prompt} />
+                      <MathRenderer segments={createSegmentsFromSolution(part.prompt)} />
                     </div>
 
                     {/* User's answer */}
@@ -169,12 +170,12 @@ export function ExamResults({
                         <div className="space-y-2">
                           {part.solution.steps.map((step, idx) => (
                             <div key={idx} className="text-sm pl-4">
-                              <MathRenderer latex={`${idx + 1}. ${step}`} />
+                              <MathRenderer segments={createSegmentsFromSolution(`${idx + 1}. ${step}`)} />
                             </div>
                           ))}
                           <div className="mt-2 pt-2 border-t border-green-500/30 font-semibold">
                             <span>Answer: </span>
-                            <MathRenderer latex={part.solution.answer} />
+                            <MathRenderer segments={createSegmentsFromSolution(part.solution.answer)} />
                           </div>
                         </div>
                       </div>
