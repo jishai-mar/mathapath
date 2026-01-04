@@ -8,7 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   LineChart, X, Minimize2, Maximize2, Plus, Trash2, 
   Target, TrendingUp, Circle, Minus, ZoomIn, ZoomOut,
-  RotateCcw, Info, ChevronDown, ChevronUp
+  RotateCcw, Info, ChevronDown, ChevronUp, Eye, AlertCircle
 } from 'lucide-react';
 import { create, all, MathNode } from 'mathjs';
 import MathRenderer from '@/components/MathRenderer';
@@ -20,6 +20,7 @@ interface AdvancedGraphCalculatorProps {
   onToggleMinimize?: () => void;
   initialFunctions?: string[];
   showTangentAt?: { functionIndex: number; x: number };
+  currentQuestion?: string;
 }
 
 interface FunctionEntry {
@@ -51,7 +52,8 @@ export default function AdvancedGraphCalculator({
   isMinimized, 
   onToggleMinimize,
   initialFunctions = ['x^2'],
-  showTangentAt
+  showTangentAt,
+  currentQuestion
 }: AdvancedGraphCalculatorProps) {
   const [functions, setFunctions] = useState<FunctionEntry[]>(() => 
     initialFunctions.map((expr, i) => ({
@@ -71,6 +73,7 @@ export default function AdvancedGraphCalculator({
   const [showKeyPoints, setShowKeyPoints] = useState(true);
   const [showAnalysis, setShowAnalysis] = useState(false);
   const [tangentX, setTangentX] = useState('');
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   
   const svgRef = useRef<SVGSVGElement>(null);
   
@@ -422,6 +425,112 @@ export default function AdvancedGraphCalculator({
     setTangentLines([]);
   };
   
+  // Extract function from question text
+  const extractFunctionFromQuestion = useCallback((question: string): string | null => {
+    if (!question) return null;
+    
+    // Clean up the question
+    let text = question.trim();
+    
+    // Common patterns for functions in math questions
+    const patterns = [
+      // y = f(x) format
+      /y\s*=\s*([^\n,;]+)/i,
+      // f(x) = ... format
+      /f\s*\(\s*x\s*\)\s*=\s*([^\n,;]+)/i,
+      // g(x) = ... format
+      /g\s*\(\s*x\s*\)\s*=\s*([^\n,;]+)/i,
+      // h(x) = ... format
+      /h\s*\(\s*x\s*\)\s*=\s*([^\n,;]+)/i,
+      // Explicit function expressions like "2x^2 + 3x - 5"
+      /(?:grafiek|graph|functie|function|plot)\s*(?:van|of)?\s*:?\s*([^\n,;]+)/i,
+      // Polynomial patterns like "x² + 2x - 3" or "x^2 + 2x - 3"
+      /(?:^|\s)([-+]?\s*\d*\s*x\s*[²³⁴⁵⁶⁷⁸⁹](?:\s*[-+]\s*\d*x?\s*)*)/i,
+      /(?:^|\s)([-+]?\s*\d*\s*x\s*\^\s*\d+(?:\s*[-+]\s*\d*x?\s*)*)/i,
+      // Exponential: e^x, 2^x, etc.
+      /(?:^|\s)(\d*\s*[eE]\s*\^\s*[^\n,;]+)/i,
+      /(?:^|\s)(\d+\s*\^\s*x[^\n,;]*)/i,
+      // Trigonometric functions
+      /(?:^|\s)((?:sin|cos|tan|arcsin|arccos|arctan)\s*\([^\)]+\)[^\n,;]*)/i,
+      // Logarithmic functions
+      /(?:^|\s)((?:log|ln|log_\d+)\s*\([^\)]+\)[^\n,;]*)/i,
+      // Square root
+      /(?:^|\s)(√\s*\([^\)]+\)[^\n,;]*)/i,
+      /(?:^|\s)(sqrt\s*\([^\)]+\)[^\n,;]*)/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        let expression = match[1].trim();
+        
+        // Clean up the expression
+        expression = expression
+          .replace(/\s+/g, '')  // Remove spaces
+          .replace(/²/g, '^2')  // Convert superscript 2
+          .replace(/³/g, '^3')  // Convert superscript 3
+          .replace(/⁴/g, '^4')
+          .replace(/⁵/g, '^5')
+          .replace(/⁶/g, '^6')
+          .replace(/⁷/g, '^7')
+          .replace(/⁸/g, '^8')
+          .replace(/⁹/g, '^9')
+          .replace(/×/g, '*')   // Convert multiplication
+          .replace(/÷/g, '/')   // Convert division
+          .replace(/−/g, '-')   // Convert minus
+          .replace(/√/g, 'sqrt'); // Convert square root
+        
+        // Add implicit multiplication for cases like "2x" -> "2*x"
+        expression = expression.replace(/(\d)([a-zA-Z])/g, '$1*$2');
+        expression = expression.replace(/([a-zA-Z])(\d)/g, '$1*$2');
+        
+        // Validate by trying to parse
+        try {
+          const testNode = mathInstance.parse(expression);
+          testNode.compile().evaluate({ x: 1 });
+          return expression;
+        } catch {
+          // Try with parentheses
+          try {
+            const withParens = `(${expression})`;
+            const testNode = mathInstance.parse(withParens);
+            testNode.compile().evaluate({ x: 1 });
+            return withParens;
+          } catch {
+            continue; // Try next pattern
+          }
+        }
+      }
+    }
+    
+    return null;
+  }, [mathInstance]);
+  
+  // Handle "Show in Graph" button click
+  const handleShowInGraph = useCallback(() => {
+    setExtractionError(null);
+    
+    if (!currentQuestion) {
+      setExtractionError('Geen vraag beschikbaar.');
+      return;
+    }
+    
+    const extractedFunc = extractFunctionFromQuestion(currentQuestion);
+    
+    if (extractedFunc) {
+      const colorIndex = functions.length % COLORS.length;
+      setFunctions(prev => [...prev, { 
+        id: `extracted-${Date.now()}`, 
+        expression: extractedFunc, 
+        color: COLORS[colorIndex],
+        visible: true
+      }]);
+      setExtractionError(null);
+    } else {
+      setExtractionError('Geen geldige functie gevonden in de vraag.');
+    }
+  }, [currentQuestion, extractFunctionFromQuestion, functions.length]);
+  
   // Generate axis tick marks
   const xTicks = useMemo(() => {
     const ticks: number[] = [];
@@ -492,6 +601,27 @@ export default function AdvancedGraphCalculator({
 
         {!isMinimized && (
           <>
+            {/* Show in Graph Button */}
+            {currentQuestion && (
+              <div className="px-3 pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShowInGraph}
+                  className="w-full gap-2 text-sm"
+                >
+                  <Eye className="w-4 h-4" />
+                  Show in Graph
+                </Button>
+                {extractionError && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-destructive bg-destructive/10 px-3 py-2 rounded-lg">
+                    <AlertCircle className="w-3.5 h-3.5" />
+                    {extractionError}
+                  </div>
+                )}
+              </div>
+            )}
+            
             {/* Graph */}
             <div className="p-3 bg-muted/10">
               <svg
