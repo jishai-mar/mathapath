@@ -15,6 +15,42 @@ import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
+import type { ContentSegment } from '@/lib/normalizeLatex';
+
+// Khan Academy–style: caller explicitly types text vs math
+const LATEX_TRIGGER = /\\left|\\begin\{|\\frac|\\sqrt|\\\(|\\\[|\\pm|\\times|\\\\/;
+
+function createSegmentsFromQuestion(question: string): ContentSegment[] {
+  const q = question.trim();
+  const idx = q.search(LATEX_TRIGGER);
+
+  if (idx === -1) {
+    return [{ type: 'text' as const, content: q }];
+  }
+
+  let textPart = '';
+  let mathPart = '';
+
+  if (idx === 0) {
+    mathPart = q;
+  } else {
+    textPart = q.slice(0, idx).trim();
+    mathPart = q.slice(idx).trim();
+  }
+
+  // REQUIRED: KaTeX-critical sanitization
+  mathPart = mathPart.replace(/\\left\{/g, '\\left\\{');
+
+  // SAFETY: closing delimiter guard
+  mathPart = mathPart.replace(/\\right(?![.\)\]\}])/g, '\\right.');
+
+  const result: ContentSegment[] = [];
+  if (textPart) {
+    result.push({ type: 'text' as const, content: textPart });
+  }
+  result.push({ type: 'math' as const, content: mathPart, displayMode: true });
+  return result;
+}
 
 
 interface DiagnosticQuestion {
@@ -615,7 +651,7 @@ export default function DiagnosticTest() {
                 </span>
               </div>
               <CardTitle className="text-lg leading-relaxed font-math">
-                <MathRenderer latex={currentQuestion.question} />
+                <MathRenderer segments={createSegmentsFromQuestion(currentQuestion.question)} />
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
