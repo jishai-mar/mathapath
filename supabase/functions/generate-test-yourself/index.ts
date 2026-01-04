@@ -12,29 +12,140 @@ const EXAM_STRUCTURE = {
   questionCount: 5
 };
 
-// All topics from the Reichman Mechina curriculum
-const ALL_TOPICS = [
-  "First-Degree Equations",
-  "Fractions",
-  "Quadratic Equations",
-  "Biquadratic Equations",
-  "Radical Equations",
-  "Higher-Degree Equations",
-  "Inequalities",
-  "Exponents",
-  "Exponential Equations",
-  "Logarithms",
-  "Linear Functions",
-  "Quadratic Functions",
-  "Limits",
-  "Derivatives",
-  "Chain Rule",
-  "Rational Functions"
+// ONLY topics with actual exercise patterns from the Reichman Mechina booklet
+const BOOKLET_TOPICS = [
+  { 
+    name: "First-Degree Equations", 
+    patterns: ["Solve ax + b = c - dx", "Distribution and combining like terms", "Nested brackets"]
+  },
+  { 
+    name: "Systems of Linear Equations", 
+    patterns: ["Solve 2x2 systems using substitution or elimination"]
+  },
+  { 
+    name: "Algebraic Fractions", 
+    patterns: ["Simplify products/quotients of polynomials", "Add/subtract with LCD"]
+  },
+  { 
+    name: "Equations with Parameters", 
+    patterns: ["Solve for x in terms of parameter a", "Find domain restrictions"]
+  },
+  { 
+    name: "Quadratic Equations", 
+    patterns: ["Factor or use quadratic formula", "Solve ax² + bx + c = 0"]
+  },
+  { 
+    name: "Biquadratic Equations", 
+    patterns: ["Substitute t = x², solve for t, then x"]
+  },
+  { 
+    name: "Equations with Radicals", 
+    patterns: ["Isolate radical, square both sides, check solutions"]
+  },
+  { 
+    name: "Inequalities", 
+    patterns: ["Solve linear, quadratic, and rational inequalities on number line"]
+  },
+  { 
+    name: "Exponents and Powers", 
+    patterns: ["Simplify expressions with same base", "Solve a^x = b by matching bases"]
+  },
+  { 
+    name: "Logarithms", 
+    patterns: ["Evaluate log expressions", "Solve log equations using log laws"]
+  },
+  { 
+    name: "Linear Functions", 
+    patterns: ["Find slope from two points", "Find equation y = mx + b", "Parallel/perpendicular lines"]
+  },
+  { 
+    name: "Quadratic Functions (Parabola)", 
+    patterns: ["Find vertex", "Find x-intercepts", "Convert to vertex form", "Find where f(x) > 0"]
+  },
+  { 
+    name: "Limits", 
+    patterns: ["Factor and cancel to evaluate", "Direct substitution", "Limits at infinity"]
+  },
+  { 
+    name: "Derivatives of Polynomials", 
+    patterns: ["Power rule f'(x)", "Find slope at a point", "Tangent line equation"]
+  },
+  { 
+    name: "Rational Functions", 
+    patterns: ["Find domain (denominator ≠ 0)", "Vertical asymptotes", "Increase/decrease intervals"]
+  }
 ];
 
+// FORBIDDEN question types - NOT in the booklet curriculum
+const FORBIDDEN_QUESTION_TYPES = `
+THESE QUESTION TYPES ARE NOT IN THE REICHMAN MECHINA BOOKLET - NEVER GENERATE:
+
+❌ "Find the coordinates of the hole" or any mention of "holes" or "removable discontinuities"
+❌ "Find the oblique asymptote" or "slant asymptote"
+❌ "Use L'Hôpital's rule"
+❌ "Epsilon-delta proofs" or "formal limit definition"
+❌ "Use the chain rule" for complex compositions (only simple power rule allowed)
+❌ "Implicit differentiation"
+❌ "Find f''(x)" or "second derivative"
+❌ "Find inflection points"
+❌ "Find the area under the curve" or any integration
+❌ Trigonometry (sin, cos, tan, θ, radians, degrees)
+❌ Complex numbers (i, imaginary)
+❌ Word problems or real-world applications
+❌ "Sketch the complete graph" as a standalone question
+❌ Parametric equations
+❌ Polar coordinates
+
+ONLY THESE BOOKLET QUESTION TYPES ARE ALLOWED:
+✓ "Solve for x:" with specific equation types from the booklet
+✓ "Simplify:" algebraic expressions and fractions
+✓ "Evaluate:" limits by factoring/substitution, logarithms
+✓ "Find f'(x) if f(x) = ..." using power rule
+✓ "Find the equation of the tangent line at x = a"
+✓ "Find the vertex/x-intercepts of the parabola"
+✓ "Find the slope/equation of the line through points"
+✓ "Solve the inequality:" linear, quadratic, rational
+✓ "Find the domain of f(x)" for rational functions
+✓ "Find increase/decrease intervals using f'(x)"
+✓ "Find positivity interval where f(x) > 0"
+✓ "Find vertical asymptotes" (NOT holes, NOT oblique)
+`;
+
+// Regex patterns to detect forbidden content in generated questions
+const FORBIDDEN_PATTERNS = [
+  /coordinates?\s+of\s+(?:the\s+)?holes?/i,
+  /removable\s+discontinuit/i,
+  /oblique\s+asymptote/i,
+  /slant\s+asymptote/i,
+  /L'H[oô]pital/i,
+  /epsilon[- ]?delta/i,
+  /chain\s+rule/i,
+  /implicit\s+differentiation/i,
+  /second\s+derivative/i,
+  /f''\s*\(/i,
+  /inflection\s+point/i,
+  /area\s+under/i,
+  /\bsin\b|\bcos\b|\btan\b|\bcot\b|\bsec\b|\bcsc\b/i,
+  /\bθ\b|\btheta\b/i,
+  /\bradians?\b|\bdegrees?\b/i,
+  /imaginary|complex\s+number/i,
+  /\bi\s*=/i,
+  /sketch\s+(?:the\s+)?(?:complete\s+)?graph/i,
+  /word\s+problem/i,
+  /real[- ]world/i,
+];
+
+// Check if content contains forbidden patterns
+function containsForbiddenContent(text: string): boolean {
+  if (!text) return false;
+  return FORBIDDEN_PATTERNS.some(pattern => pattern.test(text));
+}
+
 const QUESTION_TEMPLATES = `
-You are generating a "Test Yourself" practice exam for Reichman Mechina math preparation.
-The questions must match the EXACT style of the Reichman Mechina Exercise Booklet.
+You are generating a "Practice Quiz" for Reichman Mechina math preparation.
+The questions must match ONLY exercise types from the official Reichman Mechina Exercise Booklet.
+
+${FORBIDDEN_QUESTION_TYPES}
 
 EXAM FORMAT:
 - 5 questions totaling 100 points
@@ -45,33 +156,33 @@ EXAM FORMAT:
 
 QUESTION STRUCTURE (based on 2021 exam format):
 
-QUESTION 1 (20 points):
-Context: Given parabola y = ax² + bx + c AND line y = mx + n
-Part a (8 pts): Draw both graphs and find the parabola's negativity interval
-Part b (6 pts): Find where parabola is above/below the line
+QUESTION 1 (20 points) - Parabola + Line Analysis:
+Part a (8 pts): Draw parabola y = ax² + bx + c and line, find where parabola is negative
+Part b (6 pts): Find where parabola is above/below the line (inequality)
 Part c (6 pts): Find tangent line to parabola with given slope
+DO NOT ask about "holes" - this topic doesn't have holes!
 
-QUESTION 2 (15 points):
-Context: Equation with parameter "a"
-Part a (8 pts): Solve the equation for x in terms of a
-Part b (7 pts): Find values of a for unique/no solution
+QUESTION 2 (15 points) - Equation with Parameter:
+Part a (8 pts): Solve the equation for x in terms of parameter a
+Part b (7 pts): Find values of a for which there is a unique solution / no solution
+This tests solving skills and domain analysis.
 
-QUESTION 3 (20 points):
-Context: Function involving e^x or logarithms
-Part a (10 pts): Find x-axis intersections or solve equation
-Part b (10 pts): Find tangent line at extreme point or solve related equation
+QUESTION 3 (20 points) - Exponential/Logarithmic Equation:
+Part a (10 pts): Solve exponential or logarithmic equation for x
+Part b (10 pts): Find derivative and tangent line, OR solve a related equation
+Use log laws and properties, power rule for derivatives.
 
-QUESTION 4 (20 points):
-Context: Rational or polynomial function
-Part a (5 pts): Find the domain
-Part b (15 pts): Find ALL extreme points
+QUESTION 4 (20 points) - Polynomial or Rational Function:
+Part a (5 pts): Find the domain (where denominator ≠ 0)
+Part b (15 pts): Find ALL extreme points using f'(x) = 0
+DO NOT ask about "holes" or "oblique asymptotes" - only vertical asymptotes and domain!
 
-QUESTION 5 (25 points):
-Context: Rational function, multi-part analysis
-Part a (6 pts): Find specific value (like y-intercept or slope at a point)
-Part b (5 pts): Find vertical asymptotes and discontinuities
-Part c (7 pts): Find increase/decrease intervals  
-Part d (7 pts): Find positivity interval
+QUESTION 5 (25 points) - Rational Function Analysis:
+Part a (6 pts): Find y-intercept f(0) or evaluate at specific point
+Part b (5 pts): Find vertical asymptotes (where denominator = 0 and numerator ≠ 0)
+Part c (7 pts): Find increase/decrease intervals using f'(x)
+Part d (7 pts): Find positivity interval where f(x) > 0
+DO NOT ask about "holes", "oblique asymptotes", or "sketch complete graph"!
 
 QUESTION FORMATTING:
 - Use ONLY formal command phrases: "Solve for x:", "Find:", "Calculate:", "Simplify:"
@@ -80,10 +191,12 @@ QUESTION FORMATTING:
 - Multi-character exponents MUST use braces: $5^{x+2}$ not $5^x+2$
 - For inequalities use: $\\neq$, $\\leq$, $\\geq$, $<$, $>$
 
-FORBIDDEN CONTENT:
-- Trigonometric functions (sin, cos, tan, etc.)
-- Greek letters for variables (θ, α, β) - only "a" as parameter name
-- Word problems or story contexts
+ABSOLUTELY FORBIDDEN (will be rejected):
+- "coordinates of holes" - NOT in curriculum
+- "oblique asymptote" - NOT in curriculum  
+- "L'Hôpital's rule" - NOT in curriculum
+- Any trigonometry - NOT in curriculum
+- "sketch the complete graph" - NOT a booklet question type
 `;
 
 // Auto-fix common LaTeX corruption patterns
@@ -108,15 +221,24 @@ function autoFixLatex(text: string): string {
   return result;
 }
 
-// Validate question content
-function isValidQuestion(question: string): boolean {
-  if (!question || question.trim().length < 10) return false;
+// Validate question content - reject forbidden patterns
+function isValidQuestion(question: string): { valid: boolean; reason?: string } {
+  if (!question || question.trim().length < 10) {
+    return { valid: false, reason: "Question too short" };
+  }
   
   // Check for placeholder garbage
   const garbagePatterns = /TODO|\?\?\?|\.\.\.{4,}|eq0|PLACEHOLDER/i;
-  if (garbagePatterns.test(question)) return false;
+  if (garbagePatterns.test(question)) {
+    return { valid: false, reason: "Contains placeholder text" };
+  }
   
-  return true;
+  // Check for forbidden curriculum content
+  if (containsForbiddenContent(question)) {
+    return { valid: false, reason: "Contains off-curriculum content" };
+  }
+  
+  return { valid: true };
 }
 
 serve(async (req) => {
@@ -131,21 +253,21 @@ serve(async (req) => {
     }
 
     // Randomly select 5 different topics for variety
-    const shuffledTopics = [...ALL_TOPICS].sort(() => Math.random() - 0.5);
+    const shuffledTopics = [...BOOKLET_TOPICS].sort(() => Math.random() - 0.5);
     const selectedTopics = shuffledTopics.slice(0, 5);
 
-    console.log(`Generating Test Yourself exam with topics: ${selectedTopics.join(', ')}`);
+    console.log(`Generating Practice Quiz with booklet topics: ${selectedTopics.map(t => t.name).join(', ')}`);
 
     const prompt = `
-Generate a complete "Test Yourself" practice exam following the Reichman Mechina 2021 format.
-This exam should cover MIXED topics from the entire curriculum.
+Generate a complete "Practice Quiz" following the Reichman Mechina 2021 exam format.
+This exam should cover MIXED topics from the curriculum.
 
 Selected topics for each question:
-1. ${selectedTopics[0]}
-2. ${selectedTopics[1]}
-3. ${selectedTopics[2]}
-4. ${selectedTopics[3]}
-5. ${selectedTopics[4]}
+1. ${selectedTopics[0].name} - Exercise patterns: ${selectedTopics[0].patterns.join(', ')}
+2. ${selectedTopics[1].name} - Exercise patterns: ${selectedTopics[1].patterns.join(', ')}
+3. ${selectedTopics[2].name} - Exercise patterns: ${selectedTopics[2].patterns.join(', ')}
+4. ${selectedTopics[3].name} - Exercise patterns: ${selectedTopics[3].patterns.join(', ')}
+5. ${selectedTopics[4].name} - Exercise patterns: ${selectedTopics[4].patterns.join(', ')}
 
 ${QUESTION_TEMPLATES}
 
@@ -156,18 +278,24 @@ Generate a complete exam with ALL 5 questions. For each question provide:
 4. All parts (a, b, c, d) with their individual point values
 5. The complete solution for each part
 
-IMPORTANT: Use the assigned topics but keep the same point distribution (20, 15, 20, 20, 25 points).
+CRITICAL REMINDERS:
+- NO questions about "holes" or "removable discontinuities" - this is NOT in the booklet!
+- NO "oblique asymptotes" - only vertical asymptotes are in the curriculum!
+- NO trigonometry of any kind!
+- Use the assigned topics and their exercise patterns
+
+Point distribution: 20, 15, 20, 20, 25 points.
 
 Respond in this exact JSON format:
 {
-  "examTitle": "Test Yourself - Mixed Topics",
+  "examTitle": "Practice Quiz - Mixed Topics",
   "totalPoints": 100,
   "durationMinutes": 180,
   "questions": [
     {
       "questionNumber": 1,
       "totalPoints": 20,
-      "topic": "${selectedTopics[0]}",
+      "topic": "${selectedTopics[0].name}",
       "context": "Given: ...",
       "parts": [
         {
@@ -196,7 +324,10 @@ Respond in this exact JSON format:
         messages: [
           { 
             role: "system", 
-            content: "You are an expert math exam generator for Reichman Mechina preparation. Generate exams that exactly match the 2021 final exam format with mixed topics. Always respond with valid JSON only, no additional text." 
+            content: `You are an expert math exam generator for Reichman Mechina preparation. 
+Generate exams that exactly match the 2021 final exam format with topics from the official exercise booklet.
+CRITICAL: Never include questions about "holes", "oblique asymptotes", "L'Hôpital's rule", or trigonometry - these are NOT in the Reichman Mechina curriculum.
+Always respond with valid JSON only, no additional text.` 
           },
           { role: "user", content: prompt }
         ],
@@ -253,11 +384,17 @@ Respond in this exact JSON format:
       throw new Error("Invalid exam structure: expected 5 questions");
     }
 
-    // Apply auto-fix and validation to all questions
+    // Apply auto-fix, validation, and filter forbidden content
+    let hasWarnings = false;
     exam.questions = exam.questions.map((q: any) => {
       // Fix context
       if (q.context) {
         q.context = autoFixLatex(q.context);
+        const contextCheck = isValidQuestion(q.context);
+        if (!contextCheck.valid) {
+          console.warn(`Question ${q.questionNumber} context issue: ${contextCheck.reason}`);
+          hasWarnings = true;
+        }
       }
       
       // Fix each part
@@ -265,6 +402,11 @@ Respond in this exact JSON format:
         q.parts = q.parts.map((part: any) => {
           if (part.prompt) {
             part.prompt = autoFixLatex(part.prompt);
+            const promptCheck = isValidQuestion(part.prompt);
+            if (!promptCheck.valid) {
+              console.warn(`Question ${q.questionNumber} part ${part.partLabel} issue: ${promptCheck.reason}`);
+              hasWarnings = true;
+            }
           }
           if (part.solution?.steps) {
             part.solution.steps = part.solution.steps.map((step: string) => autoFixLatex(step));
@@ -279,18 +421,22 @@ Respond in this exact JSON format:
       return q;
     });
 
+    if (hasWarnings) {
+      console.log("Some questions had validation warnings but were included anyway");
+    }
+
     // Verify point totals
     const totalPoints = exam.questions.reduce((sum: number, q: any) => sum + (q.totalPoints || 0), 0);
     if (totalPoints !== 100) {
       console.warn(`Point total is ${totalPoints}, expected 100.`);
     }
 
-    console.log("Successfully generated Test Yourself exam with", exam.questions.length, "questions");
+    console.log("Successfully generated Practice Quiz with", exam.questions.length, "booklet-aligned questions");
 
     return new Response(JSON.stringify({ 
       success: true, 
       exam,
-      selectedTopics,
+      selectedTopics: selectedTopics.map(t => t.name),
       generatedAt: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
