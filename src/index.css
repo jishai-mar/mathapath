@@ -139,6 +139,14 @@
     font-family: 'JetBrains Mono', monospace;
   }
 
+  /* KaTeX: avoid scary red error styling in questions; keep it readable */
+  .katex .katex-error {
+    color: hsl(var(--foreground));
+    background: transparent;
+    border: 0;
+  }
+
+
   /* Soft Scrollbar */
   ::-webkit-scrollbar {
     width: 6px;
