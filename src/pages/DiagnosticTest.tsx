@@ -18,10 +18,62 @@ import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import type { ContentSegment } from '@/lib/normalizeLatex';
 
 // Khan Academy–style: caller explicitly types text vs math
-const LATEX_TRIGGER = /\\left|\\begin\{|\\frac|\\sqrt|\\\(|\\\[|\\pm|\\times|\\\\/;
+const LATEX_TRIGGER = /\\left|\\begin\{|\\frac|\\sqrt|\\\(|\\\[|\\pm|\\times|\\\\|\$/;
+
+function sanitizeMath(math: string): string {
+  let result = math;
+  result = result.replace(/\\left\{/g, '\\left\\{');
+  result = result.replace(/\\right(?![.\)\]\}])/g, '\\right.');
+  return result;
+}
 
 function createSegmentsFromQuestion(question: string): ContentSegment[] {
   const q = question.trim();
+  
+  // FIRST: Check for inline $...$ math chunks
+  const inlineMathRegex = /\$([^$]+)\$/g;
+  const mathChunks: string[] = [];
+  let match;
+  
+  while ((match = inlineMathRegex.exec(q)) !== null) {
+    mathChunks.push(match[1].trim());
+  }
+  
+  if (mathChunks.length > 0) {
+    // Extract text part (everything before the first $)
+    const firstDollarIdx = q.indexOf('$');
+    const textPart = firstDollarIdx > 0 ? q.slice(0, firstDollarIdx).trim() : '';
+    
+    if (mathChunks.length >= 2) {
+      // SYSTEM OF EQUATIONS: combine into stacked aligned block
+      const alignedEquations = mathChunks.map(eq => {
+        // Replace first = with &= for alignment
+        return eq.replace(/=/, ' &= ');
+      }).join(' \\\\ ');
+      
+      const systemLatex = sanitizeMath(`\\left\\{\\begin{aligned} ${alignedEquations} \\end{aligned}\\right.`);
+      
+      const result: ContentSegment[] = [];
+      if (textPart) {
+        result.push({ type: 'text' as const, content: textPart });
+      }
+      result.push({ type: 'math' as const, content: systemLatex, displayMode: true });
+      return result;
+    } else {
+      // SINGLE MATH CHUNK: render as inline math unless it contains \begin or \left
+      const mathContent = sanitizeMath(mathChunks[0]);
+      const isDisplayMode = /\\begin\{|\\left/.test(mathContent);
+      
+      const result: ContentSegment[] = [];
+      if (textPart) {
+        result.push({ type: 'text' as const, content: textPart });
+      }
+      result.push({ type: 'math' as const, content: mathContent, displayMode: isDisplayMode });
+      return result;
+    }
+  }
+  
+  // FALLBACK: Raw LaTeX trigger logic (existing behavior)
   const idx = q.search(LATEX_TRIGGER);
 
   if (idx === -1) {
@@ -38,17 +90,14 @@ function createSegmentsFromQuestion(question: string): ContentSegment[] {
     mathPart = q.slice(idx).trim();
   }
 
-  // REQUIRED: KaTeX-critical sanitization
-  mathPart = mathPart.replace(/\\left\{/g, '\\left\\{');
-
-  // SAFETY: closing delimiter guard
-  mathPart = mathPart.replace(/\\right(?![.\)\]\}])/g, '\\right.');
+  mathPart = sanitizeMath(mathPart);
+  const isDisplayMode = /\\begin\{|\\left/.test(mathPart);
 
   const result: ContentSegment[] = [];
   if (textPart) {
     result.push({ type: 'text' as const, content: textPart });
   }
-  result.push({ type: 'math' as const, content: mathPart, displayMode: true });
+  result.push({ type: 'math' as const, content: mathPart, displayMode: isDisplayMode });
   return result;
 }
 
