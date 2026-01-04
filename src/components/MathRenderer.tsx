@@ -2,18 +2,52 @@ import { useEffect, useRef } from 'react';
 import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { parseContentSegments, normalizeLatex, fixMalformedLatex } from '@/lib/normalizeLatex';
+import type { ContentSegment } from '@/lib/normalizeLatex';
 
 interface MathRendererProps {
-  latex: string;
+  latex?: string;
+  segments?: ContentSegment[];
   displayMode?: boolean;
   className?: string;
 }
 
-export default function MathRenderer({ latex, displayMode = false, className = '' }: MathRendererProps) {
+export default function MathRenderer({ latex, segments, displayMode = false, className = '' }: MathRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!containerRef.current || !latex) return;
+    if (!containerRef.current) return;
+
+    // DIRECT SEGMENT RENDERING PATH - bypasses all parsing/regex/normalization
+    if (segments && segments.length > 0) {
+      containerRef.current.innerHTML = '';
+      
+      segments.forEach(segment => {
+        if (segment.type === 'text') {
+          const textSpan = document.createElement('span');
+          textSpan.textContent = segment.content;
+          containerRef.current?.appendChild(textSpan);
+        } else {
+          const mathSpan = document.createElement('span');
+          try {
+            katex.render(segment.content, mathSpan, {
+              displayMode: segment.displayMode ?? false,
+              throwOnError: false,
+              trust: true,
+              strict: false,
+            });
+          } catch (error) {
+            console.error('KaTeX render error:', error);
+            mathSpan.textContent = segment.content;
+          }
+          containerRef.current?.appendChild(mathSpan);
+        }
+      });
+      
+      return; // Exit early - do not run legacy path
+    }
+
+    // LEGACY PATH - only runs if segments is NOT provided
+    if (!latex) return;
 
     // First fix any malformed LaTeX patterns
     const fixedLatex = fixMalformedLatex(latex);
@@ -57,9 +91,9 @@ export default function MathRenderer({ latex, displayMode = false, className = '
       }
     } else {
       // Parse into segments for mixed content
-      const segments = parseContentSegments(fixedLatex);
+      const parsedSegments = parseContentSegments(fixedLatex);
 
-      if (segments.length === 0) {
+      if (parsedSegments.length === 0) {
         // Fallback: try to render as math
         try {
           const normalizedLatex = normalizeLatex(fixedLatex);
@@ -74,7 +108,7 @@ export default function MathRenderer({ latex, displayMode = false, className = '
           containerRef.current.textContent = fixedLatex;
         }
       } else {
-        segments.forEach(segment => {
+        parsedSegments.forEach(segment => {
           if (segment.type === 'text') {
             // Create a text node for plain text
             const textSpan = document.createElement('span');
@@ -110,9 +144,9 @@ export default function MathRenderer({ latex, displayMode = false, className = '
         });
       }
     }
-  }, [latex, displayMode]);
+  }, [latex, segments, displayMode]);
 
-  if (!latex) return null;
+  if (!latex && (!segments || segments.length === 0)) return null;
 
   return <div ref={containerRef} className={`math-content inline ${className}`} />;
 }
