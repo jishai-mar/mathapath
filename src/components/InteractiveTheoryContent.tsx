@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import MathRenderer from './MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { 
   Lightbulb, 
   Eye, 
@@ -86,7 +87,7 @@ function TryItSection({ question, hint, answer }: { question: string; hint?: str
       </div>
       
       <div className="text-foreground mb-4">
-        <MathRenderer latex={question} />
+        <MathRenderer segments={createSegmentsFromSolution(question)} />
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -131,7 +132,7 @@ function TryItSection({ question, hint, answer }: { question: string; hint?: str
           <div className="flex items-center gap-2 text-primary">
             <CheckCircle2 className="w-4 h-4" />
             <span className="font-semibold">
-              <MathRenderer latex={answer} />
+              <MathRenderer segments={createSegmentsFromSolution(answer)} />
             </span>
           </div>
         </motion.div>
@@ -180,7 +181,7 @@ function VisualBlock({ content }: { content: string }) {
         <span className="text-sm font-medium text-primary">Visual</span>
       </div>
       <div className="text-foreground/90 text-sm">
-        <MathRenderer latex={content} />
+        <MathRenderer segments={createSegmentsFromSolution(content)} />
       </div>
     </motion.div>
   );
@@ -221,7 +222,7 @@ export default function InteractiveTheoryContent({ content }: InteractiveTheoryC
               <div className="flex items-start gap-3">
                 <MessageSquare className="w-5 h-5 text-primary mt-0.5" />
                 <div className="text-foreground leading-relaxed">
-                  <MathRenderer latex={section.content} />
+                  <MathRenderer segments={createSegmentsFromSolution(section.content)} />
                 </div>
               </div>
             </div>
@@ -233,7 +234,7 @@ export default function InteractiveTheoryContent({ content }: InteractiveTheoryC
 
           {section.type === 'concept' && (
             <div className="text-foreground/90 leading-relaxed">
-              <MathRenderer latex={section.content} />
+              <MathRenderer segments={createSegmentsFromSolution(section.content)} />
             </div>
           )}
 
@@ -252,7 +253,7 @@ export default function InteractiveTheoryContent({ content }: InteractiveTheoryC
                 <span className="font-semibold text-primary text-sm">Worked Example</span>
               </div>
               <div className="font-mono text-sm text-foreground/90 whitespace-pre-wrap">
-                <MathRenderer latex={section.content} />
+                <MathRenderer segments={createSegmentsFromSolution(section.content)} />
               </div>
             </div>
           )}
@@ -266,7 +267,7 @@ export default function InteractiveTheoryContent({ content }: InteractiveTheoryC
                 <div>
                   <span className="text-xs font-semibold text-primary uppercase tracking-wide">Key Insight</span>
                   <div className="text-foreground mt-1">
-                    <MathRenderer latex={section.content} />
+                    <MathRenderer segments={createSegmentsFromSolution(section.content)} />
                   </div>
                 </div>
               </div>
@@ -277,7 +278,7 @@ export default function InteractiveTheoryContent({ content }: InteractiveTheoryC
             <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 flex items-center gap-3">
               <span className="text-lg">📝</span>
               <div className="text-sm text-foreground/90">
-                <MathRenderer latex={section.content} />
+                <MathRenderer segments={createSegmentsFromSolution(section.content)} />
               </div>
             </div>
           )}
@@ -299,7 +300,7 @@ function renderParagraph(paragraph: string) {
   if (paragraph.startsWith('**')) {
     return (
       <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-        <MathRenderer latex={paragraph.replace(/\*\*/g, '')} />
+        <MathRenderer segments={createSegmentsFromSolution(paragraph.replace(/\*\*/g, ''))} />
       </div>
     );
   }
@@ -308,7 +309,7 @@ function renderParagraph(paragraph: string) {
   if (paragraph.match(/^\d\./)) {
     return (
       <div className="pl-4 border-l-2 border-primary/30">
-        <MathRenderer latex={paragraph} />
+        <MathRenderer segments={createSegmentsFromSolution(paragraph)} />
       </div>
     );
   }
@@ -322,7 +323,7 @@ function renderParagraph(paragraph: string) {
           <li key={idx} className="flex items-start gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-primary/50 mt-2 flex-shrink-0" />
             <span className="text-foreground/90">
-              <MathRenderer latex={item.replace(/^[•\-]\s*/, '')} />
+              <MathRenderer segments={createSegmentsFromSolution(item.replace(/^[•\-]\s*/, ''))} />
             </span>
           </li>
         ))}
@@ -336,5 +337,5 @@ function renderParagraph(paragraph: string) {
   }
 
   // Regular paragraph
-  return <MathRenderer latex={paragraph} />;
+  return <MathRenderer segments={createSegmentsFromSolution(paragraph)} />;
 }

@@ -7,6 +7,7 @@ import { useExerciseContext } from '@/contexts/ExerciseContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { normalizeSpokenMath, mathToSpoken, containsMathContent } from '@/lib/spokenMathParser';
 import { 
   X, 
@@ -753,7 +754,7 @@ Respond happily when called "Gilbert".`;
             <div className="px-4 py-3 border-b border-border bg-primary/5">
               <p className="text-xs text-muted-foreground mb-1">Current problem:</p>
               <div className="text-sm">
-                <MathRenderer latex={exerciseContext.currentQuestion} />
+                <MathRenderer segments={createSegmentsFromSolution(exerciseContext.currentQuestion)} />
               </div>
             </div>
           )}
@@ -776,7 +777,7 @@ Respond happily when called "Gilbert".`;
                     }`}
                   >
                     <div className="text-sm whitespace-pre-wrap">
-                      <MathRenderer latex={message.content} />
+                      <MathRenderer segments={createSegmentsFromSolution(message.content)} />
                     </div>
                   </div>
                 </motion.div>

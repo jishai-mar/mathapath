@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExerciseContext } from '@/contexts/ExerciseContext';
 import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { 
   X, 
   Send, 
@@ -267,7 +268,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
                   <div className="p-3 rounded-lg bg-muted/30 text-sm space-y-2">
                     <p className="font-medium">Question:</p>
                     <div className="text-muted-foreground">
-                      <MathRenderer latex={exerciseContext.currentQuestion} />
+                      <MathRenderer segments={createSegmentsFromSolution(exerciseContext.currentQuestion)} />
                     </div>
                     {exerciseContext.currentAnswer && (
                       <>
@@ -300,7 +301,7 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
                   }`}
                 >
                   <div className="text-sm whitespace-pre-wrap">
-                    <MathRenderer latex={message.content} />
+                    <MathRenderer segments={createSegmentsFromSolution(message.content)} />
                   </div>
                   {message.isStreaming && (
                     <span className="inline-block w-2 h-4 bg-current animate-pulse ml-1" />

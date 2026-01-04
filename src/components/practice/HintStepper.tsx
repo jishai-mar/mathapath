@@ -3,6 +3,7 @@ import { ChevronRight, Eye, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { SolutionStep } from './types';
 
 interface HintStepperProps {
@@ -78,7 +79,7 @@ export function HintStepper({
                   
                   {/* Calculation */}
                   <div className="p-2 rounded-lg bg-background/50 font-mono text-sm">
-                    <MathRenderer latex={step.calculation} />
+                    <MathRenderer segments={createSegmentsFromSolution(step.calculation)} />
                   </div>
                   
                   {/* Explanation */}

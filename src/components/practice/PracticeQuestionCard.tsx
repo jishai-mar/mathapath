@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { Exercise, ExerciseDetails, PracticeMode } from './types';
 import { HintStepper } from './HintStepper';
 import { FeedbackBanner } from './FeedbackBanner';
@@ -119,7 +120,7 @@ export function PracticeQuestionCard({
         {/* Question */}
         <div className="p-6 rounded-2xl bg-muted/30 border border-border">
           <div className="text-lg font-medium leading-relaxed">
-            <MathRenderer latex={exercise.question} />
+            <MathRenderer segments={createSegmentsFromSolution(exercise.question)} />
           </div>
         </div>
 
