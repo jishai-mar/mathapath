@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { PenLine, CheckCircle2 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
 import { WorkedExampleBlock } from '../types';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface WorkedExampleProps {
   block: WorkedExampleBlock;
@@ -30,7 +31,7 @@ export function WorkedExample({ block }: WorkedExampleProps) {
       <div className="bg-muted/30 rounded-lg p-4 border border-border/30">
         <p className="text-sm text-muted-foreground/80 mb-2">Problem:</p>
         <div className="text-foreground">
-          <MathRenderer latex={block.problem} />
+          <MathRenderer segments={createSegmentsFromSolution(block.problem)} />
         </div>
       </div>
 
@@ -57,13 +58,13 @@ export function WorkedExample({ block }: WorkedExampleProps) {
             {/* Step content */}
             <div className="flex-1 space-y-2">
               <p className="text-muted-foreground">
-                <MathRenderer latex={step.explanation} />
+                <MathRenderer segments={createSegmentsFromSolution(step.explanation)} />
               </p>
               {step.math && (
                 <div className={`pl-4 py-2 border-l-2 ${
                   step.highlight ? 'border-primary/50' : 'border-border/50'
                 }`}>
-                  <MathRenderer latex={step.math} />
+                  <MathRenderer segments={createSegmentsFromSolution(step.math)} />
                 </div>
               )}
             </div>
@@ -78,7 +79,7 @@ export function WorkedExample({ block }: WorkedExampleProps) {
           <div className="flex-1">
             <span className="text-sm text-muted-foreground">Answer: </span>
             <span className="text-foreground font-medium">
-              <MathRenderer latex={block.finalAnswer} />
+              <MathRenderer segments={createSegmentsFromSolution(block.finalAnswer)} />
             </span>
           </div>
         </div>

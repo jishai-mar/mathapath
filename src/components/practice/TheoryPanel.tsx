@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from '@/components/MathRenderer';
 import { TheoryContent } from './types';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface TheoryPanelProps {
   isOpen: boolean;
@@ -63,7 +64,7 @@ export function TheoryPanel({ isOpen, onClose, theory, topicName }: TheoryPanelP
                     <div>
                       <h3 className="text-xl font-semibold mb-3">{theory.title}</h3>
                       <div className="text-muted-foreground leading-relaxed">
-                        <MathRenderer latex={theory.explanation} />
+                        <MathRenderer segments={createSegmentsFromSolution(theory.explanation)} />
                       </div>
                     </div>
 
@@ -78,7 +79,7 @@ export function TheoryPanel({ isOpen, onClose, theory, topicName }: TheoryPanelP
                           {theory.keyFormulas.map((formula, index) => (
                             <li key={index} className="flex items-start gap-2">
                               <span className="text-primary font-mono text-sm mt-0.5">•</span>
-                              <MathRenderer latex={formula} />
+                              <MathRenderer segments={createSegmentsFromSolution(formula)} />
                             </li>
                           ))}
                         </ul>
@@ -96,13 +97,13 @@ export function TheoryPanel({ isOpen, onClose, theory, topicName }: TheoryPanelP
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">Problem:</p>
                             <div className="font-medium">
-                              <MathRenderer latex={theory.miniExample.problem} />
+                              <MathRenderer segments={createSegmentsFromSolution(theory.miniExample.problem)} />
                             </div>
                           </div>
                           <div>
                             <p className="text-sm text-muted-foreground mb-1">Solution:</p>
                             <div className="text-muted-foreground">
-                              <MathRenderer latex={theory.miniExample.solution} />
+                              <MathRenderer segments={createSegmentsFromSolution(theory.miniExample.solution)} />
                             </div>
                           </div>
                         </div>
