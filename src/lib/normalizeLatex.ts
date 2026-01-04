@@ -124,85 +124,90 @@ export function fixCorruptedLatexCommands(input: string): string {
 }
 
 /**
- * Converts inline system of equations to proper stacked format
- * Detects patterns like "x + y = 10 x - y = 2" and converts to cases environment
+ * Converts inline system of equations to the booklet format:
+ * an opening left brace (accolade) with two (or more) equations stacked.
+ *
+ * Booklet reference (see bookletExerciseTemplates.ts):
+ * Solve: $\begin{cases} ... \\ ... \end{cases}$
+ *
+ * KaTeX is stricter about `cases` rows (often expects `&`), so we render systems as
+ * `\left\{\begin{aligned} ... \\ ... \end{aligned}\right.` which matches the booklet look.
  */
 export function convertSystemOfEquations(input: string): string {
-  if (!input || typeof input !== 'string') {
+  if (!input || typeof input !== 'string') return input;
+
+  // Already formatted as a multi-line system
+  if (
+    input.includes('\\begin{cases}') ||
+    input.includes('\\begin{aligned}') ||
+    input.includes('\\left\\{')
+  ) {
     return input;
   }
 
-  // Already has cases environment - return as-is (will be rendered properly)
-  if (input.includes('\\begin{cases}')) {
-    return input;
-  }
-
-  // Pattern to detect multiple equations in one line
-  // Look for patterns like "x + y = 10 x - y = 2" (equation followed by another equation)
-  // An equation ends with = number/expression and a new equation starts with a variable
-  
-  // Split by common prefixes like "Solve the system of equations:" 
   const systemPrefixes = [
-    /^(.*?solve\s+the\s+system\s+of\s+equations\s*:?\s*)/i,
-    /^(.*?system\s+of\s+equations\s*:?\s*)/i,
-    /^(.*?solve\s+the\s+following\s+system\s*:?\s*)/i,
+    /^(.*?solve\s+the\s+system\s+of\s+equations\s*:?(\s*))/i,
+    /^(.*?system\s+of\s+equations\s*:?(\s*))/i,
+    /^(.*?solve\s+the\s+following\s+system\s*:?(\s*))/i,
+    /^(.*?solve\s*:?(\s*))/i,
   ];
 
   let prefix = '';
-  let mathPart = input;
+  let mathPart = input.trim();
 
   for (const prefixPattern of systemPrefixes) {
-    const match = input.match(prefixPattern);
+    const match = mathPart.match(prefixPattern);
     if (match) {
       prefix = match[1];
-      mathPart = input.slice(match[0].length).trim();
+      mathPart = mathPart.slice(match[0].length).trim();
       break;
     }
   }
 
-  // If we found a system prefix, try to split the equations
-  if (prefix) {
-    // Pattern: equation = value followed by another variable (start of next equation)
-    // Match: "x + y = 10" followed by "x - y = 2"
-    // Look for: "= number/expression" followed by a new term starting with a letter
-    const equationSplitPattern = /([^=]+=\s*[\d\-+.\s\/\\a-z{}^]+?)(?=\s+[a-z]\s*[+\-=])/gi;
-    
-    // Try to find equations by looking for "= value" patterns
-    const equations: string[] = [];
-    let remaining = mathPart;
-    
-    // Simple split: find all "= something" patterns and split before the next variable
-    // Pattern: match "something = something" followed by space and a letter
-    const parts = mathPart.split(/(?<=\d)\s+(?=[a-z]\s*[+\-])/i);
-    
-    if (parts.length >= 2) {
-      // We have multiple equations
-      const validEquations = parts.filter(p => p.includes('='));
-      if (validEquations.length >= 2) {
-        const casesContent = validEquations.map(eq => eq.trim()).join(' \\\\ ');
-        return `${prefix}$\\begin{cases} ${casesContent} \\end{cases}$`;
-      }
-    }
-    
-    // Alternative: try splitting by pattern "= number letter" where letter starts new equation
-    const altSplit = mathPart.match(/[^=]+=\s*[\d\-+.]+/g);
-    if (altSplit && altSplit.length >= 2) {
-      const casesContent = altSplit.map(eq => eq.trim()).join(' \\\\ ');
-      return `${prefix}$\\begin{cases} ${casesContent} \\end{cases}$`;
-    }
-  }
+  const collectEquations = (raw: string): string[] => {
+    const cleaned = raw
+      .replace(/\s+/g, ' ')
+      .replace(/[，؛]/g, ',')
+      .trim();
 
-  // Check for newline-separated equations
-  if (input.includes('\n')) {
-    const lines = input.split('\n').map(l => l.trim()).filter(l => l && l.includes('='));
-    if (lines.length >= 2) {
-      const casesContent = lines.join(' \\\\ ');
-      return `\\begin{cases} ${casesContent} \\end{cases}`;
-    }
-  }
+    // 1) Newline-separated or semicolon-separated
+    const byHardSeparators = cleaned
+      .split(/(?:\s*;\s*|\s*\n\s*)/)
+      .map((s) => s.trim())
+      .filter(Boolean);
 
-  return input;
+    const maybeEqList = byHardSeparators.some((s) => s.includes('=')) ? byHardSeparators : [cleaned];
+
+    // 2) If still a single chunk, attempt to split where a new equation starts.
+    if (maybeEqList.length === 1) {
+      // Split when we see " ... = ..." and then another equation starting with a variable-like token.
+      // Example: "8x+3y=28 2x+y=8" or "x+y=10, x-y=2".
+      const chunk = maybeEqList[0]
+        .replace(/,\s*/g, ' , ') // normalize commas as separators
+        .replace(/\s+,\s+/g, ' , ');
+
+      const parts = chunk
+        .split(/\s+,\s+|(?<==[^=]{1,20})\s+(?=[a-zA-Z]\w*\s*[+\-]=?|[0-9]*[a-zA-Z]\w*\s*[+\-])/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const eqs = parts.filter((p) => p.includes('='));
+      return eqs.length >= 2 ? eqs : [];
+    }
+
+    const eqs = maybeEqList.filter((p) => p.includes('='));
+    return eqs.length >= 2 ? eqs : [];
+  };
+
+  const equations = collectEquations(mathPart);
+  if (equations.length < 2) return input;
+
+  const alignedBody = equations.map((eq) => eq.trim()).join(' \\\\ ');
+  const systemLatex = `$\\left\\{\\begin{aligned} ${alignedBody} \\end{aligned}\\right.$`;
+
+  return prefix ? `${prefix}${systemLatex}` : systemLatex;
 }
+
 
 export function fixMalformedLatex(input: string): string {
   if (!input || typeof input !== 'string') {
@@ -373,27 +378,18 @@ export function normalizeLatex(input: string): string {
   });
 
   // Step 3: Clean up common issues
-  // For cases/array environments, ensure proper line breaks
-  if (result.includes('\\begin{cases}') || result.includes('\\begin{array}')) {
-    // Extract the cases content and fix line breaks
-    result = result.replace(/(\\begin\{cases\})([\s\S]*?)(\\end\{cases\})/g, (match, begin, content, end) => {
-      // Inside cases, a single backslash followed by whitespace and letter should be double backslash
-      // Pattern: equation = value \ next_variable → equation = value \\ next_variable
-      let fixedContent = content;
-      
-      // Fix: "= number \ letter" pattern (single backslash should be double)
-      fixedContent = fixedContent.replace(/(\d+)\s*\\(\s+)([a-zA-Z])/g, '$1 \\\\ $3');
-      
-      // Also ensure existing \\ are preserved and not broken
-      // If we see patterns like "28 2x" without any separator, add \\
-      fixedContent = fixedContent.replace(/(\d+)\s{2,}(\d*[a-zA-Z])/g, '$1 \\\\ $2');
-      
-      return begin + fixedContent + end;
-    });
-  } else {
+  // IMPORTANT: preserve multiline environments that rely on `\\` for line breaks.
+  const hasMultilineEnv =
+    result.includes('\\begin{cases}') ||
+    result.includes('\\begin{array}') ||
+    result.includes('\\begin{aligned}') ||
+    result.includes('\\left\\{');
+
+  if (!hasMultilineEnv) {
     // Fix double backslashes that aren't line breaks
     result = result.replace(/\\\\(?![\\n])/g, '\\');
   }
+
   
   // Fix spacing around operators
   result = result.replace(/\s*=\s*/g, ' = ');
