@@ -20,8 +20,18 @@ export default function MathRenderer({ latex, displayMode = false, className = '
     
     // Check if this is pure LaTeX (contains LaTeX commands without delimiters)
     // Also check for begin/end environments like cases/array/aligned
-    const isPureLatex = /\\(frac|sqrt|cdot|times|div|pm|log|sin|cos|tan|int|sum|prod|lim|alpha|beta|gamma|delta|theta|pi|sigma|phi|omega|left|right|text|mathbf|mathit|mathrm|begin|end)\b/.test(fixedLatex) && 
-                        !fixedLatex.includes('$');
+    // If there's clear prose + a math block (e.g. "Solve ...: \\left\\{...") we should NOT treat it as pure.
+    const hasLikelyMixedText =
+      /[a-zA-Z]{3,}/.test(fixedLatex) &&
+      fixedLatex.includes(':') &&
+      (fixedLatex.includes('\\left') || fixedLatex.includes('\\begin{'));
+
+    const isPureLatex =
+      /\\(frac|sqrt|cdot|times|div|pm|log|sin|cos|tan|int|sum|prod|lim|alpha|beta|gamma|delta|theta|pi|sigma|phi|omega|left|right|text|mathbf|mathit|mathrm|begin|end)\b/.test(
+        fixedLatex
+      ) &&
+      !fixedLatex.includes('$') &&
+      !hasLikelyMixedText;
 
     // Clear the container
     containerRef.current.innerHTML = '';
