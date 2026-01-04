@@ -5,55 +5,55 @@
 
 // Common text-to-LaTeX conversions
 const textToLatexMap: [RegExp, string][] = [
-  [/±/g, '\\pm '],
-  [/×/g, '\\times '],
-  [/÷/g, '\\div '],
-  [/√/g, '\\sqrt'],
-  [/∞/g, '\\infty '],
-  [/≤/g, '\\leq '],
-  [/≥/g, '\\geq '],
-  [/≠/g, '\\neq '],
-  [/→/g, '\\rightarrow '],
-  [/←/g, '\\leftarrow '],
-  [/⇒/g, '\\Rightarrow '],
-  [/∈/g, '\\in '],
-  [/∉/g, '\\notin '],
-  [/∪/g, '\\cup '],
-  [/∩/g, '\\cap '],
-  [/⊂/g, '\\subset '],
-  [/⊆/g, '\\subseteq '],
-  [/α/g, '\\alpha '],
-  [/β/g, '\\beta '],
-  [/γ/g, '\\gamma '],
-  [/δ/g, '\\delta '],
-  [/θ/g, '\\theta '],
-  [/π/g, '\\pi '],
-  [/σ/g, '\\sigma '],
-  [/Σ/g, '\\Sigma '],
-  [/φ/g, '\\phi '],
-  [/ω/g, '\\omega '],
+  [/±/g, "\\pm "],
+  [/×/g, "\\times "],
+  [/÷/g, "\\div "],
+  [/√/g, "\\sqrt"],
+  [/∞/g, "\\infty "],
+  [/≤/g, "\\leq "],
+  [/≥/g, "\\geq "],
+  [/≠/g, "\\neq "],
+  [/→/g, "\\rightarrow "],
+  [/←/g, "\\leftarrow "],
+  [/⇒/g, "\\Rightarrow "],
+  [/∈/g, "\\in "],
+  [/∉/g, "\\notin "],
+  [/∪/g, "\\cup "],
+  [/∩/g, "\\cap "],
+  [/⊂/g, "\\subset "],
+  [/⊆/g, "\\subseteq "],
+  [/α/g, "\\alpha "],
+  [/β/g, "\\beta "],
+  [/γ/g, "\\gamma "],
+  [/δ/g, "\\delta "],
+  [/θ/g, "\\theta "],
+  [/π/g, "\\pi "],
+  [/σ/g, "\\sigma "],
+  [/Σ/g, "\\Sigma "],
+  [/φ/g, "\\phi "],
+  [/ω/g, "\\omega "],
   // Superscript digits (x² → x^2)
-  [/²/g, '^2'],
-  [/³/g, '^3'],
-  [/⁴/g, '^4'],
-  [/⁵/g, '^5'],
-  [/⁶/g, '^6'],
-  [/⁷/g, '^7'],
-  [/⁸/g, '^8'],
-  [/⁹/g, '^9'],
-  [/⁰/g, '^0'],
-  [/¹/g, '^1'],
+  [/²/g, "^2"],
+  [/³/g, "^3"],
+  [/⁴/g, "^4"],
+  [/⁵/g, "^5"],
+  [/⁶/g, "^6"],
+  [/⁷/g, "^7"],
+  [/⁸/g, "^8"],
+  [/⁹/g, "^9"],
+  [/⁰/g, "^0"],
+  [/¹/g, "^1"],
   // Subscript digits
-  [/₀/g, '_0'],
-  [/₁/g, '_1'],
-  [/₂/g, '_2'],
-  [/₃/g, '_3'],
-  [/₄/g, '_4'],
-  [/₅/g, '_5'],
-  [/₆/g, '_6'],
-  [/₇/g, '_7'],
-  [/₈/g, '_8'],
-  [/₉/g, '_9'],
+  [/₀/g, "_0"],
+  [/₁/g, "_1"],
+  [/₂/g, "_2"],
+  [/₃/g, "_3"],
+  [/₄/g, "_4"],
+  [/₅/g, "_5"],
+  [/₆/g, "_6"],
+  [/₇/g, "_7"],
+  [/₈/g, "_8"],
+  [/₉/g, "_9"],
 ];
 
 /**
@@ -61,7 +61,7 @@ const textToLatexMap: [RegExp, string][] = [
  * Examples: "rac{1}{2}" → "\\frac{1}{2}", "qrt{x}" → "\\sqrt{x}", "f32" → "\\frac{3}{2}"
  */
 export function fixCorruptedLatexCommands(input: string): string {
-  if (!input || typeof input !== 'string') {
+  if (!input || typeof input !== "string") {
     return input;
   }
 
@@ -69,51 +69,51 @@ export function fixCorruptedLatexCommands(input: string): string {
 
   // FIRST: Fix corrupted "\f" that should be "\frac" - the backslash got partially preserved
   // Pattern: \f followed by rac{ or just \f before a { → should be \frac
-  result = result.replace(/\\f\\frac\{/g, '\\frac{');  // \f\frac{ → \frac{
-  result = result.replace(/\\frac\{/g, '\\frac{');     // Already correct, ensure consistency
-  
+  result = result.replace(/\\f\\frac\{/g, "\\frac{"); // \f\frac{ → \frac{
+  result = result.replace(/\\frac\{/g, "\\frac{"); // Already correct, ensure consistency
+
   // Fix "\f" followed by digits (like \f32 → \frac{3}{2})
-  result = result.replace(/\\f(\d)(\d)(?![0-9{])/g, '\\frac{$1}{$2}');
-  
+  result = result.replace(/\\f(\d)(\d)(?![0-9{])/g, "\\frac{$1}{$2}");
+
   // Fix standalone "f" followed by two digits (like f32 → \frac{3}{2})
-  result = result.replace(/(?<![\\a-zA-Z])f(\d)(\d)(?![0-9{])/g, '\\frac{$1}{$2}');
+  result = result.replace(/(?<![\\a-zA-Z])f(\d)(\d)(?![0-9{])/g, "\\frac{$1}{$2}");
 
   // Fix corrupted LaTeX commands (backslash was stripped)
   // These patterns match corrupted commands that should have a backslash
   const corruptedCommands: [RegExp, string][] = [
     // Stray \f before proper commands - remove it
-    [/\\f\\frac/g, '\\frac'],
-    [/\\f\\sqrt/g, '\\sqrt'],
+    [/\\f\\frac/g, "\\frac"],
+    [/\\f\\sqrt/g, "\\sqrt"],
     // Fractions: rac{ → \frac{
-    [/(?<!\\f)(?<!\\)rac\{/g, '\\frac{'],
+    [/(?<!\\f)(?<!\\)rac\{/g, "\\frac{"],
     // Square roots: qrt{ or qrt[ → \sqrt{ or \sqrt[
-    [/(?<!\\)qrt\{/g, '\\sqrt{'],
-    [/(?<!\\)qrt\[/g, '\\sqrt['],
+    [/(?<!\\)qrt\{/g, "\\sqrt{"],
+    [/(?<!\\)qrt\[/g, "\\sqrt["],
     // Times: imes → \times (but not "times" as a word)
-    [/(?<![a-zA-Z])imes(?![a-zA-Z])/g, '\\times'],
+    [/(?<![a-zA-Z])imes(?![a-zA-Z])/g, "\\times"],
     // Division: div → \div (but not "div" as part of word)
-    [/(?<![a-zA-Z])div(?![a-zA-Z])/g, '\\div'],
+    [/(?<![a-zA-Z])div(?![a-zA-Z])/g, "\\div"],
     // Plus-minus: pm → \pm
-    [/(?<![a-zA-Z])pm(?![a-zA-Z])/g, '\\pm'],
+    [/(?<![a-zA-Z])pm(?![a-zA-Z])/g, "\\pm"],
     // Logarithm: og_ → \log_
-    [/(?<!\\l)og_/g, '\\log_'],
+    [/(?<!\\l)og_/g, "\\log_"],
     // Trig functions
-    [/(?<!\\|[a-zA-Z])sin\{/g, '\\sin{'],
-    [/(?<!\\|[a-zA-Z])cos\{/g, '\\cos{'],
-    [/(?<!\\|[a-zA-Z])tan\{/g, '\\tan{'],
+    [/(?<!\\|[a-zA-Z])sin\{/g, "\\sin{"],
+    [/(?<!\\|[a-zA-Z])cos\{/g, "\\cos{"],
+    [/(?<!\\|[a-zA-Z])tan\{/g, "\\tan{"],
     // Infinity: infty → \infty
-    [/(?<!\\)infty(?![a-zA-Z])/g, '\\infty'],
+    [/(?<!\\)infty(?![a-zA-Z])/g, "\\infty"],
     // Comparison operators
-    [/(?<!\\)leq(?![a-zA-Z])/g, '\\leq'],
-    [/(?<!\\)geq(?![a-zA-Z])/g, '\\geq'],
-    [/(?<!\\)neq(?![a-zA-Z])/g, '\\neq'],
+    [/(?<!\\)leq(?![a-zA-Z])/g, "\\leq"],
+    [/(?<!\\)geq(?![a-zA-Z])/g, "\\geq"],
+    [/(?<!\\)neq(?![a-zA-Z])/g, "\\neq"],
     // Greek letters (common ones)
-    [/(?<!\\)alpha(?![a-zA-Z])/g, '\\alpha'],
-    [/(?<!\\)beta(?![a-zA-Z])/g, '\\beta'],
-    [/(?<!\\)gamma(?![a-zA-Z])/g, '\\gamma'],
-    [/(?<!\\)delta(?![a-zA-Z])/g, '\\delta'],
-    [/(?<!\\)theta(?![a-zA-Z])/g, '\\theta'],
-    [/(?<!\\)cdot(?![a-zA-Z])/g, '\\cdot'],
+    [/(?<!\\)alpha(?![a-zA-Z])/g, "\\alpha"],
+    [/(?<!\\)beta(?![a-zA-Z])/g, "\\beta"],
+    [/(?<!\\)gamma(?![a-zA-Z])/g, "\\gamma"],
+    [/(?<!\\)delta(?![a-zA-Z])/g, "\\delta"],
+    [/(?<!\\)theta(?![a-zA-Z])/g, "\\theta"],
+    [/(?<!\\)cdot(?![a-zA-Z])/g, "\\cdot"],
   ];
 
   for (const [pattern, replacement] of corruptedCommands) {
@@ -134,14 +134,10 @@ export function fixCorruptedLatexCommands(input: string): string {
  * `\left\{\begin{aligned} ... \\ ... \end{aligned}\right.` which matches the booklet look.
  */
 export function convertSystemOfEquations(input: string): string {
-  if (!input || typeof input !== 'string') return input;
+  if (!input || typeof input !== "string") return input;
 
   // Already formatted as a multi-line system
-  if (
-    input.includes('\\begin{cases}') ||
-    input.includes('\\begin{aligned}') ||
-    input.includes('\\left\\{')
-  ) {
+  if (input.includes("\\begin{cases}") || input.includes("\\begin{aligned}") || input.includes("\\left\\{")) {
     return input;
   }
 
@@ -152,7 +148,7 @@ export function convertSystemOfEquations(input: string): string {
     /^(.*?solve\s*:?(\s*))/i,
   ];
 
-  let prefix = '';
+  let prefix = "";
   let mathPart = input.trim();
 
   for (const prefixPattern of systemPrefixes) {
@@ -166,9 +162,9 @@ export function convertSystemOfEquations(input: string): string {
 
   const collectEquations = (raw: string): string[] => {
     const cleaned = raw
-      .replace(/[−–]/g, '-')
-      .replace(/\s+/g, ' ')
-      .replace(/[，；،؛]/g, ',')
+      .replace(/[−–]/g, "-")
+      .replace(/\s+/g, " ")
+      .replace(/[，；،؛]/g, ",")
       .trim();
 
     // 1) Split on explicit separators first
@@ -179,21 +175,21 @@ export function convertSystemOfEquations(input: string): string {
 
     let eqs: string[] = [];
 
-    if (explicitParts.filter((p) => p.includes('=')).length >= 2) {
-      eqs = explicitParts.filter((p) => p.includes('='));
+    if (explicitParts.filter((p) => p.includes("=")).length >= 2) {
+      eqs = explicitParts.filter((p) => p.includes("="));
     } else {
       // 2) Extract equations from a run-on string like: "x+y=10x-y=2x-y=2"
       // Grab minimal "...=..." chunks until the next "...=" or end.
       const matches = cleaned.matchAll(/([^=]{1,80}=.+?)(?=(?:[a-zA-Z][^=]{0,20}=)|$)/g);
       eqs = Array.from(matches)
         .map((m) => m[1].trim())
-        .filter((p) => p.includes('='));
+        .filter((p) => p.includes("="));
     }
 
     // 3) De-duplicate identical equations (fixes accidental repeats like "x-y=2" twice)
     const seen = new Set<string>();
     const unique = eqs.filter((eq) => {
-      const key = eq.replace(/[−–]/g, '-').replace(/\s+/g, '').toLowerCase();
+      const key = eq.replace(/[−–]/g, "-").replace(/\s+/g, "").toLowerCase();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -209,19 +205,18 @@ export function convertSystemOfEquations(input: string): string {
     .map((eq) => {
       // KaTeX-friendly booklet look: align on "=" using &
       // Only replace the first "=" in each equation.
-      const normalizedEq = eq.trim().replace(/\s*=\s*/, ' &= ');
+      const normalizedEq = eq.trim().replace(/\s*=\s*/, " &= ");
       return normalizedEq;
     })
-    .join(' \\\\ ');
+    .join(" \\\\ ");
 
   const systemLatex = `$\\left\\{\\begin{aligned} ${alignedBody} \\end{aligned}\\right.$`;
 
   return prefix ? `${prefix}${systemLatex}` : systemLatex;
 }
 
-
 export function fixMalformedLatex(input: string): string {
-  if (!input || typeof input !== 'string') {
+  if (!input || typeof input !== "string") {
     return input;
   }
 
@@ -230,51 +225,51 @@ export function fixMalformedLatex(input: string): string {
 
   // Fix common brace delimiter mistakes that cause KaTeX errors
   // "\\left{" -> "\\left\\{" (missing escape on curly brace)
-  result = result.replace(/\\left\{/g, '\\left\\{');
+  result = result.replace(/\\left\{/g, "\\left\\{");
 
   // Convert system of equations to booklet-style brace + stacked equations
   result = convertSystemOfEquations(result);
 
   // Re-apply in case the system conversion introduced/kept an unescaped brace
-  result = result.replace(/\\left\{/g, '\\left\\{');
+  result = result.replace(/\\left\{/g, "\\left\\{");
 
   // Fix patterns like "^x+^2" or "^x-^3" → "^{x+2}" or "^{x-3}"
   // This catches malformed exponents where the AI incorrectly split the exponent
-  result = result.replace(/\^([a-z])\+\^(\d+)/gi, '^{$1+$2}');
-  result = result.replace(/\^([a-z])-\^(\d+)/gi, '^{$1-$2}');
+  result = result.replace(/\^([a-z])\+\^(\d+)/gi, "^{$1+$2}");
+  result = result.replace(/\^([a-z])-\^(\d+)/gi, "^{$1-$2}");
 
   // Fix patterns already inside braces: "^{x+^2}" → "^{x+2}"
-  result = result.replace(/\^\{\s*([a-z])\+\^(\d+)\s*\}/gi, '^{$1+$2}');
-  result = result.replace(/\^\{\s*([a-z])-\^(\d+)\s*\}/gi, '^{$1-$2}');
+  result = result.replace(/\^\{\s*([a-z])\+\^(\d+)\s*\}/gi, "^{$1+$2}");
+  result = result.replace(/\^\{\s*([a-z])-\^(\d+)\s*\}/gi, "^{$1-$2}");
   // Fix patterns like "^x+2" at end of expression or before = → "^{x+2}"
   // Match: base^variable+number followed by space, =, or end
-  result = result.replace(/\^([a-z])([+\-])(\d+)(\s*[=\s]|$)/gi, '^{$1$2$3}$4');
-  
+  result = result.replace(/\^([a-z])([+\-])(\d+)(\s*[=\s]|$)/gi, "^{$1$2$3}$4");
+
   // Fix patterns like "^2x" (number before variable in exponent) → "^{2x}"
-  result = result.replace(/\^(\d)([a-z])(\s*[=\s]|$)/gi, '^{$1$2}$3');
-  
+  result = result.replace(/\^(\d)([a-z])(\s*[=\s]|$)/gi, "^{$1$2}$3");
+
   // Fix patterns like "^x-1" or "^2x+1" → "^{x-1}" or "^{2x+1}"
-  result = result.replace(/\^(\d*[a-z][+\-]\d+)(?!\})/gi, '^{$1}');
-  
+  result = result.replace(/\^(\d*[a-z][+\-]\d+)(?!\})/gi, "^{$1}");
+
   // Fix log notation: "log_2(x)" or "log_2 x" → "\\log_{2}(x)"
   // But don't double-fix if already has backslash
-  result = result.replace(/(?<!\\)log_(\d+)\s*\(/gi, '\\log_{$1}(');
-  result = result.replace(/(?<!\\)log_(\d+)\s+/gi, '\\log_{$1} ');
-  
+  result = result.replace(/(?<!\\)log_(\d+)\s*\(/gi, "\\log_{$1}(");
+  result = result.replace(/(?<!\\)log_(\d+)\s+/gi, "\\log_{$1} ");
+
   // Fix subscript notation without braces: a_10 → a_{10}
-  result = result.replace(/_(\d{2,})(?!\})/g, '_{$1}');
-  
+  result = result.replace(/_(\d{2,})(?!\})/g, "_{$1}");
+
   // Fix simple numeric fractions like 1/25 → \frac{1}{25}
   // Only applies when surrounded by non-word characters (avoids breaking expressions like x/2)
-  result = result.replace(/(?<![a-z\d])(\d+)\s*\/\s*(\d+)(?![a-z\d])/gi, '\\frac{$1}{$2}');
-  
+  result = result.replace(/(?<![a-z\d])(\d+)\s*\/\s*(\d+)(?![a-z\d])/gi, "\\frac{$1}{$2}");
+
   // Ensure square root has proper braces: √x+5 → √{x+5} when followed by operation
-  result = result.replace(/√([a-z])([+\-])(\d+)/gi, '\\sqrt{$1$2$3}');
-  result = result.replace(/√\(([^)]+)\)/g, '\\sqrt{$1}');
-  
+  result = result.replace(/√([a-z])([+\-])(\d+)/gi, "\\sqrt{$1$2$3}");
+  result = result.replace(/√\(([^)]+)\)/g, "\\sqrt{$1}");
+
   // Clean up any double braces that might have been created
-  result = result.replace(/\{\{/g, '{');
-  result = result.replace(/\}\}/g, '}');
+  result = result.replace(/\{\{/g, "{");
+  result = result.replace(/\}\}/g, "}");
 
   return result;
 }
@@ -320,8 +315,8 @@ function containsMathContent(text: string): boolean {
     /\\begin\{/,
     /\\end\{/,
   ];
-  
-  if (latexCommandPatterns.some(pattern => pattern.test(text))) {
+
+  if (latexCommandPatterns.some((pattern) => pattern.test(text))) {
     return true;
   }
 
@@ -337,13 +332,13 @@ function containsMathContent(text: string): boolean {
   const mathPatterns = [
     /\^[\d{]/,
     /_[\d{]/,
-    /\\[a-zA-Z]+\{/,   // LaTeX commands with braces
-    /^\s*[xyz]\s*[=<>]/i,  // Equations starting with variable
-    /[=<>]\s*[xyz]\s*$/i,  // Equations ending with variable
+    /\\[a-zA-Z]+\{/, // LaTeX commands with braces
+    /^\s*[xyz]\s*[=<>]/i, // Equations starting with variable
+    /[=<>]\s*[xyz]\s*$/i, // Equations ending with variable
     /\d+\s*[+\-*/]\s*\d+/, // Numeric operations
     /^\s*[\d\-+*/^()xyz\s=<>]+\s*$/i, // Pure math expression (only math chars)
   ];
-  return mathPatterns.some(pattern => pattern.test(text));
+  return mathPatterns.some((pattern) => pattern.test(text));
 }
 
 /**
@@ -354,8 +349,8 @@ function containsMathContent(text: string): boolean {
  * 4. Ensuring proper LaTeX syntax
  */
 export function normalizeLatex(input: string): string {
-  if (!input || typeof input !== 'string') {
-    return '';
+  if (!input || typeof input !== "string") {
+    return "";
   }
 
   let result = input.trim();
@@ -383,7 +378,7 @@ export function normalizeLatex(input: string): string {
   });
 
   // Remove any remaining stray $ signs
-  result = result.replace(/\$/g, '');
+  result = result.replace(/\$/g, "");
 
   // Restore display math without delimiters (we render via KaTeX directly)
   displayMatches.forEach((content, i) => {
@@ -398,20 +393,19 @@ export function normalizeLatex(input: string): string {
   // Step 3: Clean up common issues
   // IMPORTANT: preserve multiline environments that rely on `\\` for line breaks.
   const hasMultilineEnv =
-    result.includes('\\begin{cases}') ||
-    result.includes('\\begin{array}') ||
-    result.includes('\\begin{aligned}') ||
-    result.includes('\\left\\{');
+    result.includes("\\begin{cases}") ||
+    result.includes("\\begin{array}") ||
+    result.includes("\\begin{aligned}") ||
+    result.includes("\\left\\{");
 
   if (!hasMultilineEnv) {
     // Fix double backslashes that aren't line breaks
-    result = result.replace(/\\\\(?![\\n])/g, '\\');
+    result = result.replace(/\\\\(?![\\n])/g, "\\");
   }
 
-  
   // Fix spacing around operators
-  result = result.replace(/\s*=\s*/g, ' = ');
-  result = result.replace(/\s+/g, ' ');
+  result = result.replace(/\s*=\s*/g, " = ");
+  result = result.replace(/\s+/g, " ");
 
   // Step 4: Handle mixed text and math content
   // If the string has clear text parts, don't wrap those
@@ -428,7 +422,7 @@ export function normalizeLatex(input: string): string {
  * Useful for rendering mixed content
  */
 export interface ContentSegment {
-  type: 'text' | 'math';
+  type: "text" | "math";
   content: string;
   displayMode?: boolean;
 }
@@ -448,20 +442,18 @@ export function parseContentSegments(input: string): ContentSegment[] {
     if (match.index > lastIndex) {
       const textContent = input.slice(lastIndex, match.index).trim();
       if (textContent) {
-        segments.push({ type: 'text', content: textContent });
+        segments.push({ type: "text", content: textContent });
       }
     }
 
     // Add the math content
     const mathContent = match[1];
-    const isDisplayMode = mathContent.startsWith('$$');
-    const cleanContent = isDisplayMode
-      ? mathContent.slice(2, -2).trim()
-      : mathContent.slice(1, -1).trim();
+    const isDisplayMode = mathContent.startsWith("$$");
+    const cleanContent = isDisplayMode ? mathContent.slice(2, -2).trim() : mathContent.slice(1, -1).trim();
 
     if (cleanContent) {
       segments.push({
-        type: 'math',
+        type: "math",
         content: normalizeLatex(fixMalformedLatex(cleanContent)),
         displayMode: isDisplayMode,
       });
@@ -476,16 +468,16 @@ export function parseContentSegments(input: string): ContentSegment[] {
   if (segments.length === 0) {
     // 1) Prose + raw LaTeX (no $ delimiters): split at the first obvious math command.
     // This prevents KaTeX from trying to render English prose (which causes red errors).
-    const mathStartIdx = input.search(/\\left\s*[\{\[]|\\begin\s*\{/);
+    const mathStartIdx = input.search(/\left\s*[{[]|\begin\s*{|$|\frac|\sqrt/);
 
     if (mathStartIdx > 0) {
       const textBefore = input.slice(0, mathStartIdx).trim();
       const mathPart = input.slice(mathStartIdx).trim();
 
       if (/[a-zA-Z]{3,}/.test(textBefore) && /\\(left|begin|frac|sqrt|cdot|times|pm|div|text)\b/.test(mathPart)) {
-        if (textBefore) segments.push({ type: 'text', content: textBefore });
+        if (textBefore) segments.push({ type: "text", content: textBefore });
         segments.push({
-          type: 'math',
+          type: "math",
           content: normalizeLatex(fixMalformedLatex(mathPart)),
           displayMode: true,
         });
@@ -494,21 +486,19 @@ export function parseContentSegments(input: string): ContentSegment[] {
     }
 
     // 2) Fallback: split at first ":" and treat RHS as math if it looks like a math expression.
-    const colonIdx = input.indexOf(':');
+    const colonIdx = input.indexOf(":");
     if (colonIdx !== -1) {
       const left = input.slice(0, colonIdx + 1).trim();
       const right = input.slice(colonIdx + 1).trim();
 
       // RHS looks like math if it contains operators/digits/caret/root/log or LaTeX commands
-      const looksMath =
-        /[=^\\/\d√±≤≥≠]|\blog\b|\bexp\b|\\frac|\\sqrt|\\left|\\begin/i.test(right);
+      const looksMath = /[=^\\/\d√±≤≥≠]|\blog\b|\bexp\b|\\frac|\\sqrt|\\left|\\begin/i.test(right);
       if (right && looksMath) {
-        if (left) segments.push({ type: 'text', content: left });
+        if (left) segments.push({ type: "text", content: left });
         segments.push({
-          type: 'math',
+          type: "math",
           content: normalizeLatex(fixMalformedLatex(right)),
-          displayMode:
-            right.includes('\\begin{') || right.includes('\\left'),
+          displayMode: right.includes("\\begin{") || right.includes("\\left"),
         });
         return segments;
       }
@@ -522,12 +512,12 @@ export function parseContentSegments(input: string): ContentSegment[] {
       // Check if the remaining content looks like math
       if (containsMathContent(textContent)) {
         segments.push({
-          type: 'math',
+          type: "math",
           content: normalizeLatex(fixMalformedLatex(textContent)),
           displayMode: false,
         });
       } else {
-        segments.push({ type: 'text', content: textContent });
+        segments.push({ type: "text", content: textContent });
       }
     }
   }
@@ -536,12 +526,12 @@ export function parseContentSegments(input: string): ContentSegment[] {
   if (segments.length === 0 && input.trim()) {
     if (containsMathContent(input)) {
       segments.push({
-        type: 'math',
+        type: "math",
         content: normalizeLatex(fixMalformedLatex(input)),
         displayMode: false,
       });
     } else {
-      segments.push({ type: 'text', content: input.trim() });
+      segments.push({ type: "text", content: input.trim() });
     }
   }
 
