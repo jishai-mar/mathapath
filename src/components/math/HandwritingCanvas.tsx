@@ -115,7 +115,7 @@ export function HandwritingCanvas({ onClear, className = '' }: HandwritingCanvas
   return (
     <div className={`space-y-2 ${className}`}>
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-muted-foreground font-medium">Handschrift</span>
+        <span className="text-xs text-muted-foreground font-medium">Handwriting</span>
         
         <div className="flex items-center gap-1 ml-auto">
           <Button
@@ -145,10 +145,10 @@ export function HandwritingCanvas({ onClear, className = '' }: HandwritingCanvas
             size="sm"
             onClick={clearCanvas}
             className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-            title="Wissen"
+            title="Clear"
           >
             <Trash2 className="w-4 h-4 mr-1" />
-            <span className="text-xs">Wissen</span>
+            <span className="text-xs">Clear</span>
           </Button>
         </div>
       </div>
