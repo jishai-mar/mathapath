@@ -15,7 +15,7 @@ export function GlobalElevenLabsWidget({
     if (!exerciseContext) {
       return {
         has_exercise: false,
-        context_summary: 'De student bekijkt de app maar werkt niet aan een specifieke opgave.',
+        context_summary: 'The student is browsing the app but not working on a specific exercise.',
       };
     }
 
@@ -52,25 +52,25 @@ export function GlobalElevenLabsWidget({
       
       // Create a dynamic prompt that includes exercise context
       const dynamicPrompt = context.has_exercise
-        ? `Je helpt nu een student met de volgende opgave:
+        ? `You are now helping a student with the following exercise:
 
-HUIDIGE OPGAVE: ${context.current_question}
-ONDERWERP: ${context.subtopic_name}
-MOEILIJKHEID: ${context.difficulty}
-${context.student_answer ? `STUDENT'S ANTWOORD: ${context.student_answer}` : ''}
-${context.correct_answer ? `CORRECT ANTWOORD (niet direct vertellen!): ${context.correct_answer}` : ''}
-AANTAL POGINGEN: ${context.attempts}
-${context.hints ? `BESCHIKBARE HINTS: ${context.hints}` : ''}
+CURRENT EXERCISE: ${context.current_question}
+TOPIC: ${context.subtopic_name}
+DIFFICULTY: ${context.difficulty}
+${context.student_answer ? `STUDENT'S ANSWER: ${context.student_answer}` : ''}
+${context.correct_answer ? `CORRECT ANSWER (don't reveal directly!): ${context.correct_answer}` : ''}
+NUMBER OF ATTEMPTS: ${context.attempts}
+${context.hints ? `AVAILABLE HINTS: ${context.hints}` : ''}
 
-BELANGRIJK:
-- Vraag eerst wat de student al heeft geprobeerd en waar ze vastlopen
-- Geef NIET direct het antwoord, help ze om het zelf te ontdekken
-- Als ze meerdere keren fout hebben, geef dan meer directe hulp
-- Wees geduldig, vriendelijk en moedigend aan
-- Leg concepten uit in eenvoudige taal
-- Als je wiskundige formules uitlegt, zeg ze duidelijk voor (bijv. "x kwadraat plus 2x is gelijk aan 5")`
-        : `De student bekijkt de app maar werkt niet aan een specifieke opgave.
-Help ze met algemene wiskundevragen of verwijs ze naar het starten van een oefensessie.`;
+IMPORTANT:
+- First ask what the student has already tried and where they're stuck
+- Do NOT give the answer directly, help them discover it themselves
+- If they've made multiple mistakes, give more direct help
+- Be patient, friendly and encouraging
+- Explain concepts in simple language
+- When explaining math formulas, say them clearly (e.g., "x squared plus 2x equals 5")`
+        : `The student is browsing the app but not working on a specific exercise.
+Help them with general math questions or direct them to start a practice session.`;
 
       // Set the override-config attribute with dynamic context
       const overrideConfig = {
@@ -79,8 +79,8 @@ Help ze met algemene wiskundevragen of verwijs ze naar het starten van een oefen
             prompt: dynamicPrompt,
           },
           firstMessage: context.has_exercise
-            ? `Hoi! Ik zie dat je werkt aan een opgave over ${context.subtopic_name}. Waar kan ik je mee helpen?`
-            : 'Hallo! Ik ben je wiskunde tutor. Hoe kan ik je vandaag helpen?',
+            ? `Hi! I see you're working on an exercise about ${context.subtopic_name}. How can I help you?`
+            : "Hello! I'm your math tutor. How can I help you today?",
         },
       };
 

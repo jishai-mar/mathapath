@@ -511,7 +511,7 @@ export default function AdvancedGraphCalculator({
     setExtractionError(null);
     
     if (!currentQuestion) {
-      setExtractionError('Geen vraag beschikbaar.');
+      setExtractionError('No question available.');
       return;
     }
     
@@ -527,7 +527,7 @@ export default function AdvancedGraphCalculator({
       }]);
       setExtractionError(null);
     } else {
-      setExtractionError('Geen geldige functie gevonden in de vraag.');
+      setExtractionError('No valid function found in the question.');
     }
   }, [currentQuestion, extractFunctionFromQuestion, functions.length]);
   

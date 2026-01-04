@@ -22,14 +22,14 @@ type TutorPhase = 'idle' | 'activated' | 'clarifying' | 'explaining';
 const WAKE_WORDS = [
   'hey tutor',
   'hey gilbert',
-  'hé tutor',
-  'hoi tutor',
+  'hey tutor',
+  'hi tutor',
   'can i have help',
   "i don't understand",
   "i'm stuck",
   'help me',
-  'ik snap het niet',
-  'ik zit vast',
+  "i don't get it",
+  'need help',
 ];
 
 export default function VoiceFirstTutoring() {

@@ -435,7 +435,7 @@ export default function ExerciseView({
                     className="flex-1 gap-2"
                   >
                     <PlayCircle className="w-4 h-4" />
-                    Toon Uitwerking
+                    Show Solution
                   </Button>
                 </>
               )}

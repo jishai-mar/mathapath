@@ -140,32 +140,32 @@ const getAnswerFormatHint = (question: string): string | null => {
   
   // Quadratic/polynomial equations with multiple solutions
   if (q.includes('x²') || q.includes('x^2') || q.includes('kwadratisch') || q.includes('quadratic')) {
-    return 'Meerdere oplossingen? Schrijf: x = 2 of x = -3';
+    return 'Multiple solutions? Write: x = 2 or x = -3';
   }
   
   // Equations asking for x
   if ((q.includes('los op') || q.includes('solve')) && (q.includes('x =') || q.includes('x='))) {
-    return 'Schrijf je antwoord als: x = ...';
+    return 'Write your answer as: x = ...';
   }
   
   // Fraction answers
   if (q.includes('breuk') || q.includes('fraction') || q.includes('vereenvoudig')) {
-    return 'Schrijf breuken als: 3/4 of als decimaal: 0.75';
+    return 'Write fractions as: 3/4 or as decimal: 0.75';
   }
   
   // Coordinate answers
   if (q.includes('coördinat') || q.includes('coordinate') || q.includes('punt')) {
-    return 'Schrijf coördinaten als: (2, 3)';
+    return 'Write coordinates as: (2, 3)';
   }
   
   // Algebraic expressions
   if (q.includes('vereenvoudig') || q.includes('simplify')) {
-    return 'Gebruik x voor de variabele, bijv: 2x + 3';
+    return 'Use x for the variable, e.g.: 2x + 3';
   }
   
   // Percentage
   if (q.includes('procent') || q.includes('percentage') || q.includes('%')) {
-    return 'Schrijf percentages als getal: 25 (zonder %)';
+    return 'Write percentages as a number: 25 (without %)';
   }
   
   return null;
@@ -176,19 +176,19 @@ const getInputPlaceholder = (question: string): string => {
   const q = question.toLowerCase();
   
   if (q.includes('x²') || q.includes('x^2')) {
-    return 'bijv. x = 2 of x = -3';
+    return 'e.g. x = 2 or x = -3';
   }
   if (q.includes('los op') || q.includes('solve')) {
-    return 'bijv. x = 5';
+    return 'e.g. x = 5';
   }
   if (q.includes('breuk') || q.includes('fraction')) {
-    return 'bijv. 3/4 of 0.75';
+    return 'e.g. 3/4 or 0.75';
   }
   if (q.includes('coördinat') || q.includes('punt')) {
-    return 'bijv. (2, 3)';
+    return 'e.g. (2, 3)';
   }
   
-  return 'Jouw antwoord...';
+  return 'Your answer...';
 };
 
 export default function DiagnosticTest() {
@@ -543,16 +543,16 @@ export default function DiagnosticTest() {
       }
       
       if (data?.commonMistakes && data.commonMistakes.length > 0) {
-        theoryText += '\n\n**Let op deze veelgemaakte fouten:**\n';
+        theoryText += '\n\n**Watch out for these common mistakes:**\n';
         data.commonMistakes.forEach((mistake: string, index: number) => {
           theoryText += `${index + 1}. ${mistake}\n`;
         });
       }
       
-      setTheoryContent(theoryText || 'Theorie wordt geladen...');
+      setTheoryContent(theoryText || 'Loading theory...');
     } catch (error) {
       console.error('Error loading theory:', error);
-      setTheoryContent('Kon theorie niet laden. Probeer het opnieuw.');
+      setTheoryContent('Could not load theory. Please try again.');
     } finally {
       setIsLoadingTheory(false);
     }
@@ -776,10 +776,10 @@ export default function DiagnosticTest() {
                           className="flex-1 gap-2"
                         >
                           <PlayCircle className="w-4 h-4" />
-                          Toon Uitwerking
+                          Show Solution
                         </Button>
                         <Button onClick={proceedToNextQuestion} className="flex-1" size="lg">
-                          Ik snap het, verder
+                          I understand, continue
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       </div>
@@ -827,12 +827,12 @@ export default function DiagnosticTest() {
                     {isSubmitting ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Controleren...
+                        Checking...
                       </>
                     ) : (
                       <>
                         <CheckCircle className="w-4 h-4" />
-                        Controleer antwoord
+                        Check Answer
                       </>
                     )}
                   </Button>
@@ -873,7 +873,7 @@ export default function DiagnosticTest() {
                       className="text-muted-foreground gap-2 hover:text-primary transition-colors"
                     >
                       <Eye className="w-4 h-4" />
-                      Toon antwoord
+                      Show Answer
                     </Button>
                     
                     {/* Show Solution Button - Full walkthrough */}
@@ -884,7 +884,7 @@ export default function DiagnosticTest() {
                       className="text-muted-foreground gap-2 hover:text-primary hover:border-primary/50 transition-colors"
                     >
                       <BookOpen className="w-4 h-4" />
-                      Toon uitwerking
+                      Show Solution
                     </Button>
                     
                     {/* Theory Refresh Button */}
@@ -895,7 +895,7 @@ export default function DiagnosticTest() {
                       className="text-muted-foreground gap-2 hover:text-primary hover:border-primary/50 transition-colors"
                     >
                       <GraduationCap className="w-4 h-4" />
-                      Theorie opfrissen
+                      Review Theory
                     </Button>
                   </div>
 
@@ -993,12 +993,12 @@ export default function DiagnosticTest() {
                       onClick={() => setShowTheoryRefresh(false)} 
                       className="w-full"
                     >
-                      Begrepen, terug naar de vraag
+                      Got it, back to the question
                     </Button>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    Geen theorie beschikbaar voor deze vraag.
+                    No theory available for this question.
                   </p>
                 )}
               </div>
