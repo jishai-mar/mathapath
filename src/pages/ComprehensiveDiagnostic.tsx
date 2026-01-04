@@ -56,10 +56,33 @@ interface TopicLevel {
   status: 'strong' | 'developing' | 'needs_attention';
 }
 
+interface TopicScore {
+  topic_id: string;
+  topic: string;
+  score: number;
+  percentage: number;
+  questions_correct: number;
+  questions_total: number;
+  status: 'strong' | 'average' | 'weak';
+}
+
+interface TopicRecommendation {
+  topic_id: string;
+  topic_name: string;
+  score: number;
+  lessons: Array<{
+    title: string;
+    description: string;
+    type: 'review' | 'lesson' | 'theory';
+  }>;
+}
+
 interface LearningProfile {
   overall_assessment: string;
   overall_level: number;
+  overall_score: number;
   topic_levels: Record<string, TopicLevel>;
+  topic_scores: TopicScore[];
   strengths: Array<{ topic_id: string; topic_name: string; reason: string }>;
   weaknesses: Array<{ topic_id: string; topic_name: string; reason: string }>;
   misconception_patterns: Array<{ pattern: string; how_to_address: string }>;
@@ -67,6 +90,7 @@ interface LearningProfile {
   recommended_starting_topic_name: string;
   learning_path_suggestion: string;
   learning_style_notes: string;
+  recommendations: TopicRecommendation[];
 }
 
 type OnboardingPhase = 
@@ -708,99 +732,242 @@ export default function ComprehensiveDiagnostic() {
     );
   }
 
-  // Phase: Complete
+  // Phase: Complete - Enhanced Results Screen
   if (phase === 'complete' && profile) {
-    const topicLevels = Object.entries(profile.topic_levels || {});
-    const strongTopics = topicLevels.filter(([, t]) => t.status === 'strong');
-    const needsAttention = topicLevels.filter(([, t]) => t.status === 'needs_attention');
+    const topicScores = profile.topic_scores || [];
+    const strongTopics = topicScores.filter(t => t.status === 'strong');
+    const averageTopics = topicScores.filter(t => t.status === 'average');
+    const weakTopics = topicScores.filter(t => t.status === 'weak');
+    const recommendations = profile.recommendations || [];
+
+    // Generate summary sentence
+    const getSummary = () => {
+      const parts: string[] = [];
+      if (strongTopics.length > 0) {
+        parts.push(`You're strong at ${strongTopics.map(t => t.topic).join(', ')} (score ≥ 8)`);
+      }
+      if (averageTopics.length > 0) {
+        parts.push(`average at ${averageTopics.map(t => t.topic).join(', ')} (score 5-7)`);
+      }
+      if (weakTopics.length > 0) {
+        parts.push(`and need focus on ${weakTopics.map(t => t.topic).join(', ')} (score ≤ 4)`);
+      }
+      return parts.join(', ') + '.';
+    };
+
+    const getScoreColor = (score: number) => {
+      if (score >= 8) return 'text-green-400';
+      if (score >= 5) return 'text-yellow-400';
+      return 'text-red-400';
+    };
+
+    const getScoreBg = (score: number) => {
+      if (score >= 8) return 'bg-green-500/10 border-green-500/30';
+      if (score >= 5) return 'bg-yellow-500/10 border-yellow-500/30';
+      return 'bg-red-500/10 border-red-500/30';
+    };
+
+    const getLessonIcon = (type: 'review' | 'lesson' | 'theory') => {
+      switch (type) {
+        case 'review': return BookOpen;
+        case 'lesson': return GraduationCap;
+        case 'theory': return Brain;
+      }
+    };
 
     return (
-      <OnboardingLayout
-        currentStep={5}
-        totalSteps={5}
-        showBack={false}
-      >
-        <OnboardingComplete
-          title="Foundation Set"
-          subtitle="Your learning path has been calibrated based on your unique mathematical profile. I've identified exactly where to begin your journey."
-          onContinue={goToRecommendedTopic}
-        />
-
-        {/* Profile summary - shown below the complete component */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="mt-12 space-y-6"
-        >
-          {/* Overall level */}
-          <div className="p-6 rounded-2xl bg-card/50 border border-border/30 text-center">
-            <p className="text-sm text-muted-foreground mb-2">Your Overall Level</p>
-            <p className="text-5xl font-bold text-primary">{profile.overall_level}%</p>
-            <p className="text-sm text-muted-foreground mt-2">{profile.overall_assessment}</p>
-          </div>
-
-          {/* Strengths & Weaknesses */}
-          <div className="grid sm:grid-cols-2 gap-4">
-            {strongTopics.length > 0 && (
-              <div className="p-4 rounded-xl bg-green-500/5 border border-green-500/20">
-                <h3 className="font-semibold flex items-center gap-2 text-green-400 mb-3">
-                  <Sparkles className="w-4 h-4" />
-                  Strengths
-                </h3>
-                <ul className="space-y-2">
-                  {profile.strengths?.slice(0, 3).map((s, i) => (
-                    <li key={i} className="text-sm text-muted-foreground">
-                      <span className="text-green-400 font-medium">{s.topic_name}</span>
-                    </li>
-                  ))}
-                </ul>
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <div className="border-b border-border/30 bg-card/30 backdrop-blur-sm sticky top-0 z-50">
+          <div className="max-w-4xl mx-auto px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30">
+                  <CheckCircle className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold text-foreground">Diagnostic Complete</h1>
+                  <p className="text-sm text-muted-foreground">Your personalized results</p>
+                </div>
               </div>
-            )}
-
-            {needsAttention.length > 0 && (
-              <div className="p-4 rounded-xl bg-yellow-500/5 border border-yellow-500/20">
-                <h3 className="font-semibold flex items-center gap-2 text-yellow-400 mb-3">
-                  <AlertCircle className="w-4 h-4" />
-                  Focus Areas
-                </h3>
-                <ul className="space-y-2">
-                  {profile.weaknesses?.slice(0, 3).map((w, i) => (
-                    <li key={i} className="text-sm text-muted-foreground">
-                      <span className="text-yellow-400 font-medium">{w.topic_name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-
-          {/* Recommended path */}
-          {profile.recommended_starting_topic_name && (
-            <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingUp className="w-4 h-4 text-primary" />
-                <span className="font-semibold text-sm text-primary">Recommended Starting Point</span>
-              </div>
-              <p className="text-foreground font-medium">{profile.recommended_starting_topic_name}</p>
-              {profile.learning_path_suggestion && (
-                <p className="text-sm text-muted-foreground mt-2">{profile.learning_path_suggestion}</p>
-              )}
+              <Button onClick={goToDashboard} variant="outline" size="sm">
+                Go to Dashboard
+              </Button>
             </div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-6 py-8 space-y-8">
+          {/* Overall Score Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-8 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20"
+          >
+            <div className="text-center space-y-4">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/20 text-primary text-sm font-medium">
+                <Sparkles className="w-4 h-4" />
+                Your Overall Score
+              </div>
+              <div className="text-7xl font-bold text-primary">
+                {profile.overall_score || Math.round((profile.overall_level || 0) / 10)}/10
+              </div>
+              <p className="text-muted-foreground max-w-lg mx-auto">
+                {profile.overall_assessment}
+              </p>
+            </div>
+          </motion.div>
+
+          {/* Summary Sentence */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="p-6 rounded-xl bg-card/50 border border-border/30"
+          >
+            <h2 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+              <Target className="w-5 h-5 text-primary" />
+              Summary
+            </h2>
+            <p className="text-muted-foreground">{getSummary()}</p>
+          </motion.div>
+
+          {/* Topic Scores Table */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="rounded-xl border border-border/30 overflow-hidden"
+          >
+            <div className="bg-card/50 px-6 py-4 border-b border-border/30">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-primary" />
+                Score by Topic
+              </h2>
+            </div>
+            <div className="divide-y divide-border/30">
+              {topicScores.sort((a, b) => b.score - a.score).map((topic, index) => (
+                <motion.div
+                  key={topic.topic_id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.05 }}
+                  className="px-6 py-4 flex items-center justify-between hover:bg-card/30 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl ${getScoreBg(topic.score)} flex items-center justify-center border`}>
+                      <span className={`text-lg font-bold ${getScoreColor(topic.score)}`}>
+                        {topic.score}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">{topic.topic}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {topic.questions_correct}/{topic.questions_total} correct ({topic.percentage}%)
+                      </p>
+                    </div>
+                  </div>
+                  <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    topic.status === 'strong' ? 'bg-green-500/20 text-green-400' :
+                    topic.status === 'average' ? 'bg-yellow-500/20 text-yellow-400' :
+                    'bg-red-500/20 text-red-400'
+                  }`}>
+                    {topic.status === 'strong' ? 'Strong' : topic.status === 'average' ? 'Average' : 'Needs Work'}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Personalized Recommendations */}
+          {recommendations.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="space-y-4"
+            >
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-primary" />
+                <h2 className="text-lg font-semibold text-foreground">Recommended Lessons for You</h2>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Based on your results, here's what we recommend to help you improve:
+              </p>
+              
+              <div className="space-y-4">
+                {recommendations.map((rec, recIndex) => (
+                  <motion.div
+                    key={rec.topic_id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 + recIndex * 0.1 }}
+                    className="rounded-xl border border-border/30 overflow-hidden"
+                  >
+                    <div className={`px-5 py-3 ${getScoreBg(rec.score)} border-b border-border/30`}>
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-foreground">{rec.topic_name}</h3>
+                        <span className={`text-sm font-medium ${getScoreColor(rec.score)}`}>
+                          Score: {rec.score}/10
+                        </span>
+                      </div>
+                    </div>
+                    <div className="p-4 space-y-3">
+                      {rec.lessons.map((lesson, lessonIndex) => {
+                        const Icon = getLessonIcon(lesson.type);
+                        return (
+                          <div
+                            key={lessonIndex}
+                            className="flex gap-3 p-3 rounded-lg bg-card/50 hover:bg-card/80 transition-colors cursor-pointer group"
+                            onClick={() => navigate(`/practice/${rec.topic_id}`)}
+                          >
+                            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                              <Icon className="w-5 h-5 text-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-foreground text-sm group-hover:text-primary transition-colors">
+                                {lesson.title}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {lesson.description}
+                              </p>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 mt-1" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
           )}
 
-          {/* Alternative action */}
-          <div className="text-center">
+          {/* Call to Action */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="flex flex-col sm:flex-row gap-4 items-center justify-center pt-4"
+          >
+            <Button
+              onClick={goToRecommendedTopic}
+              size="lg"
+              className="px-8 py-6 text-lg font-semibold shadow-primary-glow hover:shadow-primary-glow-lg transition-shadow"
+            >
+              Start Learning
+              <ArrowRight className="w-5 h-5 ml-2" />
+            </Button>
             <Button
               variant="ghost"
               onClick={goToDashboard}
               className="text-muted-foreground hover:text-foreground"
             >
-              Go to Dashboard Instead
+              Explore Dashboard
             </Button>
-          </div>
-        </motion.div>
-      </OnboardingLayout>
+          </motion.div>
+        </div>
+      </div>
     );
   }
 

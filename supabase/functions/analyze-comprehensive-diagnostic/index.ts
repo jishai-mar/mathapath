@@ -22,9 +22,21 @@ interface TopicAnalysis {
   topic_id: string;
   topic_name: string;
   level: number;
+  score: number; // 1-10 score
   questions_answered: number;
   questions_correct: number;
   subtopics: SubtopicAnalysis[];
+}
+
+interface TopicRecommendation {
+  topic_id: string;
+  topic_name: string;
+  score: number;
+  lessons: Array<{
+    title: string;
+    description: string;
+    type: 'review' | 'lesson' | 'theory';
+  }>;
 }
 
 interface SubtopicAnalysis {
@@ -126,6 +138,7 @@ serve(async (req) => {
           topic_id: resp.topic_id,
           topic_name: resp.topic_name,
           level: 0,
+          score: 1,
           questions_answered: 0,
           questions_correct: 0,
           subtopics: [],
@@ -145,12 +158,13 @@ serve(async (req) => {
       });
     }
 
-    // Calculate levels per topic
+    // Calculate levels and 1-10 scores per topic
     for (const analysis of topicResults.values()) {
       if (analysis.questions_answered > 0) {
-        analysis.level = Math.round(
-          (analysis.questions_correct / analysis.questions_answered) * 100
-        );
+        const percentage = (analysis.questions_correct / analysis.questions_answered) * 100;
+        analysis.level = Math.round(percentage);
+        // Convert percentage to 1-10 score
+        analysis.score = Math.max(1, Math.min(10, Math.round(percentage / 10)));
       }
     }
 
@@ -159,6 +173,64 @@ serve(async (req) => {
     const overallLevel = topicArray.length > 0
       ? Math.round(topicArray.reduce((sum, t) => sum + t.level, 0) / topicArray.length)
       : 0;
+    
+    // Generate recommendations for topics with score < 8
+    const topicsNeedingImprovement = topicArray.filter(t => t.score < 8);
+    const recommendations: TopicRecommendation[] = topicsNeedingImprovement.map(topic => {
+      const lessons: TopicRecommendation['lessons'] = [];
+      
+      // Generate lesson recommendations based on score
+      if (topic.score <= 4) {
+        // Needs fundamental review
+        lessons.push({
+          title: `Review: Basics of ${topic.topic_name.toLowerCase()}`,
+          description: `You scored ${topic.score}/10 on ${topic.topic_name}. Start with the fundamentals to build a strong foundation before moving on to more complex concepts.`,
+          type: 'review'
+        });
+        lessons.push({
+          title: `Theory: Core concepts in ${topic.topic_name.toLowerCase()}`,
+          description: `Understanding the underlying theory will help you grasp why certain methods work.`,
+          type: 'theory'
+        });
+      } else if (topic.score <= 6) {
+        // Developing - needs practice
+        lessons.push({
+          title: `Lesson: Strengthening ${topic.topic_name.toLowerCase()}`,
+          description: `You scored ${topic.score}/10 on ${topic.topic_name}. Practice more problems to solidify your understanding.`,
+          type: 'lesson'
+        });
+        lessons.push({
+          title: `Review: Problem-solving strategies for ${topic.topic_name.toLowerCase()}`,
+          description: `Learn effective approaches to tackle different types of problems in this area.`,
+          type: 'review'
+        });
+      } else {
+        // Close to mastery - just needs polish
+        lessons.push({
+          title: `Lesson: Advanced ${topic.topic_name.toLowerCase()} techniques`,
+          description: `You scored ${topic.score}/10 on ${topic.topic_name}. A few more practice sessions will help you reach mastery.`,
+          type: 'lesson'
+        });
+      }
+      
+      return {
+        topic_id: topic.topic_id,
+        topic_name: topic.topic_name,
+        score: topic.score,
+        lessons
+      };
+    });
+    
+    // Create topic scores array for the response
+    const topicScores = topicArray.map(t => ({
+      topic_id: t.topic_id,
+      topic: t.topic_name,
+      score: t.score,
+      percentage: t.level,
+      questions_correct: t.questions_correct,
+      questions_total: t.questions_answered,
+      status: t.score >= 8 ? 'strong' : t.score >= 5 ? 'average' : 'weak' as 'strong' | 'average' | 'weak'
+    }));
 
     // Use AI to generate personalized insights
     const systemPrompt = `You are a patient, experienced math tutor analyzing a comprehensive diagnostic assessment.
@@ -410,13 +482,20 @@ IMPORTANT:
 
     console.log("Comprehensive diagnostic analysis complete");
 
+    // Calculate overall score (1-10)
+    const overallScore = topicArray.length > 0
+      ? Math.max(1, Math.min(10, Math.round(topicArray.reduce((sum, t) => sum + t.score, 0) / topicArray.length)))
+      : 1;
+
     return new Response(
       JSON.stringify({
         success: true,
         profile: {
           overall_assessment: analysis.overall_assessment,
           overall_level: analysis.overall_level || overallLevel,
+          overall_score: overallScore,
           topic_levels: analysis.topic_levels,
+          topic_scores: topicScores,
           strengths: analysis.strengths,
           weaknesses: analysis.weaknesses,
           misconception_patterns: analysis.misconception_patterns,
@@ -424,6 +503,7 @@ IMPORTANT:
           recommended_starting_topic_name: analysis.recommended_starting_topic_name,
           learning_path_suggestion: analysis.learning_path_suggestion,
           learning_style_notes: analysis.learning_style_notes,
+          recommendations: recommendations,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
