@@ -568,7 +568,7 @@ Generate the exercise now:`;
     console.log('AI generated exercise:', content);
 
     // Parse the JSON response
-    let exercise;
+    let exercise: { question: string; correct_answer: string; explanation?: string; hints?: string[] };
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -585,6 +585,38 @@ Generate the exercise now:`;
     const questionLower = exercise.question.toLowerCase();
     const forbiddenPatterns = ['sin', 'cos', 'tan', 'theta', 'θ', 'π', 'arcsin', 'arccos', 'arctan'];
     const hasForbidden = forbiddenPatterns.some(p => questionLower.includes(p));
+    
+    // Validate: reject corrupted LaTeX patterns
+    const corruptionPatterns = [
+      /[a-zA-Z]eq\d/i,                    // meq0, neq0 (corrupted \neq)
+      /[a-zA-Z]\s+eq\s+\d/i,              // m eq 0 (corrupted \neq)
+      /\\f\\frac|\\s\\sqrt/i,             // double-prefixed commands
+      /(?<!\\)rac\{|(?<!\\)qrt\{/i,       // missing backslash
+      /\bTODO\b|\?\?\?|\.\.\.\.+/i,       // placeholder garbage
+    ];
+    const hasCorruption = corruptionPatterns.some(p => p.test(exercise.question));
+    
+    // Auto-fix common corruptions
+    if (hasCorruption) {
+      console.log('Detected corruption in generated exercise, attempting auto-fix...');
+      let fixedQuestion = exercise.question;
+      
+      // Fix corrupted \neq patterns
+      fixedQuestion = fixedQuestion.replace(/([a-zA-Z])\s*\n\s*eq\s*(\d)/g, '$1 \\neq $2');
+      fixedQuestion = fixedQuestion.replace(/([a-zA-Z])eq(\d)/g, '$1 \\neq $2');
+      fixedQuestion = fixedQuestion.replace(/([a-zA-Z])\s+eq\s+(\d)/g, '$1 \\neq $2');
+      
+      // Fix double-prefixed commands
+      fixedQuestion = fixedQuestion.replace(/\\f\\frac/g, '\\frac');
+      fixedQuestion = fixedQuestion.replace(/\\s\\sqrt/g, '\\sqrt');
+      
+      // Fix missing backslash on commands
+      fixedQuestion = fixedQuestion.replace(/(?<!\\)rac\{/g, '\\frac{');
+      fixedQuestion = fixedQuestion.replace(/(?<!\\)qrt\{/g, '\\sqrt{');
+      
+      exercise.question = fixedQuestion;
+      console.log('Auto-fixed exercise question:', exercise.question);
+    }
     
     if (hasForbidden) {
       console.warn('Generated exercise contains forbidden content, using fallback');

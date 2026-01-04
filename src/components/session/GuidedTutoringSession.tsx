@@ -9,6 +9,7 @@ import { useTutorTTS } from '@/hooks/useTutorTTS';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { ElevenLabsAgent } from '@/components/tutor/ElevenLabsAgent';
+import { validateExercise } from '@/lib/exerciseValidator';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import { TalkToTutorButton } from '@/components/tutor/TalkToTutorButton';
 import ToolPanel from '@/components/tools/ToolPanel';
@@ -375,20 +376,33 @@ export function GuidedTutoringSession({
         ex => ex.id && !usedExerciseIds.includes(ex.id)
       ) || [];
 
-      if (availableExercises.length > 0) {
-        const randomExercise = availableExercises[Math.floor(Math.random() * availableExercises.length)];
-        
+      // Find a valid exercise (validate and auto-fix if needed)
+      let validExercise = null;
+      for (const exercise of availableExercises) {
+        const validation = validateExercise(exercise.question || '');
+        if (validation.isValid) {
+          validExercise = {
+            ...exercise,
+            question: validation.fixedQuestion || exercise.question,
+          };
+          break;
+        } else {
+          console.warn(`[GuidedTutoringSession] Skipping invalid exercise ${exercise.id}: ${validation.reason}`);
+        }
+      }
+
+      if (validExercise) {
         // Track this exercise as used
-        setUsedExerciseIds(prev => [...prev, randomExercise.id!]);
-        setCurrentExercise(randomExercise as Exercise);
+        setUsedExerciseIds(prev => [...prev, validExercise.id!]);
+        setCurrentExercise(validExercise as Exercise);
         
         // Update exercise context for the AI tutor
         exerciseContext?.setCurrentExercise({
-          question: randomExercise.question || '',
+          question: validExercise.question || '',
           subtopicName,
           subtopicId,
-          difficulty: randomExercise.difficulty as 'easy' | 'medium' | 'hard',
-          hints: randomExercise.hints || [],
+          difficulty: validExercise.difficulty as 'easy' | 'medium' | 'hard',
+          hints: validExercise.hints || [],
         });
         
         // Announce exercise
