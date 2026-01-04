@@ -166,37 +166,40 @@ export function convertSystemOfEquations(input: string): string {
 
   const collectEquations = (raw: string): string[] => {
     const cleaned = raw
+      .replace(/[−–]/g, '-')
       .replace(/\s+/g, ' ')
-      .replace(/[，؛]/g, ',')
+      .replace(/[，；،؛]/g, ',')
       .trim();
 
-    // 1) Newline-separated or semicolon-separated
-    const byHardSeparators = cleaned
-      .split(/(?:\s*;\s*|\s*\n\s*)/)
+    // 1) Split on explicit separators first
+    const explicitParts = cleaned
+      .split(/(?:\s*;\s*|\s*\n\s*|\s*,\s*)/)
       .map((s) => s.trim())
       .filter(Boolean);
 
-    const maybeEqList = byHardSeparators.some((s) => s.includes('=')) ? byHardSeparators : [cleaned];
+    let eqs: string[] = [];
 
-    // 2) If still a single chunk, attempt to split where a new equation starts.
-    if (maybeEqList.length === 1) {
-      // Split when we see " ... = ..." and then another equation starting with a variable-like token.
-      // Example: "8x+3y=28 2x+y=8" or "x+y=10, x-y=2".
-      const chunk = maybeEqList[0]
-        .replace(/,\s*/g, ' , ') // normalize commas as separators
-        .replace(/\s+,\s+/g, ' , ');
-
-      const parts = chunk
-        .split(/\s+,\s+|(?<==[^=]{1,20})\s+(?=[a-zA-Z]\w*\s*[+\-]=?|[0-9]*[a-zA-Z]\w*\s*[+\-])/)
-        .map((s) => s.trim())
-        .filter(Boolean);
-
-      const eqs = parts.filter((p) => p.includes('='));
-      return eqs.length >= 2 ? eqs : [];
+    if (explicitParts.filter((p) => p.includes('=')).length >= 2) {
+      eqs = explicitParts.filter((p) => p.includes('='));
+    } else {
+      // 2) Extract equations from a run-on string like: "x+y=10x-y=2x-y=2"
+      // Grab minimal "...=..." chunks until the next "...=" or end.
+      const matches = cleaned.matchAll(/([^=]{1,80}=.+?)(?=(?:[a-zA-Z][^=]{0,20}=)|$)/g);
+      eqs = Array.from(matches)
+        .map((m) => m[1].trim())
+        .filter((p) => p.includes('='));
     }
 
-    const eqs = maybeEqList.filter((p) => p.includes('='));
-    return eqs.length >= 2 ? eqs : [];
+    // 3) De-duplicate identical equations (fixes accidental repeats like "x-y=2" twice)
+    const seen = new Set<string>();
+    const unique = eqs.filter((eq) => {
+      const key = eq.replace(/[−–]/g, '-').replace(/\s+/g, '').toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    return unique.length >= 2 ? unique : [];
   };
 
   const equations = collectEquations(mathPart);
