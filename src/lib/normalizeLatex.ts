@@ -468,7 +468,7 @@ export function parseContentSegments(input: string): ContentSegment[] {
   if (segments.length === 0) {
     // 1) Prose + raw LaTeX (no $ delimiters): split at the first obvious math command.
     // This prevents KaTeX from trying to render English prose (which causes red errors).
-    const mathStartIdx = input.search(/\left\s*[{[]|\begin\s*{|$|\frac|\sqrt/);
+    const mathStartIdx = input.search(/\\left\s*[{\\[]|\\begin\s*\{|\\frac|\\sqrt/);
 
     if (mathStartIdx > 0) {
       const textBefore = input.slice(0, mathStartIdx).trim();
