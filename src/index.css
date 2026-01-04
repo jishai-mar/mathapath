@@ -136,7 +136,7 @@
   }
   
   .math-content {
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'STIX Two Text', 'Times New Roman', serif;
   }
 
   /* KaTeX: avoid scary red error styling in questions; keep it readable */

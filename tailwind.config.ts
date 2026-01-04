@@ -17,6 +17,7 @@ export default {
         sans: ['Nunito', 'sans-serif'],
         display: ['Quicksand', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        math: ['STIX Two Text', 'Times New Roman', 'serif'],
       },
       colors: {
         border: "hsl(var(--border))",
