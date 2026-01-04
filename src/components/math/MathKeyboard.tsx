@@ -11,6 +11,7 @@ interface MathKeyboardProps {
   onInsert: (symbol: string) => void;
   className?: string;
   topicName?: string;
+  currentQuestion?: string;
 }
 
 type KeyCategory = 'basic' | 'algebra' | 'greek' | 'functions' | 'comparison' | 'fractions' | 'arrows';
@@ -239,7 +240,7 @@ const subscripts: MathKey[] = [
   { display: 'ₘ', insert: 'ₘ' },
 ];
 
-export function MathKeyboard({ onInsert, className, topicName }: MathKeyboardProps) {
+export function MathKeyboard({ onInsert, className, topicName, currentQuestion }: MathKeyboardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<KeyCategory>('basic');
   const [showExtras, setShowExtras] = useState(false);
@@ -335,6 +336,7 @@ export function MathKeyboard({ onInsert, className, topicName }: MathKeyboardPro
           isOpen={showGraph}
           onClose={() => setShowGraph(false)}
           initialFunctions={['x^2']}
+          currentQuestion={currentQuestion}
         />
       </div>
 

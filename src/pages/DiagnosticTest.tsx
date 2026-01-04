@@ -714,7 +714,8 @@ export default function DiagnosticTest() {
                   
                   {/* Math Keyboard */}
                   <MathKeyboard 
-                    onInsert={(symbol) => setCurrentAnswer(prev => prev + symbol)} 
+                    onInsert={(symbol) => setCurrentAnswer(prev => prev + symbol)}
+                    currentQuestion={currentQuestion?.question}
                   />
                   
                   {/* Multi-line Answer Input */}
