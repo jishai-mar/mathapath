@@ -470,22 +470,46 @@ export function parseContentSegments(input: string): ContentSegment[] {
     lastIndex = match.index + match[0].length;
   }
 
-  // Heuristic: textbook-style prompts like "Solve for x: ..." without $ delimiters
+  // Heuristic: detect prose + LaTeX without $ delimiters
   // Split at first ":" and treat the RHS as math if it looks like a math expression.
+  // Also detect LaTeX commands like \left\{, \begin{...}, \frac, etc.
   if (segments.length === 0) {
+    // First, detect LaTeX commands embedded in prose (e.g., "Solve: \left\{...")
+    const latexCommandPattern =
+      /(.*?)(\s*)(\\left\\?\{\\begin\{aligned\}[\s\S]+\\end\{aligned\}\\right\.?|\\left\\?\{\\begin\{cases\}[\s\S]+\\end\{cases\}\\right\.?|\\begin\{aligned\}[\s\S]+\\end\{aligned\}|\\begin\{cases\}[\s\S]+\\end\{cases\}|\\left\\?\{[\s\S]+\\right\.?)$/;
+
+    const latexMatch = input.match(latexCommandPattern);
+    if (latexMatch && latexMatch[3]) {
+      const textBefore = latexMatch[1].trim();
+      const mathPart = latexMatch[3].trim();
+
+      if (textBefore) {
+        segments.push({ type: 'text', content: textBefore });
+      }
+      segments.push({
+        type: 'math',
+        content: normalizeLatex(fixMalformedLatex(mathPart)),
+        displayMode: true, // Systems of equations should be display mode
+      });
+      return segments;
+    }
+
+    // Fallback: split at first ":" and treat RHS as math if it looks like a math expression.
     const colonIdx = input.indexOf(':');
     if (colonIdx !== -1) {
       const left = input.slice(0, colonIdx + 1).trim();
       const right = input.slice(colonIdx + 1).trim();
 
-      // RHS looks like math if it contains operators/digits/caret/root/log
-      const looksMath = /[=^\\/\d√±≤≥≠]|\blog\b|\bexp\b/i.test(right);
+      // RHS looks like math if it contains operators/digits/caret/root/log or LaTeX commands
+      const looksMath =
+        /[=^\\/\d√±≤≥≠]|\blog\b|\bexp\b|\\frac|\\sqrt|\\left|\\begin/i.test(right);
       if (right && looksMath) {
         if (left) segments.push({ type: 'text', content: left });
         segments.push({
           type: 'math',
           content: normalizeLatex(fixMalformedLatex(right)),
-          displayMode: false,
+          displayMode:
+            right.includes('\\begin{') || right.includes('\\left'),
         });
         return segments;
       }
