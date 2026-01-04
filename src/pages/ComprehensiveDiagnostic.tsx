@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import OnboardingLayout from '@/components/onboarding/OnboardingLayout';
 import SelectionCard from '@/components/onboarding/SelectionCard';
 import QuestionHeader from '@/components/onboarding/QuestionHeader';
@@ -614,7 +615,7 @@ export default function ComprehensiveDiagnostic() {
                   {/* Question card */}
                   <div className="p-6 rounded-2xl bg-card/50 border border-border/30 backdrop-blur-sm">
                     <div className="text-lg leading-relaxed text-foreground mb-6">
-                      <MathRenderer latex={currentQuestion.question} />
+                      <MathRenderer segments={createSegmentsFromSolution(currentQuestion.question)} />
                     </div>
 
                     <Input

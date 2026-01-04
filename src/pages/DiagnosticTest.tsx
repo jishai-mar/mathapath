@@ -13,6 +13,7 @@ import { HandwritingCanvas } from '@/components/math/HandwritingCanvas';
 import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye, GraduationCap, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
+import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import TutorCharacter from '@/components/tutor/TutorCharacter';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import type { ContentSegment } from '@/lib/normalizeLatex';
@@ -907,7 +908,7 @@ export default function DiagnosticTest() {
                         <div>
                           <p className="text-xs font-medium text-primary mb-1">Correct antwoord</p>
                           <div className="text-base font-medium">
-                            <MathRenderer latex={currentQuestion.correct_answer} />
+                            <MathRenderer segments={createSegmentsFromSolution(currentQuestion.correct_answer)} />
                           </div>
                         </div>
                       </div>
@@ -985,7 +986,7 @@ export default function DiagnosticTest() {
                       <div className="flex items-start gap-3">
                         <Lightbulb className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                         <div className="text-sm leading-relaxed">
-                          <MathRenderer latex={theoryContent} />
+                          <MathRenderer segments={createSegmentsFromSolution(theoryContent)} />
                         </div>
                       </div>
                     </div>
