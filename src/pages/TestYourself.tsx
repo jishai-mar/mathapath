@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Shuffle, Loader2, AlertCircle, Check } from 'lucide-react';
+import { ArrowLeft, Shuffle, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,9 +20,9 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { ExamTimer } from '@/components/exam/ExamTimer';
 import { ExamQuestion } from '@/components/exam/ExamQuestion';
-import { ExamResults } from '@/components/exam/ExamResults';
+import { LevelResults } from '@/components/exam/LevelResults';
 
-// Available topics matching the booklet curriculum
+// Available topics - 12 total matching the edge function
 const AVAILABLE_TOPICS = [
   { id: 'linear-equations', name: 'Linear Equations', icon: '📐' },
   { id: 'quadratic-equations', name: 'Quadratic Equations', icon: '📈' },
@@ -70,7 +70,6 @@ export default function PracticeQuiz() {
   const [selectedTopics, setSelectedTopics] = useState<string[]>(
     AVAILABLE_TOPICS.map(t => t.id) // All selected by default
   );
-  const [returnedTopics, setReturnedTopics] = useState<string[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, Record<string, string>>>({});
   const [isPaused, setIsPaused] = useState(false);
@@ -95,9 +94,15 @@ export default function PracticeQuiz() {
     setSelectedTopics([]);
   };
 
+  // Calculate expected question count based on selected topics
+  const getExpectedQuestionCount = () => {
+    const N = selectedTopics.length;
+    return Math.max(5, N); // Minimum 5 questions, or N if N >= 5
+  };
+
   const generateExam = async () => {
-    if (selectedTopics.length < 2) {
-      toast.error('Please select at least 2 topics');
+    if (selectedTopics.length < 1) {
+      toast.error('Please select at least 1 topic');
       return;
     }
 
@@ -105,34 +110,28 @@ export default function PracticeQuiz() {
     setError(null);
     
     try {
-      // Map topic IDs to names for the API
-      const topicNames = selectedTopics.map(id => 
-        AVAILABLE_TOPICS.find(t => t.id === id)?.name || id
-      );
-
       const { data, error: fnError } = await supabase.functions.invoke('generate-test-yourself', {
-        body: { topics: topicNames }
+        body: { selectedTopics }
       });
 
       if (fnError) throw fnError;
       
       if (!data?.success || !data?.exam) {
-        throw new Error(data?.error || 'Failed to generate test');
+        throw new Error(data?.error || 'Failed to generate quiz');
       }
 
       setExam({
         ...data.exam,
         durationMinutes: data.exam.durationMinutes || 180
       });
-      setReturnedTopics(data.selectedTopics || []);
       setStartTime(new Date());
       setCurrentQuestion(0);
       setAnswers({});
       setIsComplete(false);
-      toast.success('Test generated with your selected topics!');
+      toast.success(`Quiz generated with ${data.questionCount} questions!`);
     } catch (err) {
-      console.error('Error generating test:', err);
-      const message = err instanceof Error ? err.message : 'Failed to generate test';
+      console.error('Error generating quiz:', err);
+      const message = err instanceof Error ? err.message : 'Failed to generate quiz';
       setError(message);
       toast.error(message);
     } finally {
@@ -151,7 +150,7 @@ export default function PracticeQuiz() {
   };
 
   const handleTimeUp = useCallback(() => {
-    toast.warning('Time is up! Submitting your test...');
+    toast.warning('Time is up! Submitting your quiz...');
     setIsComplete(true);
   }, []);
 
@@ -162,7 +161,7 @@ export default function PracticeQuiz() {
   const confirmSubmit = () => {
     setIsComplete(true);
     setShowSubmitDialog(false);
-    toast.success('Test submitted!');
+    toast.success('Quiz submitted!');
   };
 
   const handleRetry = () => {
@@ -190,6 +189,8 @@ export default function PracticeQuiz() {
 
   // Landing state - no exam generated yet
   if (!exam && !isLoading) {
+    const expectedQuestions = getExpectedQuestionCount();
+    
     return (
       <div className="min-h-screen bg-background">
         <header className="border-b">
@@ -197,7 +198,7 @@ export default function PracticeQuiz() {
             <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold">Practice Quiz</h1>
+            <h1 className="text-xl font-bold">Let's find your level</h1>
           </div>
         </header>
 
@@ -209,14 +210,15 @@ export default function PracticeQuiz() {
                 <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
                   <Shuffle className="h-8 w-8 text-primary" />
                 </div>
-                <CardTitle className="text-2xl">Practice Quiz - Mixed Topics</CardTitle>
+                <CardTitle className="text-2xl">Let's find your level</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-muted-foreground space-y-2">
-                  <p>Challenge yourself with questions from selected topics:</p>
+                  <p>This diagnostic quiz will assess your knowledge across selected topics:</p>
                   <ul className="text-sm space-y-1">
-                    <li>• 5 questions totaling 100 points</li>
-                    <li>• Multi-part questions (a, b, c, d)</li>
+                    <li>• Multi-part questions (3-5 subparts each)</li>
+                    <li>• Each question focuses on one topic</li>
+                    <li>• Get personalized feedback and recommendations</li>
                     <li>• 3 hour time limit</li>
                   </ul>
                 </div>
@@ -238,7 +240,7 @@ export default function PracticeQuiz() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Choose at least 2 topics to include in your quiz
+                  Choose at least 1 topic to include in your quiz
                 </p>
               </CardHeader>
               <CardContent>
@@ -275,6 +277,9 @@ export default function PracticeQuiz() {
                   <Badge variant="secondary">
                     {selectedTopics.length} of {AVAILABLE_TOPICS.length} topics selected
                   </Badge>
+                  <Badge variant="outline">
+                    {expectedQuestions} questions will be generated
+                  </Badge>
                 </div>
               </CardContent>
             </Card>
@@ -290,10 +295,10 @@ export default function PracticeQuiz() {
               size="lg" 
               onClick={generateExam} 
               className="w-full"
-              disabled={selectedTopics.length < 2}
+              disabled={selectedTopics.length < 1}
             >
               <Shuffle className="h-5 w-5 mr-2" />
-              Generate Quiz ({selectedTopics.length} topics)
+              Start Quiz ({expectedQuestions} questions from {selectedTopics.length} topic{selectedTopics.length !== 1 ? 's' : ''})
             </Button>
           </div>
         </main>
@@ -308,8 +313,8 @@ export default function PracticeQuiz() {
         <div className="text-center space-y-4">
           <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
           <div>
-            <h2 className="text-xl font-semibold">Generating Your Test</h2>
-            <p className="text-muted-foreground">Creating 5 mixed-topic questions...</p>
+            <h2 className="text-xl font-semibold">Generating Your Quiz</h2>
+            <p className="text-muted-foreground">Creating questions for {selectedTopics.length} topic{selectedTopics.length !== 1 ? 's' : ''}...</p>
           </div>
         </div>
       </div>
@@ -325,17 +330,18 @@ export default function PracticeQuiz() {
             <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-xl font-bold">Test Results</h1>
+            <h1 className="text-xl font-bold">Your Results</h1>
           </div>
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          <ExamResults
+          <LevelResults
             exam={exam}
             answers={answers}
             timeSpentMinutes={getTimeSpentMinutes()}
             onRetry={handleRetry}
             onNewExam={handleNewExam}
+            availableTopics={AVAILABLE_TOPICS}
           />
         </main>
       </div>
@@ -355,7 +361,7 @@ export default function PracticeQuiz() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="font-bold">{exam?.examTitle}</h1>
+              <h1 className="font-bold">{exam?.examTitle || "Let's find your level"}</h1>
               <p className="text-sm text-muted-foreground">
                 Question {currentQuestion + 1} of {exam?.questions.length}
                 {currentQ?.topic && <span className="ml-2">• {currentQ.topic}</span>}
@@ -371,7 +377,7 @@ export default function PracticeQuiz() {
               onPauseToggle={() => setIsPaused(!isPaused)}
             />
             <Button onClick={handleSubmit}>
-              Submit Test
+              Submit Quiz
             </Button>
           </div>
         </div>
@@ -446,15 +452,15 @@ export default function PracticeQuiz() {
       <AlertDialog open={showSubmitDialog} onOpenChange={setShowSubmitDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Submit Test?</AlertDialogTitle>
+            <AlertDialogTitle>Submit Quiz?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to submit your test? You will be able to see the solutions after submitting.
+              Are you sure you want to submit? You will see your results and personalized recommendations.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Continue Working</AlertDialogCancel>
             <AlertDialogAction onClick={confirmSubmit}>
-              Submit Test
+              Submit Quiz
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

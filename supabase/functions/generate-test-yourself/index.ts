@@ -5,74 +5,67 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Exam structure matching Practice Exam format
-const EXAM_STRUCTURE = {
-  totalPoints: 100,
-  durationMinutes: 180,
-  questionCount: 5
-};
-
-// ONLY topics with actual exercise patterns from the Reichman Mechina booklet
+// Available topics - 12 total
 const BOOKLET_TOPICS = [
   { 
-    name: "First-Degree Equations", 
+    id: "linear-equations",
+    name: "Linear Equations", 
     patterns: ["Solve ax + b = c - dx", "Distribution and combining like terms", "Nested brackets"]
   },
   { 
-    name: "Systems of Linear Equations", 
-    patterns: ["Solve 2x2 systems using substitution or elimination"]
-  },
-  { 
-    name: "Algebraic Fractions", 
-    patterns: ["Simplify products/quotients of polynomials", "Add/subtract with LCD"]
-  },
-  { 
-    name: "Equations with Parameters", 
-    patterns: ["Solve for x in terms of parameter a", "Find domain restrictions"]
-  },
-  { 
+    id: "quadratic-equations",
     name: "Quadratic Equations", 
     patterns: ["Factor or use quadratic formula", "Solve ax² + bx + c = 0"]
   },
   { 
+    id: "biquadratic-equations",
     name: "Biquadratic Equations", 
     patterns: ["Substitute t = x², solve for t, then x"]
   },
   { 
-    name: "Equations with Radicals", 
+    id: "fractions",
+    name: "Algebraic Fractions", 
+    patterns: ["Simplify products/quotients of polynomials", "Add/subtract with LCD"]
+  },
+  { 
+    id: "radical-equations",
+    name: "Radical Equations", 
     patterns: ["Isolate radical, square both sides, check solutions"]
   },
   { 
-    name: "Inequalities", 
-    patterns: ["Solve linear, quadratic, and rational inequalities on number line"]
-  },
-  { 
-    name: "Exponents and Powers", 
+    id: "exponents",
+    name: "Exponents", 
     patterns: ["Simplify expressions with same base", "Solve a^x = b by matching bases"]
   },
   { 
+    id: "logarithms",
     name: "Logarithms", 
     patterns: ["Evaluate log expressions", "Solve log equations using log laws"]
   },
   { 
-    name: "Linear Functions", 
-    patterns: ["Find slope from two points", "Find equation y = mx + b", "Parallel/perpendicular lines"]
+    id: "inequalities",
+    name: "Inequalities", 
+    patterns: ["Solve linear, quadratic, and rational inequalities on number line"]
   },
   { 
-    name: "Quadratic Functions (Parabola)", 
-    patterns: ["Find vertex", "Find x-intercepts", "Convert to vertex form", "Find where f(x) > 0"]
-  },
-  { 
+    id: "limits",
     name: "Limits", 
     patterns: ["Factor and cancel to evaluate", "Direct substitution", "Limits at infinity"]
   },
   { 
-    name: "Derivatives of Polynomials", 
+    id: "derivatives",
+    name: "Derivatives", 
     patterns: ["Power rule f'(x)", "Find slope at a point", "Tangent line equation"]
   },
   { 
-    name: "Rational Functions", 
-    patterns: ["Find domain (denominator ≠ 0)", "Vertical asymptotes", "Increase/decrease intervals"]
+    id: "linear-functions",
+    name: "Linear Functions", 
+    patterns: ["Find slope from two points", "Find equation y = mx + b", "Parallel/perpendicular lines"]
+  },
+  { 
+    id: "quadratic-functions",
+    name: "Quadratic Functions", 
+    patterns: ["Find vertex", "Find x-intercepts", "Convert to vertex form", "Find where f(x) > 0"]
   }
 ];
 
@@ -141,64 +134,6 @@ function containsForbiddenContent(text: string): boolean {
   return FORBIDDEN_PATTERNS.some(pattern => pattern.test(text));
 }
 
-const QUESTION_TEMPLATES = `
-You are generating a "Practice Quiz" for Reichman Mechina math preparation.
-The questions must match ONLY exercise types from the official Reichman Mechina Exercise Booklet.
-
-${FORBIDDEN_QUESTION_TYPES}
-
-EXAM FORMAT:
-- 5 questions totaling 100 points
-- Each question has multiple parts (a, b, c, d) that may build on each other
-- Questions progress from easier to harder
-- Time allowed: 3 hours
-- IMPORTANT: Each question should be from a DIFFERENT topic area
-
-QUESTION STRUCTURE (based on 2021 exam format):
-
-QUESTION 1 (20 points) - Parabola + Line Analysis:
-Part a (8 pts): Draw parabola y = ax² + bx + c and line, find where parabola is negative
-Part b (6 pts): Find where parabola is above/below the line (inequality)
-Part c (6 pts): Find tangent line to parabola with given slope
-DO NOT ask about "holes" - this topic doesn't have holes!
-
-QUESTION 2 (15 points) - Equation with Parameter:
-Part a (8 pts): Solve the equation for x in terms of parameter a
-Part b (7 pts): Find values of a for which there is a unique solution / no solution
-This tests solving skills and domain analysis.
-
-QUESTION 3 (20 points) - Exponential/Logarithmic Equation:
-Part a (10 pts): Solve exponential or logarithmic equation for x
-Part b (10 pts): Find derivative and tangent line, OR solve a related equation
-Use log laws and properties, power rule for derivatives.
-
-QUESTION 4 (20 points) - Polynomial or Rational Function:
-Part a (5 pts): Find the domain (where denominator ≠ 0)
-Part b (15 pts): Find ALL extreme points using f'(x) = 0
-DO NOT ask about "holes" or "oblique asymptotes" - only vertical asymptotes and domain!
-
-QUESTION 5 (25 points) - Rational Function Analysis:
-Part a (6 pts): Find y-intercept f(0) or evaluate at specific point
-Part b (5 pts): Find vertical asymptotes (where denominator = 0 and numerator ≠ 0)
-Part c (7 pts): Find increase/decrease intervals using f'(x)
-Part d (7 pts): Find positivity interval where f(x) > 0
-DO NOT ask about "holes", "oblique asymptotes", or "sketch complete graph"!
-
-QUESTION FORMATTING:
-- Use ONLY formal command phrases: "Solve for x:", "Find:", "Calculate:", "Simplify:"
-- NO motivational phrases (Let's, Try, Can you, etc.)
-- Use proper LaTeX: $\\frac{a}{b}$, $x^{n}$, $\\sqrt{x}$, $\\log_{a}(x)$, $e^{x}$
-- Multi-character exponents MUST use braces: $5^{x+2}$ not $5^x+2$
-- For inequalities use: $\\neq$, $\\leq$, $\\geq$, $<$, $>$
-
-ABSOLUTELY FORBIDDEN (will be rejected):
-- "coordinates of holes" - NOT in curriculum
-- "oblique asymptote" - NOT in curriculum  
-- "L'Hôpital's rule" - NOT in curriculum
-- Any trigonometry - NOT in curriculum
-- "sketch the complete graph" - NOT a booklet question type
-`;
-
 // Auto-fix common LaTeX corruption patterns
 function autoFixLatex(text: string): string {
   if (!text) return text;
@@ -241,6 +176,50 @@ function isValidQuestion(question: string): { valid: boolean; reason?: string } 
   return { valid: true };
 }
 
+// Calculate topic distribution based on number of selected topics
+function calculateTopicDistribution(selectedTopicIds: string[]): string[] {
+  const N = selectedTopicIds.length;
+  
+  // Shuffle the selected topics for randomness
+  const shuffled = [...selectedTopicIds].sort(() => Math.random() - 0.5);
+  
+  // Case A: N >= 5 - one question per topic
+  if (N >= 5) {
+    return shuffled; // Each topic gets exactly 1 question
+  }
+  
+  // Case B: N < 5 - need exactly 5 questions total
+  const distribution: string[] = [];
+  
+  if (N === 1) {
+    // All 5 questions from the single topic
+    for (let i = 0; i < 5; i++) {
+      distribution.push(shuffled[0]);
+    }
+  } else if (N === 2) {
+    // Distribution [2, 3] randomly assigned
+    const counts = Math.random() < 0.5 ? [2, 3] : [3, 2];
+    for (let i = 0; i < counts[0]; i++) distribution.push(shuffled[0]);
+    for (let i = 0; i < counts[1]; i++) distribution.push(shuffled[1]);
+  } else if (N === 3) {
+    // Distribution [2, 2, 1] randomly assigned
+    const indices = [0, 1, 2].sort(() => Math.random() - 0.5);
+    distribution.push(shuffled[indices[0]], shuffled[indices[0]]); // 2 questions
+    distribution.push(shuffled[indices[1]], shuffled[indices[1]]); // 2 questions
+    distribution.push(shuffled[indices[2]]); // 1 question
+  } else if (N === 4) {
+    // Distribution [2, 1, 1, 1] randomly assigned
+    const indices = [0, 1, 2, 3].sort(() => Math.random() - 0.5);
+    distribution.push(shuffled[indices[0]], shuffled[indices[0]]); // 2 questions
+    distribution.push(shuffled[indices[1]]); // 1 question
+    distribution.push(shuffled[indices[2]]); // 1 question
+    distribution.push(shuffled[indices[3]]); // 1 question
+  }
+  
+  // Shuffle the final distribution so topics aren't grouped
+  return distribution.sort(() => Math.random() - 0.5);
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -252,105 +231,140 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Parse request body for optional topic filter
+    // Parse request body for topic filter
     const body = await req.json().catch(() => ({}));
-    const requestedTopics: string[] = body.topics || [];
+    const requestedTopicIds: string[] = body.selectedTopics || [];
 
-    // Filter topics based on user selection, or use all if none specified
-    let availableTopics = BOOKLET_TOPICS;
-    if (requestedTopics.length > 0) {
-      // Match requested topic names to our booklet topics (case-insensitive, partial match)
-      availableTopics = BOOKLET_TOPICS.filter(topic => 
-        requestedTopics.some(reqTopic => 
-          topic.name.toLowerCase().includes(reqTopic.toLowerCase()) ||
-          reqTopic.toLowerCase().includes(topic.name.toLowerCase())
-        )
-      );
-      
-      // If no matches found, fall back to all topics
-      if (availableTopics.length < 2) {
-        console.log(`Not enough matching topics, falling back to all topics`);
-        availableTopics = BOOKLET_TOPICS;
-      }
+    // Validate we have at least 1 topic
+    if (requestedTopicIds.length < 1) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Please select at least 1 topic" 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    // Randomly select 5 different topics from available pool
-    const shuffledTopics = [...availableTopics].sort(() => Math.random() - 0.5);
-    const selectedTopics = shuffledTopics.slice(0, Math.min(5, shuffledTopics.length));
+    // Get topic objects for selected IDs
+    const selectedTopics = BOOKLET_TOPICS.filter(t => requestedTopicIds.includes(t.id));
     
-    // If we have fewer than 5 topics, fill remaining slots from other available topics
-    if (selectedTopics.length < 5) {
-      const remainingTopics = [...availableTopics]
-        .filter(t => !selectedTopics.includes(t))
-        .sort(() => Math.random() - 0.5);
-      
-      while (selectedTopics.length < 5 && remainingTopics.length > 0) {
-        // Reuse topics if needed
-        selectedTopics.push(remainingTopics.shift() || availableTopics[selectedTopics.length % availableTopics.length]);
-      }
-      
-      // If still not enough, cycle through available topics
-      while (selectedTopics.length < 5) {
-        selectedTopics.push(availableTopics[selectedTopics.length % availableTopics.length]);
-      }
+    if (selectedTopics.length === 0) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "No valid topics selected" 
+      }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    console.log(`Requested topics: ${requestedTopics.join(', ') || 'all'}`);
-    console.log(`Generating Practice Quiz with topics: ${selectedTopics.map(t => t.name).join(', ')}`);
+    // Calculate distribution: which topic for each question
+    const topicDistribution = calculateTopicDistribution(selectedTopics.map(t => t.id));
+    const questionCount = topicDistribution.length;
+
+    // Build the topics list for each question
+    const questionsConfig = topicDistribution.map((topicId, idx) => {
+      const topic = selectedTopics.find(t => t.id === topicId)!;
+      return {
+        questionNumber: idx + 1,
+        topic: topic.name,
+        patterns: topic.patterns
+      };
+    });
+
+    console.log(`Generating quiz with ${questionCount} questions`);
+    console.log(`Topic distribution: ${questionsConfig.map(q => q.topic).join(', ')}`);
+
+    // Calculate points per question (distribute 100 points)
+    const basePoints = Math.floor(100 / questionCount);
+    const extraPoints = 100 - (basePoints * questionCount);
+    const pointsPerQuestion = questionsConfig.map((_, idx) => 
+      idx < extraPoints ? basePoints + 1 : basePoints
+    );
+
+    const questionsPrompt = questionsConfig.map((q, idx) => 
+      `Question ${q.questionNumber} (${pointsPerQuestion[idx]} points) - Topic: ${q.topic}
+       Exercise patterns: ${q.patterns.join(', ')}`
+    ).join('\n\n');
 
     const prompt = `
-Generate a complete "Practice Quiz" following the Reichman Mechina 2021 exam format.
-This exam should cover MIXED topics from the curriculum.
+Generate a diagnostic quiz titled "Let's find your level" to assess student knowledge.
 
-Selected topics for each question:
-1. ${selectedTopics[0].name} - Exercise patterns: ${selectedTopics[0].patterns.join(', ')}
-2. ${selectedTopics[1].name} - Exercise patterns: ${selectedTopics[1].patterns.join(', ')}
-3. ${selectedTopics[2].name} - Exercise patterns: ${selectedTopics[2].patterns.join(', ')}
-4. ${selectedTopics[3].name} - Exercise patterns: ${selectedTopics[3].patterns.join(', ')}
-5. ${selectedTopics[4].name} - Exercise patterns: ${selectedTopics[4].patterns.join(', ')}
+${FORBIDDEN_QUESTION_TYPES}
 
-${QUESTION_TEMPLATES}
+QUIZ STRUCTURE:
+- Total: ${questionCount} questions, 100 points total
+- Each question belongs to EXACTLY ONE topic
+- Each question MUST have between 3 and 5 subparts (a, b, c, and optionally d, e)
+- All subparts of a question must be from the SAME topic
+- Subparts should progress from easier to harder within the same topic
+- Time allowed: 3 hours
 
-Generate a complete exam with ALL 5 questions. For each question provide:
-1. The question number and total points
-2. The topic being tested
-3. The context/given information (function, equation, etc.)
-4. All parts (a, b, c, d) with their individual point values
-5. The complete solution for each part
+QUESTIONS TO GENERATE:
+${questionsPrompt}
 
-CRITICAL REMINDERS:
-- NO questions about "holes" or "removable discontinuities" - this is NOT in the booklet!
-- NO "oblique asymptotes" - only vertical asymptotes are in the curriculum!
-- NO trigonometry of any kind!
-- Use the assigned topics and their exercise patterns
+SUBPART REQUIREMENTS:
+- Minimum 3 parts per question (a, b, c)
+- Maximum 5 parts per question (a, b, c, d, e)
+- Each part tests a different aspect of the topic
+- Difficulty should increase slightly from part a to the last part
+- Label parts clearly as (a), (b), (c), etc.
 
-Point distribution: 20, 15, 20, 20, 25 points.
+QUESTION FORMATTING:
+- Use ONLY formal command phrases: "Solve for x:", "Find:", "Calculate:", "Simplify:"
+- NO motivational phrases (Let's, Try, Can you, etc.)
+- Use proper LaTeX: $\\frac{a}{b}$, $x^{n}$, $\\sqrt{x}$, $\\log_{a}(x)$, $e^{x}$
+- Multi-character exponents MUST use braces: $5^{x+2}$ not $5^x+2$
 
 Respond in this exact JSON format:
 {
-  "examTitle": "Practice Quiz - Mixed Topics",
+  "examTitle": "Let's find your level",
   "totalPoints": 100,
   "durationMinutes": 180,
   "questions": [
     {
       "questionNumber": 1,
-      "totalPoints": 20,
-      "topic": "${selectedTopics[0].name}",
-      "context": "Given: ...",
+      "totalPoints": ${pointsPerQuestion[0]},
+      "topic": "${questionsConfig[0].topic}",
+      "context": "Given: [provide context for the question]",
       "parts": [
         {
           "partLabel": "a",
-          "points": 8,
-          "prompt": "...",
+          "points": [points for this part],
+          "prompt": "[the subquestion]",
           "solution": {
             "steps": ["Step 1: ...", "Step 2: ..."],
-            "answer": "..."
+            "answer": "[final answer]"
+          }
+        },
+        {
+          "partLabel": "b",
+          "points": [points for this part],
+          "prompt": "[the subquestion]",
+          "solution": {
+            "steps": ["Step 1: ...", "Step 2: ..."],
+            "answer": "[final answer]"
+          }
+        },
+        {
+          "partLabel": "c",
+          "points": [points for this part],
+          "prompt": "[the subquestion]",
+          "solution": {
+            "steps": ["Step 1: ...", "Step 2: ..."],
+            "answer": "[final answer]"
           }
         }
       ]
     }
   ]
 }
+
+IMPORTANT: 
+- Generate EXACTLY ${questionCount} questions
+- Each question MUST have 3-5 parts (not more, not less than 3)
+- Points for parts within a question should sum to the question's total points
 `;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -364,10 +378,7 @@ Respond in this exact JSON format:
         messages: [
           { 
             role: "system", 
-            content: `You are an expert math exam generator for Reichman Mechina preparation. 
-Generate exams that exactly match the 2021 final exam format with topics from the official exercise booklet.
-CRITICAL: Never include questions about "holes", "oblique asymptotes", "L'Hôpital's rule", or trigonometry - these are NOT in the Reichman Mechina curriculum.
-Always respond with valid JSON only, no additional text.` 
+            content: `You are an expert math diagnostic quiz generator. Generate quizzes that accurately assess student knowledge across different math topics. Each question has 3-5 subparts all from the same topic. Always respond with valid JSON only, no additional text.` 
           },
           { role: "user", content: prompt }
         ],
@@ -420,11 +431,11 @@ Always respond with valid JSON only, no additional text.`
     }
 
     // Validate exam structure
-    if (!exam.questions || exam.questions.length !== 5) {
-      throw new Error("Invalid exam structure: expected 5 questions");
+    if (!exam.questions || exam.questions.length !== questionCount) {
+      console.warn(`Expected ${questionCount} questions, got ${exam.questions?.length || 0}`);
     }
 
-    // Apply auto-fix, validation, and filter forbidden content
+    // Apply auto-fix, validation, and ensure 3-5 parts per question
     let hasWarnings = false;
     exam.questions = exam.questions.map((q: any) => {
       // Fix context
@@ -435,6 +446,14 @@ Always respond with valid JSON only, no additional text.`
           console.warn(`Question ${q.questionNumber} context issue: ${contextCheck.reason}`);
           hasWarnings = true;
         }
+      }
+      
+      // Ensure 3-5 parts
+      if (q.parts && q.parts.length < 3) {
+        console.warn(`Question ${q.questionNumber} has only ${q.parts.length} parts, expected 3-5`);
+      }
+      if (q.parts && q.parts.length > 5) {
+        q.parts = q.parts.slice(0, 5); // Trim to max 5
       }
       
       // Fix each part
@@ -461,6 +480,9 @@ Always respond with valid JSON only, no additional text.`
       return q;
     });
 
+    // Set the exam title
+    exam.examTitle = "Let's find your level";
+
     if (hasWarnings) {
       console.log("Some questions had validation warnings but were included anyway");
     }
@@ -471,22 +493,24 @@ Always respond with valid JSON only, no additional text.`
       console.warn(`Point total is ${totalPoints}, expected 100.`);
     }
 
-    console.log("Successfully generated Practice Quiz with", exam.questions.length, "booklet-aligned questions");
+    console.log("Successfully generated diagnostic quiz with", exam.questions.length, "questions");
 
     return new Response(JSON.stringify({ 
       success: true, 
       exam,
-      selectedTopics: selectedTopics.map(t => t.name),
+      selectedTopics: selectedTopics.map(t => ({ id: t.id, name: t.name })),
+      questionCount,
       generatedAt: new Date().toISOString()
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
-  } catch (error) {
-    console.error("Error generating exam:", error);
+  } catch (error: unknown) {
+    console.error("Error generating quiz:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to generate quiz";
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : "An error occurred processing your request",
-      success: false
+      success: false, 
+      error: errorMessage
     }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
