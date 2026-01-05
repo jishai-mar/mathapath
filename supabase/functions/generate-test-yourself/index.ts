@@ -252,11 +252,51 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Randomly select 5 different topics for variety
-    const shuffledTopics = [...BOOKLET_TOPICS].sort(() => Math.random() - 0.5);
-    const selectedTopics = shuffledTopics.slice(0, 5);
+    // Parse request body for optional topic filter
+    const body = await req.json().catch(() => ({}));
+    const requestedTopics: string[] = body.topics || [];
 
-    console.log(`Generating Practice Quiz with booklet topics: ${selectedTopics.map(t => t.name).join(', ')}`);
+    // Filter topics based on user selection, or use all if none specified
+    let availableTopics = BOOKLET_TOPICS;
+    if (requestedTopics.length > 0) {
+      // Match requested topic names to our booklet topics (case-insensitive, partial match)
+      availableTopics = BOOKLET_TOPICS.filter(topic => 
+        requestedTopics.some(reqTopic => 
+          topic.name.toLowerCase().includes(reqTopic.toLowerCase()) ||
+          reqTopic.toLowerCase().includes(topic.name.toLowerCase())
+        )
+      );
+      
+      // If no matches found, fall back to all topics
+      if (availableTopics.length < 2) {
+        console.log(`Not enough matching topics, falling back to all topics`);
+        availableTopics = BOOKLET_TOPICS;
+      }
+    }
+
+    // Randomly select 5 different topics from available pool
+    const shuffledTopics = [...availableTopics].sort(() => Math.random() - 0.5);
+    const selectedTopics = shuffledTopics.slice(0, Math.min(5, shuffledTopics.length));
+    
+    // If we have fewer than 5 topics, fill remaining slots from other available topics
+    if (selectedTopics.length < 5) {
+      const remainingTopics = [...availableTopics]
+        .filter(t => !selectedTopics.includes(t))
+        .sort(() => Math.random() - 0.5);
+      
+      while (selectedTopics.length < 5 && remainingTopics.length > 0) {
+        // Reuse topics if needed
+        selectedTopics.push(remainingTopics.shift() || availableTopics[selectedTopics.length % availableTopics.length]);
+      }
+      
+      // If still not enough, cycle through available topics
+      while (selectedTopics.length < 5) {
+        selectedTopics.push(availableTopics[selectedTopics.length % availableTopics.length]);
+      }
+    }
+
+    console.log(`Requested topics: ${requestedTopics.join(', ') || 'all'}`);
+    console.log(`Generating Practice Quiz with topics: ${selectedTopics.map(t => t.name).join(', ')}`);
 
     const prompt = `
 Generate a complete "Practice Quiz" following the Reichman Mechina 2021 exam format.
