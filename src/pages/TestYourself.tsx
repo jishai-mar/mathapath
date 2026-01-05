@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { ArrowLeft, Shuffle, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Shuffle, Loader2, AlertCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +21,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { ExamTimer } from '@/components/exam/ExamTimer';
 import { ExamQuestion } from '@/components/exam/ExamQuestion';
 import { ExamResults } from '@/components/exam/ExamResults';
+
+// Available topics matching the booklet curriculum
+const AVAILABLE_TOPICS = [
+  { id: 'linear-equations', name: 'Linear Equations', icon: '📐' },
+  { id: 'quadratic-equations', name: 'Quadratic Equations', icon: '📈' },
+  { id: 'biquadratic-equations', name: 'Biquadratic Equations', icon: '🔢' },
+  { id: 'fractions', name: 'Algebraic Fractions', icon: '➗' },
+  { id: 'radical-equations', name: 'Radical Equations', icon: '√' },
+  { id: 'exponents', name: 'Exponents', icon: 'ⁿ' },
+  { id: 'logarithms', name: 'Logarithms', icon: '📊' },
+  { id: 'inequalities', name: 'Inequalities', icon: '≤' },
+  { id: 'limits', name: 'Limits', icon: '∞' },
+  { id: 'derivatives', name: 'Derivatives', icon: '∂' },
+  { id: 'linear-functions', name: 'Linear Functions', icon: '📉' },
+  { id: 'quadratic-functions', name: 'Quadratic Functions', icon: '⌒' },
+];
 
 interface ExamPart {
   partLabel: string;
@@ -49,7 +67,10 @@ export default function PracticeQuiz() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [exam, setExam] = useState<Exam | null>(null);
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [selectedTopics, setSelectedTopics] = useState<string[]>(
+    AVAILABLE_TOPICS.map(t => t.id) // All selected by default
+  );
+  const [returnedTopics, setReturnedTopics] = useState<string[]>([]);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<Record<number, Record<string, string>>>({});
   const [isPaused, setIsPaused] = useState(false);
@@ -58,13 +79,39 @@ export default function PracticeQuiz() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const toggleTopic = (topicId: string) => {
+    setSelectedTopics(prev => 
+      prev.includes(topicId)
+        ? prev.filter(id => id !== topicId)
+        : [...prev, topicId]
+    );
+  };
+
+  const selectAllTopics = () => {
+    setSelectedTopics(AVAILABLE_TOPICS.map(t => t.id));
+  };
+
+  const deselectAllTopics = () => {
+    setSelectedTopics([]);
+  };
+
   const generateExam = async () => {
+    if (selectedTopics.length < 2) {
+      toast.error('Please select at least 2 topics');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
     
     try {
+      // Map topic IDs to names for the API
+      const topicNames = selectedTopics.map(id => 
+        AVAILABLE_TOPICS.find(t => t.id === id)?.name || id
+      );
+
       const { data, error: fnError } = await supabase.functions.invoke('generate-test-yourself', {
-        body: {}
+        body: { topics: topicNames }
       });
 
       if (fnError) throw fnError;
@@ -77,12 +124,12 @@ export default function PracticeQuiz() {
         ...data.exam,
         durationMinutes: data.exam.durationMinutes || 180
       });
-      setSelectedTopics(data.selectedTopics || []);
+      setReturnedTopics(data.selectedTopics || []);
       setStartTime(new Date());
       setCurrentQuestion(0);
       setAnswers({});
       setIsComplete(false);
-      toast.success('Test generated with mixed topics!');
+      toast.success('Test generated with your selected topics!');
     } catch (err) {
       console.error('Error generating test:', err);
       const message = err instanceof Error ? err.message : 'Failed to generate test';
@@ -127,7 +174,6 @@ export default function PracticeQuiz() {
 
   const handleNewExam = () => {
     setExam(null);
-    generateExam();
   };
 
   const getTimeSpentMinutes = () => {
@@ -155,8 +201,9 @@ export default function PracticeQuiz() {
           </div>
         </header>
 
-        <main className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto">
+        <main className="container mx-auto px-4 py-8">
+          <div className="max-w-3xl mx-auto space-y-6">
+            {/* Header Card */}
             <Card className="text-center">
               <CardHeader>
                 <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -164,37 +211,90 @@ export default function PracticeQuiz() {
                 </div>
                 <CardTitle className="text-2xl">Practice Quiz - Mixed Topics</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-6">
+              <CardContent>
                 <div className="text-muted-foreground space-y-2">
-                  <p>Challenge yourself with questions from ALL topics in the curriculum:</p>
+                  <p>Challenge yourself with questions from selected topics:</p>
                   <ul className="text-sm space-y-1">
                     <li>• 5 questions totaling 100 points</li>
                     <li>• Multi-part questions (a, b, c, d)</li>
                     <li>• 3 hour time limit</li>
-                    <li>• Random mix of topics for comprehensive practice</li>
                   </ul>
                 </div>
-
-                <div className="flex flex-wrap gap-2 justify-center">
-                  <Badge variant="secondary">Equations</Badge>
-                  <Badge variant="secondary">Functions</Badge>
-                  <Badge variant="secondary">Derivatives</Badge>
-                  <Badge variant="secondary">Logarithms</Badge>
-                  <Badge variant="secondary">& More</Badge>
-                </div>
-
-                {error && (
-                  <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5 shrink-0" />
-                    <span className="text-sm">{error}</span>
-                  </div>
-                )}
-
-                <Button size="lg" onClick={generateExam} className="w-full">
-                  Generate Mixed Test
-                </Button>
               </CardContent>
             </Card>
+
+            {/* Topic Selection Card */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">Select Topics</CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={selectAllTopics}>
+                      Select All
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={deselectAllTopics}>
+                      Clear All
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Choose at least 2 topics to include in your quiz
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {AVAILABLE_TOPICS.map(topic => (
+                    <div
+                      key={topic.id}
+                      className={`
+                        flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all
+                        ${selectedTopics.includes(topic.id) 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-muted-foreground/50'
+                        }
+                      `}
+                      onClick={() => toggleTopic(topic.id)}
+                    >
+                      <Checkbox
+                        id={topic.id}
+                        checked={selectedTopics.includes(topic.id)}
+                        onCheckedChange={() => toggleTopic(topic.id)}
+                      />
+                      <Label 
+                        htmlFor={topic.id} 
+                        className="flex items-center gap-2 cursor-pointer flex-1"
+                      >
+                        <span className="text-lg">{topic.icon}</span>
+                        <span className="text-sm">{topic.name}</span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <Badge variant="secondary">
+                    {selectedTopics.length} of {AVAILABLE_TOPICS.length} topics selected
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            {error && (
+              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 shrink-0" />
+                <span className="text-sm">{error}</span>
+              </div>
+            )}
+
+            <Button 
+              size="lg" 
+              onClick={generateExam} 
+              className="w-full"
+              disabled={selectedTopics.length < 2}
+            >
+              <Shuffle className="h-5 w-5 mr-2" />
+              Generate Quiz ({selectedTopics.length} topics)
+            </Button>
           </div>
         </main>
       </div>
