@@ -37,37 +37,9 @@ const queryClient = new QueryClient();
 function AppRoutes() {
   const { user, loading } = useAuth();
   const { isFirstTime, isLoading: tutorLoading } = useTutor();
-  const [diagnosticCompleted, setDiagnosticCompleted] = useState<boolean | null>(null);
-  const [checkingDiagnostic, setCheckingDiagnostic] = useState(true);
-
-  useEffect(() => {
-    const checkDiagnosticStatus = async () => {
-      if (!user) {
-        setDiagnosticCompleted(null);
-        setCheckingDiagnostic(false);
-        return;
-      }
-
-      try {
-        const { data } = await supabase
-          .from('profiles')
-          .select('comprehensive_diagnostic_completed')
-          .eq('id', user.id)
-          .single();
-
-        setDiagnosticCompleted(data?.comprehensive_diagnostic_completed ?? false);
-      } catch {
-        setDiagnosticCompleted(false);
-      } finally {
-        setCheckingDiagnostic(false);
-      }
-    };
-
-    checkDiagnosticStatus();
-  }, [user]);
 
   // Show nothing while loading to prevent flash
-  if (loading || checkingDiagnostic || tutorLoading) {
+  if (loading || tutorLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
@@ -83,8 +55,6 @@ function AppRoutes() {
         element={
           !user ? (
             <Landing />
-          ) : !diagnosticCompleted ? (
-            <ComprehensiveDiagnostic />
           ) : isFirstTime ? (
             <MeetYourTutor />
           ) : (

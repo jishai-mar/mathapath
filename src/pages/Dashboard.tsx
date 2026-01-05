@@ -81,7 +81,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (user) {
-      checkComprehensiveDiagnostic();
+      loadData();
     }
   }, [user]);
 
@@ -92,20 +92,6 @@ export default function Dashboard() {
       fetchAiInsights(profile, topics, progress, weakSubs);
     }
   }, [isLoading, profile, topics, progress, subtopicProgress, tutorPrefs.tutorName, tutorPrefs.personality]);
-  const checkComprehensiveDiagnostic = async () => {
-    try {
-      const {
-        data: profileData
-      } = await supabase.from('profiles').select('comprehensive_diagnostic_completed').eq('id', user!.id).single();
-      if (!profileData?.comprehensive_diagnostic_completed) {
-        navigate('/diagnostic');
-        return;
-      }
-      loadData();
-    } catch (error) {
-      navigate('/diagnostic');
-    }
-  };
   const loadData = async () => {
     try {
       const {
@@ -420,15 +406,9 @@ export default function Dashboard() {
               
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 pt-2">
-                <Button onClick={() => {
-                if (recommendation.type === 'weakness') {
-                  navigate('/practice');
-                } else if (recommendation.topic && 'id' in recommendation.topic) {
-                  handleTopicClick(recommendation.topic.id);
-                }
-              }} className="px-6 py-3 h-auto rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
+              <Button onClick={() => navigate('/practice-quiz')} className="px-6 py-3 h-auto rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
                   <Play className="w-4 h-4 mr-2" />
-                  {recommendation.action}
+                  Make Practice Quiz
                 </Button>
                 <Button variant="outline" onClick={() => setShowTutorChat(true)} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
                   <MessageCircle className="w-4 h-4 mr-2" />
