@@ -25,7 +25,8 @@ import {
   Eye,
   FileCheck,
   ChevronLeft,
-  Keyboard
+  Keyboard,
+  Loader2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
@@ -545,6 +546,19 @@ export default function ComprehensiveDiagnostic() {
   // Phase: Test
   if (phase === 'test' && questions.length > 0) {
     const currentQuestion = questions[currentIndex];
+    
+    // Guard against undefined currentQuestion (index out of bounds during transition)
+    if (!currentQuestion) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
+            <p className="text-muted-foreground">Loading question...</p>
+          </div>
+        </div>
+      );
+    }
+    
     const progress = ((currentIndex + 1) / questions.length) * 100;
 
     const getEncouragement = (index: number, total: number) => {
