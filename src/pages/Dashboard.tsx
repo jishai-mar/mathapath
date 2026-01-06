@@ -9,7 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import TopicGrid from '@/components/TopicGrid';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import TutorChat from '@/components/TutorChat';
-import { Sparkles, Star, Flame, Target, TrendingUp, AlertTriangle, ArrowRight, Play, MessageCircle, Pentagon, Lightbulb, BookOpen, Mic, Bookmark } from 'lucide-react';
+import { Sparkles, Star, Flame, Target, TrendingUp, AlertTriangle, ArrowRight, Play, MessageCircle, Pentagon, Lightbulb, BookOpen, Mic, Bookmark, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
 interface Topic {
   id: string;
@@ -417,6 +417,10 @@ export default function Dashboard() {
                 <Button variant="outline" onClick={() => navigate('/voice-tutor')} className="px-6 py-3 h-auto rounded-xl bg-secondary/10 border-secondary/30 text-secondary hover:bg-secondary/20">
                   <Mic className="w-4 h-4 mr-2" />
                   Voice Mode
+                </Button>
+                <Button variant="outline" onClick={() => navigate('/scan-work')} className="px-6 py-3 h-auto rounded-xl bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20">
+                  <ScanLine className="w-4 h-4 mr-2" />
+                  Scan Work
                 </Button>
                 <Button variant="outline" onClick={() => navigate('/bookmarks')} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
                   <Bookmark className="w-4 h-4 mr-2" />

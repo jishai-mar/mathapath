@@ -77,3 +77,6 @@ verify_jwt = false
 
 [functions.generate-test-yourself]
 verify_jwt = false
+
+[functions.analyze-general-work]
+verify_jwt = false
