@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
+import { supabase } from '@/integrations/supabase/client';
 interface ExamQuestion {
   questionNumber: number;
   totalPoints: number;
@@ -218,6 +220,53 @@ export function LevelResults({
   const strongTopics = topicScores.filter(t => t.category === 'strong');
   const needsPracticeTopics = topicScores.filter(t => t.category === 'needs-practice');
   const needsAttentionTopics = topicScores.filter(t => t.category === 'needs-attention');
+
+  // Save results to database
+  const hasSaved = useRef(false);
+  
+  useEffect(() => {
+    if (hasSaved.current) return;
+    
+    const saveResults = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return; // Don't save if not logged in
+        
+        const topicScoresData = topicScores.map(t => ({
+          topicName: t.topicName,
+          percentage: t.percentage,
+          category: t.category,
+          totalParts: t.totalParts,
+          answeredParts: t.answeredParts
+        }));
+        
+        const { error } = await supabase
+          .from('level_assessment_results')
+          .insert({
+            user_id: user.id,
+            time_spent_minutes: timeSpentMinutes,
+            total_questions: exam.questions.length,
+            total_parts: totalParts,
+            answered_parts: answeredParts,
+            overall_percentage: overallPercentage,
+            topics_assessed: topicScores.map(t => t.topicName),
+            topic_scores: topicScoresData,
+            strong_topics: strongTopics.map(t => t.topicName),
+            weak_topics: [...needsPracticeTopics, ...needsAttentionTopics].map(t => t.topicName)
+          });
+        
+        if (error) {
+          console.error('Error saving results:', error);
+        } else {
+          hasSaved.current = true;
+        }
+      } catch (err) {
+        console.error('Error saving results:', err);
+      }
+    };
+    
+    saveResults();
+  }, [topicScores, exam, timeSpentMinutes, totalParts, answeredParts, overallPercentage, strongTopics, needsPracticeTopics, needsAttentionTopics]);
 
   const formatDuration = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
