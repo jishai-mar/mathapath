@@ -29,6 +29,7 @@ import PracticeExam from "./pages/PracticeExam";
 import PracticeQuiz from "./pages/TestYourself";
 import ExponentialTutorDemo from "./pages/ExponentialTutorDemo";
 import PracticeQuestion from "./pages/PracticeQuestion";
+import ScanWork from "./pages/ScanWork";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -78,6 +79,7 @@ function AppRoutes() {
       <Route path="/practice-quiz" element={<PracticeQuiz />} />
       <Route path="/exponential-tutor" element={<ExponentialTutorDemo />} />
       <Route path="/practice-question/:subtopicId" element={<PracticeQuestion />} />
+      <Route path="/scan-work" element={<ScanWork />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
