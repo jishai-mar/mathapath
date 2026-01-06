@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,11 +15,11 @@ import {
   TrendingUp,
   AlertTriangle,
   Lightbulb,
-  Star
+  Star,
+  Dumbbell
 } from 'lucide-react';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
-
 interface ExamQuestion {
   questionNumber: number;
   totalPoints: number;
@@ -137,6 +138,23 @@ export function LevelResults({
   onNewExam,
   availableTopics
 }: LevelResultsProps) {
+  const navigate = useNavigate();
+
+  const handleFocusPractice = (topicName: string) => {
+    // Find the topic ID from availableTopics
+    const topic = availableTopics.find(t => 
+      t.name.toLowerCase() === topicName.toLowerCase() ||
+      topicName.toLowerCase().includes(t.name.toLowerCase()) ||
+      t.name.toLowerCase().includes(topicName.toLowerCase())
+    );
+    
+    if (topic?.id) {
+      navigate(`/practice?topic=${topic.id}`);
+    } else {
+      // Fallback to practice page
+      navigate('/practice');
+    }
+  };
   // Calculate per-topic scores
   const topicScores = useMemo(() => {
     const scoresByTopic: Record<string, TopicScore> = {};
@@ -372,6 +390,14 @@ export function LevelResults({
                     ))}
                   </ul>
                 </div>
+                <Button 
+                  onClick={() => handleFocusPractice(topic.topicName)}
+                  className="mt-3 bg-yellow-600 hover:bg-yellow-700"
+                  size="sm"
+                >
+                  <Dumbbell className="h-4 w-4 mr-2" />
+                  Focus Practice
+                </Button>
               </div>
             ))}
           </CardContent>
@@ -413,6 +439,14 @@ export function LevelResults({
                     ))}
                   </ul>
                 </div>
+                <Button 
+                  onClick={() => handleFocusPractice(topic.topicName)}
+                  className="mt-3 bg-red-600 hover:bg-red-700"
+                  size="sm"
+                >
+                  <Dumbbell className="h-4 w-4 mr-2" />
+                  Focus Practice
+                </Button>
               </div>
             ))}
           </CardContent>
