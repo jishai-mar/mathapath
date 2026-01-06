@@ -443,6 +443,54 @@ export type Database = {
         }
         Relationships: []
       }
+      level_assessment_results: {
+        Row: {
+          answered_parts: number
+          completed_at: string
+          created_at: string
+          id: string
+          overall_percentage: number
+          strong_topics: string[] | null
+          time_spent_minutes: number
+          topic_scores: Json
+          topics_assessed: Json
+          total_parts: number
+          total_questions: number
+          user_id: string
+          weak_topics: string[] | null
+        }
+        Insert: {
+          answered_parts: number
+          completed_at?: string
+          created_at?: string
+          id?: string
+          overall_percentage: number
+          strong_topics?: string[] | null
+          time_spent_minutes: number
+          topic_scores?: Json
+          topics_assessed?: Json
+          total_parts: number
+          total_questions: number
+          user_id: string
+          weak_topics?: string[] | null
+        }
+        Update: {
+          answered_parts?: number
+          completed_at?: string
+          created_at?: string
+          id?: string
+          overall_percentage?: number
+          strong_topics?: string[] | null
+          time_spent_minutes?: number
+          topic_scores?: Json
+          topics_assessed?: Json
+          total_parts?: number
+          total_questions?: number
+          user_id?: string
+          weak_topics?: string[] | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           about_me: string | null
