@@ -418,10 +418,6 @@ export default function Dashboard() {
                   <Mic className="w-4 h-4 mr-2" />
                   Voice Mode
                 </Button>
-                <Button variant="outline" onClick={() => navigate('/scan-work')} className="px-6 py-3 h-auto rounded-xl bg-amber-500/10 border-amber-500/30 text-amber-500 hover:bg-amber-500/20">
-                  <ScanLine className="w-4 h-4 mr-2" />
-                  Scan Work
-                </Button>
                 <Button variant="outline" onClick={() => navigate('/bookmarks')} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
                   <Bookmark className="w-4 h-4 mr-2" />
                   Bookmarks

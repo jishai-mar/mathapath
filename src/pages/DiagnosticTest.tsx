@@ -10,7 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { MathKeyboard } from '@/components/math/MathKeyboard';
 import { HandwritingCanvas } from '@/components/math/HandwritingCanvas';
-import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye, GraduationCap, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Brain, CheckCircle, Sparkles, Target, Lightbulb, AlertCircle, ThumbsUp, PlayCircle, BookOpen, Eye, GraduationCap, Loader2, ScanLine } from 'lucide-react';
 import { toast } from 'sonner';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
@@ -908,6 +908,17 @@ export default function DiagnosticTest() {
                     >
                       <GraduationCap className="w-4 h-4" />
                       Review Theory
+                    </Button>
+                    
+                    {/* Scan Work Button */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate('/scan-work')}
+                      className="text-muted-foreground gap-2 hover:text-amber-500 hover:border-amber-500/50 transition-colors"
+                    >
+                      <ScanLine className="w-4 h-4" />
+                      Scan Work
                     </Button>
                   </div>
 
