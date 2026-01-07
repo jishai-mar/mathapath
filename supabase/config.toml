@@ -92,3 +92,9 @@ verify_jwt = false
 
 [functions.update-learning-path]
 verify_jwt = false
+
+[functions.grade-exam-answer]
+verify_jwt = false
+
+[functions.analyze-practice-exam]
+verify_jwt = false
