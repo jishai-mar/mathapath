@@ -31,6 +31,8 @@ import ExponentialTutorDemo from "./pages/ExponentialTutorDemo";
 import PracticeQuestion from "./pages/PracticeQuestion";
 import ScanWork from "./pages/ScanWork";
 import NotFound from "./pages/NotFound";
+import SetLearningGoal from "./pages/SetLearningGoal";
+import TopicExam from "./pages/TopicExam";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +82,8 @@ function AppRoutes() {
       <Route path="/exponential-tutor" element={<ExponentialTutorDemo />} />
       <Route path="/practice-question/:subtopicId" element={<PracticeQuestion />} />
       <Route path="/scan-work" element={<ScanWork />} />
+      <Route path="/set-goal" element={<SetLearningGoal />} />
+      <Route path="/topic-exam/:topicId" element={<TopicExam />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

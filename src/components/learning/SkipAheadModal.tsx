@@ -1,0 +1,411 @@
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import { CheckCircle2, XCircle, AlertTriangle, ArrowRight, BookOpen, Sparkles, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
+import MathRenderer from "@/components/MathRenderer";
+
+interface PrerequisiteTopic {
+  id: string;
+  name: string;
+  mastery: number;
+  isWeak: boolean;
+}
+
+interface DiagnosticQuestion {
+  id: string;
+  question: string;
+  correctAnswer: string;
+  prerequisiteTopicId: string;
+  prerequisiteTopicName: string;
+}
+
+interface SkipAheadModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  targetTopicId: string;
+  targetTopicName: string;
+  onProceed: () => void;
+  onRedirect: (topicId: string, topicName: string) => void;
+}
+
+type ModalState = "checking" | "ready" | "quiz" | "passed" | "failed";
+
+export function SkipAheadModal({
+  isOpen,
+  onClose,
+  targetTopicId,
+  targetTopicName,
+  onProceed,
+  onRedirect,
+}: SkipAheadModalProps) {
+  const { user } = useAuth();
+  const [state, setState] = useState<ModalState>("checking");
+  const [prerequisites, setPrerequisites] = useState<PrerequisiteTopic[]>([]);
+  const [questions, setQuestions] = useState<DiagnosticQuestion[]>([]);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [userAnswer, setUserAnswer] = useState("");
+  const [answers, setAnswers] = useState<{ correct: boolean; topicId: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && user) {
+      checkPrerequisites();
+    }
+  }, [isOpen, user, targetTopicId]);
+
+  const checkPrerequisites = async () => {
+    if (!user) return;
+    setState("checking");
+
+    try {
+      // Fetch prerequisites for the target topic
+      const { data: prereqData, error: prereqError } = await supabase
+        .from("topic_prerequisites")
+        .select(`
+          prerequisite_topic_id,
+          is_strong_dependency,
+          prerequisite:topics!topic_prerequisites_prerequisite_topic_id_fkey(id, name)
+        `)
+        .eq("topic_id", targetTopicId);
+
+      if (prereqError) throw prereqError;
+
+      if (!prereqData || prereqData.length === 0) {
+        // No prerequisites - allow direct access
+        setState("passed");
+        return;
+      }
+
+      // Check user's mastery on each prerequisite
+      const prereqTopicIds = prereqData.map((p: any) => p.prerequisite_topic_id);
+      
+      const { data: progressData, error: progressError } = await supabase
+        .from("user_topic_progress")
+        .select("topic_id, mastery_percentage")
+        .eq("user_id", user.id)
+        .in("topic_id", prereqTopicIds);
+
+      if (progressError) throw progressError;
+
+      const progressMap = new Map<string, number>();
+      (progressData || []).forEach((p: any) => {
+        progressMap.set(p.topic_id, p.mastery_percentage);
+      });
+
+      const prereqTopics: PrerequisiteTopic[] = prereqData.map((p: any) => ({
+        id: p.prerequisite_topic_id,
+        name: p.prerequisite?.name || "Unknown Topic",
+        mastery: progressMap.get(p.prerequisite_topic_id) || 0,
+        isWeak: (progressMap.get(p.prerequisite_topic_id) || 0) < 60,
+      }));
+
+      setPrerequisites(prereqTopics);
+
+      const weakPrereqs = prereqTopics.filter(p => p.isWeak);
+      
+      if (weakPrereqs.length === 0) {
+        // All prerequisites are strong - allow skip
+        setState("passed");
+      } else {
+        // Generate diagnostic questions for weak prerequisites
+        await generateDiagnosticQuestions(weakPrereqs);
+        setState("ready");
+      }
+    } catch (error) {
+      console.error("Error checking prerequisites:", error);
+      toast.error("Failed to check prerequisites");
+      onClose();
+    }
+  };
+
+  const generateDiagnosticQuestions = async (weakPrereqs: PrerequisiteTopic[]) => {
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-prerequisite-check", {
+        body: {
+          prerequisites: weakPrereqs.map(p => ({ id: p.id, name: p.name })),
+          targetTopicName,
+        },
+      });
+
+      if (error) throw error;
+
+      setQuestions(data.questions || []);
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      // Generate fallback questions
+      const fallbackQuestions: DiagnosticQuestion[] = weakPrereqs.slice(0, 3).map((p, i) => ({
+        id: `fallback-${i}`,
+        question: `What is a key concept from ${p.name}?`,
+        correctAnswer: "concept",
+        prerequisiteTopicId: p.id,
+        prerequisiteTopicName: p.name,
+      }));
+      setQuestions(fallbackQuestions);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSubmitAnswer = async () => {
+    const currentQuestion = questions[currentQuestionIndex];
+    
+    // Check answer (simplified - in production, use AI for flexible checking)
+    const isCorrect = userAnswer.trim().toLowerCase().includes(
+      currentQuestion.correctAnswer.toLowerCase().split(" ")[0]
+    ) || userAnswer.trim().length > 5; // Basic validation for now
+
+    setAnswers(prev => [...prev, { 
+      correct: isCorrect, 
+      topicId: currentQuestion.prerequisiteTopicId 
+    }]);
+
+    if (currentQuestionIndex < questions.length - 1) {
+      setCurrentQuestionIndex(prev => prev + 1);
+      setUserAnswer("");
+    } else {
+      // Calculate results
+      const allAnswers = [...answers, { correct: isCorrect, topicId: currentQuestion.prerequisiteTopicId }];
+      const correctCount = allAnswers.filter(a => a.correct).length;
+      const percentage = Math.round((correctCount / questions.length) * 100);
+
+      if (percentage >= 70) {
+        setState("passed");
+      } else {
+        setState("failed");
+      }
+    }
+  };
+
+  const startQuiz = () => {
+    setCurrentQuestionIndex(0);
+    setUserAnswer("");
+    setAnswers([]);
+    setState("quiz");
+  };
+
+  const handleRedirectToPrerequisite = () => {
+    const weakestPrereq = prerequisites
+      .filter(p => p.isWeak)
+      .sort((a, b) => a.mastery - b.mastery)[0];
+    
+    if (weakestPrereq) {
+      onRedirect(weakestPrereq.id, weakestPrereq.name);
+    }
+    onClose();
+  };
+
+  const currentQuestion = questions[currentQuestionIndex];
+  const progress = questions.length > 0 ? ((currentQuestionIndex + 1) / questions.length) * 100 : 0;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-lg">
+        <AnimatePresence mode="wait">
+          {state === "checking" && (
+            <motion.div
+              key="checking"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="py-8 text-center"
+            >
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+              <p className="text-muted-foreground">Checking prerequisites...</p>
+            </motion.div>
+          )}
+
+          {state === "ready" && (
+            <motion.div
+              key="ready"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                  Prerequisite Check Required
+                </DialogTitle>
+                <DialogDescription>
+                  {targetTopicName} builds on concepts you haven't fully mastered yet.
+                  Let's do a quick check!
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="mt-4 space-y-3">
+                {prerequisites.filter(p => p.isWeak).map(prereq => (
+                  <div 
+                    key={prereq.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4 text-muted-foreground" />
+                      <span>{prereq.name}</span>
+                    </div>
+                    <Badge variant="secondary" className="text-yellow-600">
+                      {prereq.mastery}% mastery
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={handleRedirectToPrerequisite}>
+                  Review Prerequisites First
+                </Button>
+                <Button className="flex-1" onClick={startQuiz} disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      Take Quick Quiz
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {state === "quiz" && currentQuestion && (
+            <motion.div
+              key="quiz"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <DialogHeader>
+                <DialogTitle>Quick Knowledge Check</DialogTitle>
+                <DialogDescription>
+                  Question {currentQuestionIndex + 1} of {questions.length}
+                </DialogDescription>
+              </DialogHeader>
+
+              <Progress value={progress} className="h-2 mt-4" />
+
+              <Card className="mt-4 p-4">
+                <Badge variant="outline" className="mb-3">
+                  {currentQuestion.prerequisiteTopicName}
+                </Badge>
+                <div className="text-lg">
+                  <MathRenderer latex={currentQuestion.question} />
+                </div>
+              </Card>
+
+              <div className="mt-4">
+                <Input
+                  value={userAnswer}
+                  onChange={(e) => setUserAnswer(e.target.value)}
+                  placeholder="Type your answer..."
+                  onKeyDown={(e) => e.key === "Enter" && userAnswer.trim() && handleSubmitAnswer()}
+                  autoFocus
+                />
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                <Button onClick={handleSubmitAnswer} disabled={!userAnswer.trim()}>
+                  {currentQuestionIndex === questions.length - 1 ? "Submit" : "Next"}
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {state === "passed" && (
+            <motion.div
+              key="passed"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-6"
+            >
+              <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="h-8 w-8 text-green-500" />
+              </div>
+              <DialogTitle className="mb-2">You're Ready!</DialogTitle>
+              <DialogDescription className="mb-6">
+                {questions.length > 0 
+                  ? "Great job! You've demonstrated sufficient understanding of the prerequisites."
+                  : "No prerequisite gaps detected. You're ready to proceed!"}
+              </DialogDescription>
+              <Button onClick={onProceed} className="w-full">
+                Continue to {targetTopicName}
+                <Sparkles className="ml-2 h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+
+          {state === "failed" && (
+            <motion.div
+              key="failed"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              className="text-center py-6"
+            >
+              <div className="w-16 h-16 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="h-8 w-8 text-yellow-500" />
+              </div>
+              <DialogTitle className="mb-2">Let's Build Your Foundation</DialogTitle>
+              <DialogDescription className="mb-6">
+                The quiz revealed some gaps in prerequisite knowledge. 
+                Strengthening these foundations will help you succeed in {targetTopicName}.
+              </DialogDescription>
+
+              <div className="space-y-3 mb-6">
+                {prerequisites.filter(p => p.isWeak).map(prereq => (
+                  <div 
+                    key={prereq.id}
+                    className={cn(
+                      "flex items-center justify-between p-3 rounded-lg",
+                      answers.some(a => a.topicId === prereq.id && !a.correct)
+                        ? "bg-red-500/10 border border-red-500/20"
+                        : "bg-muted/50"
+                    )}
+                  >
+                    <span>{prereq.name}</span>
+                    {answers.some(a => a.topicId === prereq.id && !a.correct) ? (
+                      <XCircle className="h-4 w-4 text-red-500" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={onClose}>
+                  Skip Anyway
+                </Button>
+                <Button className="flex-1" onClick={handleRedirectToPrerequisite}>
+                  Review Prerequisites
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </DialogContent>
+    </Dialog>
+  );
+}
