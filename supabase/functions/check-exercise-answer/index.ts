@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -168,7 +168,21 @@ serve(async (req) => {
   try {
     const { exerciseId, userAnswer, userId, hintsUsed, timeSpentSeconds, currentSubLevel, subtopicName } = await req.json();
 
-    if (!exerciseId || !userId) {
+    // Prefer deriving user id from the auth token; keep body userId as backward-compatible fallback.
+    let resolvedUserId = userId as string | undefined;
+    if (!resolvedUserId) {
+      const authHeader = req.headers.get("Authorization") || "";
+      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+
+      const { data } = await authClient.auth.getUser();
+      resolvedUserId = data?.user?.id;
+    }
+
+    if (!exerciseId || !resolvedUserId) {
       return new Response(
         JSON.stringify({ error: "exerciseId and userId are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -389,7 +403,7 @@ serve(async (req) => {
         hints_used,
         exercises!inner(difficulty, subtopic_id)
       `)
-      .eq("user_id", userId)
+      .eq("user_id", resolvedUserId)
       .order("created_at", { ascending: false })
       .limit(30);
 
@@ -516,7 +530,7 @@ serve(async (req) => {
       .from("exercise_attempts")
       .insert({
         exercise_id: exerciseId,
-        user_id: userId,
+        user_id: resolvedUserId,
         user_answer: userAnswer || null,
         is_correct: isCorrect,
         hints_used: hintsUsed || 0,
