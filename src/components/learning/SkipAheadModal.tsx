@@ -45,6 +45,12 @@ interface SkipAheadModalProps {
 
 type ModalState = "checking" | "ready" | "quiz" | "passed" | "failed";
 
+interface QuizAnswer {
+  answer: string;
+  isCorrect: boolean;
+  checked: boolean;
+}
+
 export function SkipAheadModal({
   isOpen,
   onClose,
@@ -59,8 +65,9 @@ export function SkipAheadModal({
   const [questions, setQuestions] = useState<DiagnosticQuestion[]>([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
-  const [answers, setAnswers] = useState<{ correct: boolean; topicId: string }[]>([]);
+  const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
@@ -164,32 +171,73 @@ export function SkipAheadModal({
   };
 
   const handleSubmitAnswer = async () => {
-    const currentQuestion = questions[currentQuestionIndex];
+    if (!userAnswer.trim() || isChecking) return;
     
-    // Check answer (simplified - in production, use AI for flexible checking)
-    const isCorrect = userAnswer.trim().toLowerCase().includes(
-      currentQuestion.correctAnswer.toLowerCase().split(" ")[0]
-    ) || userAnswer.trim().length > 5; // Basic validation for now
+    const currentQuestion = questions[currentQuestionIndex];
+    setIsChecking(true);
+    
+    try {
+      // Use AI-based answer validation for accurate checking
+      const { data, error } = await supabase.functions.invoke('check-exercise-answer', {
+        body: {
+          exerciseId: `prereq-${currentQuestionIndex}`,
+          userAnswer: userAnswer.trim(),
+          userId: user?.id,
+          subtopicName: currentQuestion.prerequisiteTopicName,
+          correctAnswer: currentQuestion.correctAnswer,
+          hintsUsed: 0,
+        },
+      });
 
-    setAnswers(prev => [...prev, { 
-      correct: isCorrect, 
-      topicId: currentQuestion.prerequisiteTopicId 
-    }]);
-
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(prev => prev + 1);
-      setUserAnswer("");
-    } else {
-      // Calculate results
-      const allAnswers = [...answers, { correct: isCorrect, topicId: currentQuestion.prerequisiteTopicId }];
-      const correctCount = allAnswers.filter(a => a.correct).length;
-      const percentage = Math.round((correctCount / questions.length) * 100);
-
-      if (percentage >= 70) {
-        setState("passed");
+      let isCorrect = false;
+      
+      if (!error && data) {
+        isCorrect = data.isCorrect ?? false;
       } else {
-        setState("failed");
+        // Fallback: simple comparison if AI check fails
+        const correctNormalized = currentQuestion.correctAnswer.toLowerCase().replace(/\s+/g, '');
+        const userNormalized = userAnswer.toLowerCase().replace(/\s+/g, '');
+        isCorrect = correctNormalized === userNormalized;
       }
+
+      const newAnswer: QuizAnswer = { 
+        answer: userAnswer, 
+        isCorrect, 
+        checked: true 
+      };
+      
+      const updatedAnswers = [...answers, newAnswer];
+      setAnswers(updatedAnswers);
+
+      if (currentQuestionIndex < questions.length - 1) {
+        // Move to next question after delay
+        setTimeout(() => {
+          setCurrentQuestionIndex(prev => prev + 1);
+          setUserAnswer("");
+        }, isCorrect ? 500 : 1200);
+      } else {
+        // Calculate final results
+        setTimeout(() => {
+          const correctCount = updatedAnswers.filter(a => a.isCorrect).length;
+          const percentage = Math.round((correctCount / questions.length) * 100);
+
+          if (percentage >= 70) {
+            setState("passed");
+          } else {
+            setState("failed");
+          }
+        }, 1000);
+      }
+    } catch (err) {
+      console.error('Error checking answer:', err);
+      // On error, be lenient and allow progression
+      setAnswers(prev => [...prev, { answer: userAnswer, isCorrect: true, checked: true }]);
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setUserAnswer("");
+      }
+    } finally {
+      setIsChecking(false);
     }
   };
 
@@ -373,35 +421,34 @@ export function SkipAheadModal({
               </DialogDescription>
 
               <div className="space-y-3 mb-6">
-                {prerequisites.filter(p => p.isWeak).map(prereq => (
-                  <div 
-                    key={prereq.id}
-                    className={cn(
-                      "flex items-center justify-between p-3 rounded-lg",
-                      answers.some(a => a.topicId === prereq.id && !a.correct)
-                        ? "bg-red-500/10 border border-red-500/20"
-                        : "bg-muted/50"
-                    )}
-                  >
-                    <span>{prereq.name}</span>
-                    {answers.some(a => a.topicId === prereq.id && !a.correct) ? (
-                      <XCircle className="h-4 w-4 text-red-500" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    )}
-                  </div>
-                ))}
+                {prerequisites.filter(p => p.isWeak).map((prereq, idx) => {
+                  const hasWrongAnswer = answers[idx] && !answers[idx].isCorrect;
+                  return (
+                    <div 
+                      key={prereq.id}
+                      className={cn(
+                        "flex items-center justify-between p-3 rounded-lg",
+                        hasWrongAnswer
+                          ? "bg-red-500/10 border border-red-500/20"
+                          : "bg-muted/50"
+                      )}
+                    >
+                      <span>{prereq.name}</span>
+                      {hasWrongAnswer ? (
+                        <XCircle className="h-4 w-4 text-red-500" />
+                      ) : (
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
-              <div className="flex gap-3">
-                <Button variant="outline" className="flex-1" onClick={onClose}>
-                  Skip Anyway
-                </Button>
-                <Button className="flex-1" onClick={handleRedirectToPrerequisite}>
-                  Review Prerequisites
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
+              {/* Removed "Skip Anyway" button - must review prerequisites */}
+              <Button className="w-full" onClick={handleRedirectToPrerequisite}>
+                Review Prerequisites
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>
