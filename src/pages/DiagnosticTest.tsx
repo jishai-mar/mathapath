@@ -404,14 +404,14 @@ export default function DiagnosticTest() {
         .eq('id', test.id);
 
       if (isCorrect) {
-        // Correct answer - show brief celebration, then move on
+        // Correct answer - show brief celebration, then move on faster
         setShowingFeedback(true);
         setCurrentFeedback(null);
         
-        // Auto-advance after a short delay for correct answers
+        // Reduced delay for correct answers (800ms instead of 1500ms)
         setTimeout(() => {
           proceedToNextQuestion();
-        }, 1500);
+        }, 800);
       } else {
         // Incorrect - record this subtopic as needing more work
         setWeakSubtopics(prev => new Set(prev).add(question.subtopic_id));
