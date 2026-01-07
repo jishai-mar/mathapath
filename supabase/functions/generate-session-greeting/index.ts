@@ -175,7 +175,7 @@ IMPORTANT RULES:
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "gpt-4.1-mini-2025-04-14",
+          model: "gpt-4o-mini",
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: "Generate the session greeting now." },
@@ -187,6 +187,9 @@ IMPORTANT RULES:
 
     // IMPORTANT: return 200 with a fallback payload so the client SDK doesn't treat it as a hard error.
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error("OpenAI API error:", response.status, errorText);
+      
       if (response.status === 429) {
         const greeting = buildFallbackGreeting({
           studentName,
