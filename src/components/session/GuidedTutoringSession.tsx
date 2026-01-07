@@ -13,7 +13,9 @@ import { validateExercise } from '@/lib/exerciseValidator';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import { TalkToTutorButton } from '@/components/tutor/TalkToTutorButton';
 import ToolPanel from '@/components/tools/ToolPanel';
+import { TheoryQuickView } from '@/components/session/TheoryQuickView';
 import { checkMastery, getCalibratedFeedback, RECENCY_RESET_COUNT, MASTERY_THRESHOLDS } from '@/lib/masteryThresholds';
+import { toast } from 'sonner';
 import { 
   Send, 
   Volume2, 
@@ -29,7 +31,9 @@ import {
   Timer,
   TrendingUp,
   Zap,
-  BarChart3
+  BarChart3,
+  BookOpen,
+  FastForward
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -88,6 +92,7 @@ export function GuidedTutoringSession({
   const [isMuted, setIsMuted] = useState(false);
   const [focusMode, setFocusMode] = useState(false);
   const [showWalkthrough, setShowWalkthrough] = useState(false);
+  const [showTheory, setShowTheory] = useState(false);
   const [lastCorrectAnswer, setLastCorrectAnswer] = useState<string | undefined>();
   const [stats, setStats] = useState<SessionStats>({ correct: 0, total: 0, xpEarned: 0 });
   const [currentFeedback, setCurrentFeedback] = useState<{
@@ -560,6 +565,46 @@ export function GuidedTutoringSession({
     loadNextExercise();
   };
 
+  // Skip to harder difficulty when student finds exercises too easy
+  const handleSkipToHarder = () => {
+    if (currentDifficulty === 'hard') {
+      toast.info("You're already at the hardest level!");
+      return;
+    }
+
+    // If student has shown competence (2+ correct), skip directly
+    if (performanceData.correctStreak >= 2 || stats.correct >= 2) {
+      const nextDifficulty = currentDifficulty === 'easy' ? 'medium' : 'hard';
+      
+      setDifficultyProgressions(p => [...p, {
+        fromDifficulty: currentDifficulty,
+        toDifficulty: nextDifficulty,
+        afterExercise: stats.total,
+      }]);
+      
+      setCurrentDifficulty(nextDifficulty);
+      setPerformanceData(prev => ({ ...prev, exercisesAtCurrentDifficulty: 0, correctStreak: 0 }));
+      
+      toast.success(`Jumping to ${nextDifficulty} difficulty!`);
+      loadNextExercise();
+    } else {
+      // Otherwise skip with a note that they can prove themselves
+      const nextDifficulty = currentDifficulty === 'easy' ? 'medium' : 'hard';
+      
+      setDifficultyProgressions(p => [...p, {
+        fromDifficulty: currentDifficulty,
+        toDifficulty: nextDifficulty,
+        afterExercise: stats.total,
+      }]);
+      
+      setCurrentDifficulty(nextDifficulty);
+      setPerformanceData(prev => ({ ...prev, exercisesAtCurrentDifficulty: 0, correctStreak: 0 }));
+      
+      toast.success(`Let's try ${nextDifficulty} difficulty!`);
+      loadNextExercise();
+    }
+  };
+
   // Save session analytics to database
   const saveSessionAnalytics = useCallback(async () => {
     if (!user) return;
@@ -821,21 +866,63 @@ export function GuidedTutoringSession({
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-center gap-4">
+                {/* Helper buttons row */}
+                <div className="flex items-center justify-center gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowTheory(true)}
+                    className="gap-2 h-9"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Theory
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowWalkthrough(true)}
+                    className="gap-2 h-9"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Solution
+                  </Button>
+
                   {currentExercise.hints && currentExercise.hints.length > 0 && (
-                    <button
+                    <Button
                       type="button"
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      variant="outline"
+                      size="sm"
                       onClick={() => {
                         if (!isMuted) {
                           speak(currentExercise.hints![0], 'thinking');
                         }
+                        toast.info(currentExercise.hints![0]);
                       }}
+                      className="gap-2 h-9"
                     >
-                      <Lightbulb className="w-4 h-4 inline mr-2" />
+                      <Lightbulb className="w-4 h-4" />
                       Hint
-                    </button>
+                    </Button>
                   )}
+
+                  {currentDifficulty !== 'hard' && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleSkipToHarder}
+                      className="gap-2 h-9 text-muted-foreground hover:text-foreground"
+                    >
+                      <FastForward className="w-4 h-4" />
+                      Too easy
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-center">
                   <TalkToTutorButton variant="secondary" size="sm" />
                 </div>
               </form>
@@ -1030,6 +1117,14 @@ export function GuidedTutoringSession({
           correctAnswer={lastCorrectAnswer}
         />
       )}
+
+      {/* Theory Quick View */}
+      <TheoryQuickView
+        isOpen={showTheory}
+        onClose={() => setShowTheory(false)}
+        subtopicId={subtopicId}
+        subtopicName={subtopicName}
+      />
 
       {/* Graph Calculator - Always available */}
       <ToolPanel 
