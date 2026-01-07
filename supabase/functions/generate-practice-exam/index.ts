@@ -168,7 +168,7 @@ Respond in this exact JSON format:
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-mini-2025-04-14",
         messages: [
           { 
             role: "system", 

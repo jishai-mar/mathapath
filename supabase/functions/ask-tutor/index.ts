@@ -451,7 +451,7 @@ Remember: You are not just teaching math - you are building confidence, creating
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-mini-2025-04-14",
         messages,
         max_completion_tokens: 2048,
       }),
