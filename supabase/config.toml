@@ -80,3 +80,15 @@ verify_jwt = false
 
 [functions.analyze-general-work]
 verify_jwt = false
+
+[functions.generate-learning-path]
+verify_jwt = false
+
+[functions.generate-prerequisite-check]
+verify_jwt = false
+
+[functions.generate-topic-exam]
+verify_jwt = false
+
+[functions.update-learning-path]
+verify_jwt = false

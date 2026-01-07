@@ -314,6 +314,70 @@ export type Database = {
           },
         ]
       }
+      learning_path_nodes: {
+        Row: {
+          created_at: string | null
+          estimated_minutes: number | null
+          goal_id: string | null
+          id: string
+          order_index: number
+          scheduled_date: string
+          status: string | null
+          subtopic_id: string | null
+          target_difficulty: string | null
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          estimated_minutes?: number | null
+          goal_id?: string | null
+          id?: string
+          order_index: number
+          scheduled_date: string
+          status?: string | null
+          subtopic_id?: string | null
+          target_difficulty?: string | null
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          estimated_minutes?: number | null
+          goal_id?: string | null
+          id?: string
+          order_index?: number
+          scheduled_date?: string
+          status?: string | null
+          subtopic_id?: string | null
+          target_difficulty?: string | null
+          topic_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_path_nodes_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "user_learning_goals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_path_nodes_subtopic_id_fkey"
+            columns: ["subtopic_id"]
+            isOneToOne: false
+            referencedRelation: "subtopics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_path_nodes_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learning_profiles: {
         Row: {
           created_at: string
@@ -507,16 +571,19 @@ export type Database = {
           last_name: string | null
           last_practice_date: string | null
           last_session_mood: string | null
+          learning_path_generated_at: string | null
           longest_streak: number
           notify_achievements: boolean | null
           notify_community_mentions: boolean | null
           notify_daily_reminder: boolean | null
           notify_new_courses: boolean | null
           notify_weekly_progress: boolean | null
+          onboarding_completed: boolean | null
           privacy_marketing_emails: boolean | null
           privacy_public_profile: boolean | null
           privacy_usage_analytics: boolean | null
           session_count: number | null
+          target_mastery_date: string | null
           total_xp: number
           updated_at: string
           username: string | null
@@ -536,16 +603,19 @@ export type Database = {
           last_name?: string | null
           last_practice_date?: string | null
           last_session_mood?: string | null
+          learning_path_generated_at?: string | null
           longest_streak?: number
           notify_achievements?: boolean | null
           notify_community_mentions?: boolean | null
           notify_daily_reminder?: boolean | null
           notify_new_courses?: boolean | null
           notify_weekly_progress?: boolean | null
+          onboarding_completed?: boolean | null
           privacy_marketing_emails?: boolean | null
           privacy_public_profile?: boolean | null
           privacy_usage_analytics?: boolean | null
           session_count?: number | null
+          target_mastery_date?: string | null
           total_xp?: number
           updated_at?: string
           username?: string | null
@@ -565,16 +635,19 @@ export type Database = {
           last_name?: string | null
           last_practice_date?: string | null
           last_session_mood?: string | null
+          learning_path_generated_at?: string | null
           longest_streak?: number
           notify_achievements?: boolean | null
           notify_community_mentions?: boolean | null
           notify_daily_reminder?: boolean | null
           notify_new_courses?: boolean | null
           notify_weekly_progress?: boolean | null
+          onboarding_completed?: boolean | null
           privacy_marketing_emails?: boolean | null
           privacy_public_profile?: boolean | null
           privacy_usage_analytics?: boolean | null
           session_count?: number | null
+          target_mastery_date?: string | null
           total_xp?: number
           updated_at?: string
           username?: string | null
@@ -704,6 +777,98 @@ export type Database = {
           },
         ]
       }
+      topic_exam_results: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_exam_ready: boolean
+          mistake_patterns: Json | null
+          questions_correct: number
+          score_percentage: number
+          subtopic_scores: Json
+          time_spent_minutes: number
+          topic_id: string
+          total_questions: number
+          user_id: string
+          weak_subtopics: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_exam_ready?: boolean
+          mistake_patterns?: Json | null
+          questions_correct: number
+          score_percentage: number
+          subtopic_scores?: Json
+          time_spent_minutes: number
+          topic_id: string
+          total_questions: number
+          user_id: string
+          weak_subtopics?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_exam_ready?: boolean
+          mistake_patterns?: Json | null
+          questions_correct?: number
+          score_percentage?: number
+          subtopic_scores?: Json
+          time_spent_minutes?: number
+          topic_id?: string
+          total_questions?: number
+          user_id?: string
+          weak_subtopics?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_exam_results_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_prerequisites: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_strong_dependency: boolean | null
+          prerequisite_topic_id: string
+          topic_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_strong_dependency?: boolean | null
+          prerequisite_topic_id: string
+          topic_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_strong_dependency?: boolean | null
+          prerequisite_topic_id?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_prerequisites_prerequisite_topic_id_fkey"
+            columns: ["prerequisite_topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_prerequisites_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topics: {
         Row: {
           created_at: string
@@ -773,33 +938,81 @@ export type Database = {
         }
         Relationships: []
       }
+      user_learning_goals: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          target_date: string
+          topics_to_master: string[]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          target_date: string
+          topics_to_master?: string[]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          target_date?: string
+          topics_to_master?: string[]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_subtopic_progress: {
         Row: {
+          consecutive_correct: number | null
+          current_difficulty: string | null
+          easy_mastered: boolean | null
+          exam_ready: boolean | null
           exercises_completed: number
           exercises_correct: number
+          hard_mastered: boolean | null
           hints_used: number
           id: string
           mastery_percentage: number
+          medium_mastered: boolean | null
           subtopic_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          consecutive_correct?: number | null
+          current_difficulty?: string | null
+          easy_mastered?: boolean | null
+          exam_ready?: boolean | null
           exercises_completed?: number
           exercises_correct?: number
+          hard_mastered?: boolean | null
           hints_used?: number
           id?: string
           mastery_percentage?: number
+          medium_mastered?: boolean | null
           subtopic_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          consecutive_correct?: number | null
+          current_difficulty?: string | null
+          easy_mastered?: boolean | null
+          exam_ready?: boolean | null
           exercises_completed?: number
           exercises_correct?: number
+          hard_mastered?: boolean | null
           hints_used?: number
           id?: string
           mastery_percentage?: number
+          medium_mastered?: boolean | null
           subtopic_id?: string
           updated_at?: string
           user_id?: string
