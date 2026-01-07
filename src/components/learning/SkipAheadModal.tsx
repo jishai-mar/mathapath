@@ -43,12 +43,14 @@ interface SkipAheadModalProps {
   onRedirect: (topicId: string, topicName: string) => void;
 }
 
-type ModalState = "checking" | "ready" | "quiz" | "passed" | "failed";
+// STRICT state types - no bypass paths
+type ModalState = "checking" | "ready" | "quiz" | "passed" | "failed" | "error";
 
 interface QuizAnswer {
   answer: string;
   isCorrect: boolean;
   checked: boolean;
+  confidence: 'high' | 'uncertain';
 }
 
 export function SkipAheadModal({
@@ -68,6 +70,7 @@ export function SkipAheadModal({
   const [answers, setAnswers] = useState<QuizAnswer[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   useEffect(() => {
     if (isOpen && user) {
@@ -78,6 +81,7 @@ export function SkipAheadModal({
   const checkPrerequisites = async () => {
     if (!user) return;
     setState("checking");
+    setErrorMessage("");
 
     try {
       // Fetch prerequisites for the target topic
@@ -135,8 +139,8 @@ export function SkipAheadModal({
       }
     } catch (error) {
       console.error("Error checking prerequisites:", error);
-      toast.error("Failed to check prerequisites");
-      onClose();
+      setErrorMessage("Failed to check prerequisites. Please try again.");
+      setState("error");
     }
   };
 
@@ -153,18 +157,16 @@ export function SkipAheadModal({
 
       if (error) throw error;
 
-      setQuestions(data.questions || []);
+      if (!data?.questions || data.questions.length === 0) {
+        throw new Error("No questions generated");
+      }
+
+      setQuestions(data.questions);
     } catch (error) {
       console.error("Error generating questions:", error);
-      // Generate fallback questions
-      const fallbackQuestions: DiagnosticQuestion[] = weakPrereqs.slice(0, 3).map((p, i) => ({
-        id: `fallback-${i}`,
-        question: `What is a key concept from ${p.name}?`,
-        correctAnswer: "concept",
-        prerequisiteTopicId: p.id,
-        prerequisiteTopicName: p.name,
-      }));
-      setQuestions(fallbackQuestions);
+      // STRICT: On generation failure, block skip and show error
+      setErrorMessage("Could not generate prerequisite quiz. Please review prerequisites first.");
+      setState("error");
     } finally {
       setIsLoading(false);
     }
@@ -177,7 +179,7 @@ export function SkipAheadModal({
     setIsChecking(true);
     
     try {
-      // Use AI-based answer validation for accurate checking
+      // Use server-side answer checking - MUST return confidence level
       const { data, error } = await supabase.functions.invoke('check-exercise-answer', {
         body: {
           exerciseId: `prereq-${currentQuestionIndex}`,
@@ -189,21 +191,32 @@ export function SkipAheadModal({
         },
       });
 
-      let isCorrect = false;
-      
-      if (!error && data) {
-        isCorrect = data.isCorrect ?? false;
-      } else {
-        // Fallback: simple comparison if AI check fails
-        const correctNormalized = currentQuestion.correctAnswer.toLowerCase().replace(/\s+/g, '');
-        const userNormalized = userAnswer.toLowerCase().replace(/\s+/g, '');
-        isCorrect = correctNormalized === userNormalized;
+      // STRICT: On any error, DO NOT allow progression
+      if (error || !data) {
+        console.error('Answer check failed:', error);
+        setErrorMessage("Unable to verify your answer. Please try again.");
+        setIsChecking(false);
+        return; // Stay on current question, don't record answer
       }
+
+      // Get confidence from server response
+      const confidence = data.confidence || 'high';
+      
+      // STRICT: If confidence is uncertain, block and ask to retry
+      if (confidence === 'uncertain') {
+        toast.error("Could not verify answer with confidence. Please rephrase your answer.");
+        setIsChecking(false);
+        return;
+      }
+
+      // Only proceed if we have HIGH confidence result
+      const isCorrect = data.isCorrect === true && confidence === 'high';
 
       const newAnswer: QuizAnswer = { 
         answer: userAnswer, 
         isCorrect, 
-        checked: true 
+        checked: true,
+        confidence,
       };
       
       const updatedAnswers = [...answers, newAnswer];
@@ -216,11 +229,12 @@ export function SkipAheadModal({
           setUserAnswer("");
         }, isCorrect ? 500 : 1200);
       } else {
-        // Calculate final results
+        // Calculate final results - STRICT threshold
         setTimeout(() => {
-          const correctCount = updatedAnswers.filter(a => a.isCorrect).length;
+          const correctCount = updatedAnswers.filter(a => a.isCorrect && a.confidence === 'high').length;
           const percentage = Math.round((correctCount / questions.length) * 100);
 
+          // STRICT: Must get 70%+ with HIGH confidence answers to pass
           if (percentage >= 70) {
             setState("passed");
           } else {
@@ -230,18 +244,20 @@ export function SkipAheadModal({
       }
     } catch (err) {
       console.error('Error checking answer:', err);
-      // On error, be lenient and allow progression
-      setAnswers(prev => [...prev, { answer: userAnswer, isCorrect: true, checked: true }]);
-      if (currentQuestionIndex < questions.length - 1) {
-        setCurrentQuestionIndex(prev => prev + 1);
-        setUserAnswer("");
-      }
+      // STRICT: On ANY error, DO NOT auto-pass. Block and show error.
+      setErrorMessage("Verification failed. Please try again.");
+      // Stay on current question - do not advance
     } finally {
       setIsChecking(false);
     }
   };
 
   const startQuiz = () => {
+    if (questions.length === 0) {
+      setErrorMessage("No quiz questions available. Please review prerequisites.");
+      setState("error");
+      return;
+    }
     setCurrentQuestionIndex(0);
     setUserAnswer("");
     setAnswers([]);
@@ -257,6 +273,14 @@ export function SkipAheadModal({
       onRedirect(weakestPrereq.id, weakestPrereq.name);
     }
     onClose();
+  };
+
+  const handleRetry = () => {
+    setErrorMessage("");
+    setAnswers([]);
+    setCurrentQuestionIndex(0);
+    setUserAnswer("");
+    checkPrerequisites();
   };
 
   const currentQuestion = questions[currentQuestionIndex];
@@ -276,6 +300,34 @@ export function SkipAheadModal({
             >
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
               <p className="text-muted-foreground">Checking prerequisites...</p>
+            </motion.div>
+          )}
+
+          {state === "error" && (
+            <motion.div
+              key="error"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="py-6 text-center"
+            >
+              <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
+                <AlertTriangle className="h-8 w-8 text-red-500" />
+              </div>
+              <DialogTitle className="mb-2">Verification Failed</DialogTitle>
+              <DialogDescription className="mb-6">
+                {errorMessage || "Unable to verify prerequisites. Please review them first."}
+              </DialogDescription>
+
+              <div className="space-y-3">
+                <Button variant="outline" className="w-full" onClick={handleRetry}>
+                  Try Again
+                </Button>
+                <Button className="w-full" onClick={handleRedirectToPrerequisite}>
+                  Review Prerequisites
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
             </motion.div>
           )}
 
@@ -318,7 +370,7 @@ export function SkipAheadModal({
                 <Button variant="outline" className="flex-1" onClick={handleRedirectToPrerequisite}>
                   Review Prerequisites First
                 </Button>
-                <Button className="flex-1" onClick={startQuiz} disabled={isLoading}>
+                <Button className="flex-1" onClick={startQuiz} disabled={isLoading || questions.length === 0}>
                   {isLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -365,15 +417,28 @@ export function SkipAheadModal({
                   value={userAnswer}
                   onChange={(e) => setUserAnswer(e.target.value)}
                   placeholder="Type your answer..."
-                  onKeyDown={(e) => e.key === "Enter" && userAnswer.trim() && handleSubmitAnswer()}
+                  onKeyDown={(e) => e.key === "Enter" && userAnswer.trim() && !isChecking && handleSubmitAnswer()}
                   autoFocus
+                  disabled={isChecking}
                 />
+                {isChecking && (
+                  <p className="text-xs text-muted-foreground mt-2">Verifying answer...</p>
+                )}
               </div>
 
               <div className="mt-4 flex justify-end">
-                <Button onClick={handleSubmitAnswer} disabled={!userAnswer.trim()}>
-                  {currentQuestionIndex === questions.length - 1 ? "Submit" : "Next"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                <Button 
+                  onClick={handleSubmitAnswer} 
+                  disabled={!userAnswer.trim() || isChecking}
+                >
+                  {isChecking ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      {currentQuestionIndex === questions.length - 1 ? "Submit" : "Next"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </motion.div>
@@ -444,7 +509,7 @@ export function SkipAheadModal({
                 })}
               </div>
 
-              {/* Removed "Skip Anyway" button - must review prerequisites */}
+              {/* STRICT: NO "Skip Anyway" button - must review prerequisites */}
               <Button className="w-full" onClick={handleRedirectToPrerequisite}>
                 Review Prerequisites
                 <ArrowRight className="ml-2 h-4 w-4" />

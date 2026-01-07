@@ -13,6 +13,7 @@ import { validateExercise } from '@/lib/exerciseValidator';
 import { SolutionWalkthrough } from '@/components/exercise/SolutionWalkthrough';
 import { TalkToTutorButton } from '@/components/tutor/TalkToTutorButton';
 import ToolPanel from '@/components/tools/ToolPanel';
+import { checkMastery, getCalibratedFeedback, RECENCY_RESET_COUNT, MASTERY_THRESHOLDS } from '@/lib/masteryThresholds';
 import { 
   Send, 
   Volume2, 
@@ -273,7 +274,7 @@ export function GuidedTutoringSession({
     }
   };
 
-  // Update difficulty based on performance streaks
+  // Update difficulty based on performance - USES masteryThresholds.ts as SINGLE SOURCE OF TRUTH
   const updateDifficultyAfterAnswer = useCallback((isCorrect: boolean) => {
     // Record exercise timing
     const timeSpent = Math.round((Date.now() - exerciseStartTime) / 1000);
@@ -285,18 +286,29 @@ export function GuidedTutoringSession({
     }]);
     
     setPerformanceData(prev => {
+      // Apply recency reset: if last N answers were wrong, reset streak
+      let newCorrectStreak = isCorrect ? prev.correctStreak + 1 : 0;
+      
+      // Check recent wrong answers for recency reset
+      if (!isCorrect && prev.incorrectStreak >= RECENCY_RESET_COUNT - 1) {
+        newCorrectStreak = 0; // Full reset on consecutive wrong
+      }
+      
       const newPerf = {
         ...prev,
-        correctStreak: isCorrect ? prev.correctStreak + 1 : 0,
+        correctStreak: newCorrectStreak,
         incorrectStreak: isCorrect ? 0 : prev.incorrectStreak + 1,
         accuracy: stats.total > 0 ? (stats.correct + (isCorrect ? 1 : 0)) / (stats.total + 1) : isCorrect ? 1 : 0,
         exercisesAtCurrentDifficulty: prev.exercisesAtCurrentDifficulty + 1,
       };
       
-      const prevDifficulty = currentDifficulty;
+      // Use UNIFIED mastery check from masteryThresholds.ts
+      const totalAttempts = newPerf.exercisesAtCurrentDifficulty;
+      const correctAttempts = Math.round(newPerf.accuracy * totalAttempts);
+      const masteryResult = checkMastery(currentDifficulty, newPerf.correctStreak, totalAttempts, correctAttempts);
       
-      // Upgrade difficulty after 2 correct in a row (or 3 at current level)
-      if (newPerf.correctStreak >= 2 || (newPerf.exercisesAtCurrentDifficulty >= 3 && newPerf.accuracy >= 0.7)) {
+      // Upgrade if mastered (uses thresholds from masteryThresholds.ts)
+      if (masteryResult.isMastered) {
         if (currentDifficulty === 'easy') {
           setCurrentDifficulty('medium');
           setDifficultyProgressions(p => [...p, {
@@ -304,7 +316,7 @@ export function GuidedTutoringSession({
             toDifficulty: 'medium',
             afterExercise: stats.total + 1,
           }]);
-          return { ...newPerf, exercisesAtCurrentDifficulty: 0 };
+          return { ...newPerf, exercisesAtCurrentDifficulty: 0, correctStreak: 0 };
         } else if (currentDifficulty === 'medium') {
           setCurrentDifficulty('hard');
           setDifficultyProgressions(p => [...p, {
@@ -312,12 +324,12 @@ export function GuidedTutoringSession({
             toDifficulty: 'hard',
             afterExercise: stats.total + 1,
           }]);
-          return { ...newPerf, exercisesAtCurrentDifficulty: 0 };
+          return { ...newPerf, exercisesAtCurrentDifficulty: 0, correctStreak: 0 };
         }
       }
       
-      // Downgrade difficulty after 2 incorrect in a row
-      if (newPerf.incorrectStreak >= 2) {
+      // Downgrade on consecutive wrong (use RECENCY_RESET_COUNT)
+      if (newPerf.incorrectStreak >= RECENCY_RESET_COUNT) {
         if (currentDifficulty === 'hard') {
           setCurrentDifficulty('medium');
           setDifficultyProgressions(p => [...p, {

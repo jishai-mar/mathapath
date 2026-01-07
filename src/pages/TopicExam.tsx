@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Clock, CheckCircle2, Target, AlertTriangle, Sparkles, BookOpen } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, CheckCircle2, Target, AlertTriangle, Sparkles, BookOpen, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import MathRenderer from "@/components/MathRenderer";
 import { motion, AnimatePresence } from "framer-motion";
@@ -48,7 +48,20 @@ interface UserAnswer {
   answer: string;
 }
 
-type ExamPhase = "intro" | "exam" | "results";
+interface PartResult {
+  questionId: string;
+  partLabel: string;
+  subtopicName: string;
+  userAnswer: string;
+  correctAnswer: string;
+  maxPoints: number;
+  earnedPoints: number;
+  isCorrect: boolean;
+  confidence: 'high' | 'uncertain';
+  needsReview: boolean;
+}
+
+type ExamPhase = "intro" | "exam" | "grading" | "results";
 
 export default function TopicExam() {
   const { topicId } = useParams();
@@ -64,6 +77,7 @@ export default function TopicExam() {
   const [timeRemaining, setTimeRemaining] = useState(0);
   const [examStartTime, setExamStartTime] = useState<Date | null>(null);
   const [results, setResults] = useState<any>(null);
+  const [partResults, setPartResults] = useState<PartResult[]>([]);
 
   useEffect(() => {
     if (topicId) {
@@ -138,86 +152,104 @@ export default function TopicExam() {
   const handleSubmitExam = async () => {
     if (!examData || !user || !examStartTime) return;
 
+    // Switch to grading phase - show loading
+    setPhase("grading");
+
     const endTime = new Date();
     const timeSpentMinutes = Math.round(
       (endTime.getTime() - examStartTime.getTime()) / 60000
     );
 
-    // Calculate scores
-    let totalEarned = 0;
-    const subtopicScores: Record<string, { earned: number; possible: number }> = {};
-    const weakSubtopics: string[] = [];
-
-    examData.questions.forEach(question => {
-      const subtopic = question.subtopicName;
-      if (!subtopicScores[subtopic]) {
-        subtopicScores[subtopic] = { earned: 0, possible: 0 };
-      }
-
-      question.parts.forEach(part => {
-        const userAnswer = getCurrentAnswer(question.id, part.partLabel);
-        subtopicScores[subtopic].possible += part.points;
-
-        // Simple scoring - in production, use AI for flexible grading
-        const hasAnswer = userAnswer.trim().length > 0;
-        const partScore = hasAnswer ? Math.round(part.points * 0.7) : 0;
-        totalEarned += partScore;
-        subtopicScores[subtopic].earned += partScore;
-      });
-    });
-
-    // Determine weak subtopics (below 60%)
-    Object.entries(subtopicScores).forEach(([subtopic, scores]) => {
-      if (scores.possible > 0 && (scores.earned / scores.possible) < 0.6) {
-        weakSubtopics.push(subtopic);
-      }
-    });
-
-    const scorePercentage = Math.round((totalEarned / examData.totalPoints) * 100);
-    const isExamReady = scorePercentage >= 70;
-
-    // Save results
     try {
-      await supabase.from("topic_exam_results").insert({
-        user_id: user.id,
-        topic_id: examData.topicId,
-        score_percentage: scorePercentage,
-        questions_correct: Math.round((scorePercentage / 100) * examData.questions.length),
-        total_questions: examData.questions.length,
-        time_spent_minutes: timeSpentMinutes,
-        is_exam_ready: isExamReady,
-        subtopic_scores: subtopicScores,
-        weak_subtopics: weakSubtopics,
-      });
-
-      // Update learning path if weak areas detected
-      if (weakSubtopics.length > 0) {
-        await supabase.functions.invoke("update-learning-path", {
+      // Call server-side DETERMINISTIC grading
+      const { data: gradingResult, error: gradingError } = await supabase.functions.invoke(
+        "grade-exam-answer",
+        {
           body: {
+            questions: examData.questions,
+            userAnswers,
             userId: user.id,
-            performanceData: {
-              topicId: examData.topicId,
-              score: scorePercentage,
-              weakSubtopics,
-            },
-            source: "topic_exam",
+            topicId: examData.topicId,
           },
-        });
-      }
-    } catch (error) {
-      console.error("Error saving results:", error);
-    }
+        }
+      );
 
-    setResults({
-      scorePercentage,
-      totalEarned,
-      totalPossible: examData.totalPoints,
-      isExamReady,
-      timeSpentMinutes,
-      subtopicScores,
-      weakSubtopics,
-    });
-    setPhase("results");
+      if (gradingError) {
+        console.error("Grading error:", gradingError);
+        toast.error("Failed to grade exam. Please try again.");
+        setPhase("exam");
+        return;
+      }
+
+      // Check if grading was blocked due to uncertain answers
+      if (!gradingResult.canSubmit) {
+        toast.error(gradingResult.message || "Some answers could not be verified. Please retry.");
+        setPhase("exam");
+        return;
+      }
+
+      const {
+        scorePercentage,
+        totalEarned,
+        totalPossible,
+        isExamReady,
+        partResults: serverPartResults,
+        subtopicScores,
+        weakSubtopics,
+      } = gradingResult;
+
+      // Store part results for display
+      setPartResults(serverPartResults || []);
+
+      // Save results to database
+      try {
+        await supabase.from("topic_exam_results").insert({
+          user_id: user.id,
+          topic_id: examData.topicId,
+          score_percentage: scorePercentage,
+          questions_correct: Math.round((scorePercentage / 100) * examData.questions.length),
+          total_questions: examData.questions.length,
+          time_spent_minutes: timeSpentMinutes,
+          is_exam_ready: isExamReady,
+          subtopic_scores: subtopicScores,
+          weak_subtopics: weakSubtopics,
+        });
+
+        // Update learning path if weak areas detected
+        if (weakSubtopics && weakSubtopics.length > 0) {
+          await supabase.functions.invoke("update-learning-path", {
+            body: {
+              userId: user.id,
+              performanceData: {
+                topicId: examData.topicId,
+                score: scorePercentage,
+                weakSubtopics,
+              },
+              source: "topic_exam",
+            },
+          });
+        }
+      } catch (saveError) {
+        console.error("Error saving results:", saveError);
+        // Continue to show results even if save fails
+      }
+
+      setResults({
+        scorePercentage,
+        totalEarned,
+        totalPossible,
+        isExamReady,
+        timeSpentMinutes,
+        subtopicScores,
+        weakSubtopics,
+      });
+      setPhase("results");
+
+    } catch (error) {
+      console.error("Error submitting exam:", error);
+      toast.error("Failed to submit exam. Please try again.");
+      setPhase("exam");
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -438,6 +470,27 @@ export default function TopicExam() {
           </motion.div>
         )}
 
+        {/* Grading Phase - Loading State */}
+        {phase === "grading" && (
+          <motion.div
+            key="grading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="min-h-screen flex items-center justify-center"
+          >
+            <Card className="max-w-md">
+              <CardContent className="pt-6 text-center">
+                <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                <h2 className="text-xl font-semibold mb-2">Grading Your Exam</h2>
+                <p className="text-muted-foreground">
+                  Verifying your answers with our deterministic grading system...
+                </p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
         {/* Results Phase */}
         {phase === "results" && results && (
           <motion.div
@@ -480,7 +533,36 @@ export default function TopicExam() {
                   </div>
                 </div>
 
-                {results.weakSubtopics.length > 0 && (
+                {/* Per-Part Breakdown */}
+                {partResults.length > 0 && (
+                  <div className="p-4 rounded-lg bg-muted/30 space-y-2">
+                    <div className="font-medium mb-3">Answer Breakdown</div>
+                    {partResults.slice(0, 6).map((part, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          Q{part.questionId?.slice(-2) || idx+1} Part {part.partLabel}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={part.isCorrect ? "text-green-600" : "text-red-500"}>
+                            {part.earnedPoints}/{part.maxPoints}
+                          </span>
+                          {part.isCorrect ? (
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertTriangle className="h-4 w-4 text-red-500" />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    {partResults.length > 6 && (
+                      <div className="text-xs text-muted-foreground text-center mt-2">
+                        + {partResults.length - 6} more parts
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {results.weakSubtopics && results.weakSubtopics.length > 0 && (
                   <div className="p-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                     <div className="font-medium text-yellow-600 mb-2">Areas to Review</div>
                     <div className="space-y-1">
@@ -508,6 +590,7 @@ export default function TopicExam() {
                   </Button>
                   <Button className="flex-1" onClick={() => {
                     setPhase("intro");
+                    setPartResults([]);
                     generateExam();
                   }}>
                     Try Again
