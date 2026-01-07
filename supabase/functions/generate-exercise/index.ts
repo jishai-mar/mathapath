@@ -541,19 +541,38 @@ Generate the exercise now:`;
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI gateway error:', response.status, errorText);
-      
-      // Return a booklet-style fallback
+
+      // Persist a fallback exercise so the client still receives a valid exercise id.
       const fallbackExercise = {
         question: "Solve for x: 3x + 7 = 22",
         correct_answer: "5",
         explanation: "Subtract 7 from both sides: 3x = 15. Divide by 3: x = 5.",
         hints: ["What operation undoes +7?", "After isolating 3x, divide both sides by 3"],
-        difficulty,
-        fallback: true,
       };
-      
+
+      const { data: fallbackRow, error: insertError } = await supabase
+        .from('exercises')
+        .insert({
+          subtopic_id: subtopicId,
+          question: fallbackExercise.question,
+          correct_answer: fallbackExercise.correct_answer,
+          explanation: fallbackExercise.explanation,
+          hints: fallbackExercise.hints,
+          difficulty,
+        })
+        .select()
+        .single();
+
+      if (insertError || !fallbackRow) {
+        console.error('Failed to insert fallback exercise:', insertError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to save generated exercise' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       return new Response(
-        JSON.stringify(fallbackExercise),
+        JSON.stringify({ ...fallbackRow, fallback: true }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
