@@ -173,8 +173,12 @@ export function SkipAheadModal({
   };
 
   const handleSubmitAnswer = async () => {
+    if (!user?.id) {
+      toast.error("Please log in to continue.");
+      return;
+    }
     if (!userAnswer.trim() || isChecking) return;
-    
+
     const currentQuestion = questions[currentQuestionIndex];
     setIsChecking(true);
     
@@ -184,7 +188,7 @@ export function SkipAheadModal({
         body: {
           exerciseId: `prereq-${currentQuestionIndex}`,
           userAnswer: userAnswer.trim(),
-          userId: user?.id,
+          userId: user.id,
           subtopicName: currentQuestion.prerequisiteTopicName,
           correctAnswer: currentQuestion.correctAnswer,
           hintsUsed: 0,
