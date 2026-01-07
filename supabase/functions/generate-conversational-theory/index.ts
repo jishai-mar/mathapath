@@ -148,7 +148,7 @@ IMPORTANT: Keep each step concise (max 3 sentences). The lesson should feel like
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4.1-mini-2025-04-14",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Create a conversational lesson for: ${subtopicName}` }
