@@ -220,8 +220,55 @@ export type Database = {
           },
         ]
       }
+      exercise_theory_links: {
+        Row: {
+          created_at: string | null
+          exercise_id: string | null
+          id: string
+          relevance: string
+          theory_block_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          relevance?: string
+          theory_block_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          exercise_id?: string | null
+          id?: string
+          relevance?: string
+          theory_block_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_theory_links_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_theory_links_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercises_public"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercise_theory_links_theory_block_id_fkey"
+            columns: ["theory_block_id"]
+            isOneToOne: false
+            referencedRelation: "theory_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
+          concepts_tested: string[] | null
           correct_answer: string
           created_at: string
           difficulty: Database["public"]["Enums"]["difficulty_level"]
@@ -229,9 +276,11 @@ export type Database = {
           hints: string[] | null
           id: string
           question: string
+          requires_visual: boolean | null
           subtopic_id: string
         }
         Insert: {
+          concepts_tested?: string[] | null
           correct_answer: string
           created_at?: string
           difficulty?: Database["public"]["Enums"]["difficulty_level"]
@@ -239,9 +288,11 @@ export type Database = {
           hints?: string[] | null
           id?: string
           question: string
+          requires_visual?: boolean | null
           subtopic_id: string
         }
         Update: {
+          concepts_tested?: string[] | null
           correct_answer?: string
           created_at?: string
           difficulty?: Database["public"]["Enums"]["difficulty_level"]
@@ -249,6 +300,7 @@ export type Database = {
           hints?: string[] | null
           id?: string
           question?: string
+          requires_visual?: boolean | null
           subtopic_id?: string
         }
         Relationships: [
@@ -729,6 +781,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "subtopics_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      theory_blocks: {
+        Row: {
+          block_number: string | null
+          block_type: string
+          content: Json
+          created_at: string | null
+          id: string
+          latex_content: string | null
+          order_index: number
+          prerequisites: string[] | null
+          title: string
+          topic_id: string | null
+        }
+        Insert: {
+          block_number?: string | null
+          block_type: string
+          content: Json
+          created_at?: string | null
+          id?: string
+          latex_content?: string | null
+          order_index: number
+          prerequisites?: string[] | null
+          title: string
+          topic_id?: string | null
+        }
+        Update: {
+          block_number?: string | null
+          block_type?: string
+          content?: Json
+          created_at?: string | null
+          id?: string
+          latex_content?: string | null
+          order_index?: number
+          prerequisites?: string[] | null
+          title?: string
+          topic_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theory_blocks_topic_id_fkey"
             columns: ["topic_id"]
             isOneToOne: false
             referencedRelation: "topics"
