@@ -33,6 +33,8 @@ import ScanWork from "./pages/ScanWork";
 import NotFound from "./pages/NotFound";
 import SetLearningGoal from "./pages/SetLearningGoal";
 import TopicExam from "./pages/TopicExam";
+import LearningPathScreen from "./pages/LearningPathScreen";
+import LessonScreen from "./pages/LessonScreen";
 
 const queryClient = new QueryClient();
 
@@ -84,6 +86,8 @@ function AppRoutes() {
       <Route path="/scan-work" element={<ScanWork />} />
       <Route path="/set-goal" element={<SetLearningGoal />} />
       <Route path="/topic-exam/:topicId" element={<TopicExam />} />
+      <Route path="/learning-path/:topicId" element={<LearningPathScreen />} />
+      <Route path="/lesson/:topicId/:lessonId" element={<LessonScreen />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
