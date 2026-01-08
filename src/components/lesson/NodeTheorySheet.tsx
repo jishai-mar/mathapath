@@ -5,8 +5,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
-import { BookOpen, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { BookOpen, Lightbulb, CheckCircle2, Calculator } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+interface WorkedExample {
+  title?: string;
+  problem: string;
+  solution: string;
+}
+
+interface TheoryData {
+  explanation: string | null;
+  workedExamples: WorkedExample[];
+}
 
 interface NodeTheorySheetProps {
   isOpen: boolean;
@@ -26,8 +37,7 @@ export function NodeTheorySheet({
   topicName 
 }: NodeTheorySheetProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [theoryContent, setTheoryContent] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [theoryData, setTheoryData] = useState<TheoryData | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -39,122 +49,235 @@ export function NodeTheorySheet({
     setIsLoading(true);
 
     try {
-      // First check if there's stored theory in the subtopics table
-      const { data: subtopicData } = await supabase
+      // Fetch static theory content from the database
+      const { data: subtopicData, error } = await supabase
         .from('subtopics')
-        .select('theory_explanation')
+        .select('theory_explanation, worked_examples')
         .eq('id', lessonId)
         .single();
 
-      if (subtopicData?.theory_explanation) {
-        setTheoryContent(subtopicData.theory_explanation);
-        setIsLoading(false);
+      if (error) {
+        console.error('Error fetching theory:', error);
+        setTheoryData(null);
         return;
       }
 
-      // Otherwise, generate theory content for this specific node
-      setIsGenerating(true);
-      const { data, error: fnError } = await supabase.functions.invoke('generate-theory-content', {
-        body: { 
-          subtopicName: lessonName, 
-          subtopicId: lessonId,
-          lessonIndex,
-          topicName,
-          nodeSpecific: true // Flag to generate node-specific content
-        },
-      });
-
-      if (fnError) throw fnError;
-
-      if (data?.content) {
-        setTheoryContent(data.content);
-      } else {
-        // Generate fallback content
-        setTheoryContent(generateFallbackTheory(lessonName, lessonIndex));
+      // Parse worked examples (stored as JSON)
+      let workedExamples: WorkedExample[] = [];
+      if (subtopicData?.worked_examples) {
+        try {
+          const parsed = subtopicData.worked_examples;
+          if (Array.isArray(parsed)) {
+            workedExamples = parsed.map((item: unknown) => {
+              const example = item as { title?: string; problem?: string; solution?: string };
+              return {
+                title: example.title,
+                problem: example.problem || '',
+                solution: example.solution || '',
+              };
+            }).filter(ex => ex.problem && ex.solution);
+          }
+        } catch (e) {
+          console.error('Error parsing worked examples:', e);
+        }
       }
+
+      setTheoryData({
+        explanation: subtopicData?.theory_explanation || null,
+        workedExamples,
+      });
     } catch (err) {
       console.error('Error fetching theory:', err);
-      // Always provide content, never show error state
-      setTheoryContent(generateFallbackTheory(lessonName, lessonIndex));
+      setTheoryData(null);
     } finally {
       setIsLoading(false);
-      setIsGenerating(false);
     }
   };
+
+  const hasContent = theoryData?.explanation || (theoryData?.workedExamples && theoryData.workedExamples.length > 0);
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="left" className="w-full sm:max-w-xl">
         <SheetHeader className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-lg bg-primary/10">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-primary/10">
               <BookOpen className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <SheetTitle className="text-lg">{lessonName}</SheetTitle>
-              <p className="text-sm text-muted-foreground">Lesson {lessonIndex + 1} Theory</p>
+              <SheetTitle className="text-lg font-semibold">{lessonName}</SheetTitle>
+              <p className="text-sm text-muted-foreground">
+                {topicName && `${topicName} · `}Lesson {lessonIndex + 1}
+              </p>
             </div>
           </div>
         </SheetHeader>
 
         <ScrollArea className="h-[calc(100vh-8rem)] mt-6 pr-4">
           {isLoading ? (
-            <div className="space-y-4">
-              {isGenerating && (
-                <Alert className="mb-4 bg-primary/5 border-primary/20">
-                  <AlertCircle className="h-4 w-4 text-primary" />
-                  <AlertDescription className="text-sm">
-                    Generating personalized theory content for this lesson...
-                  </AlertDescription>
-                </Alert>
+            <TheoryLoadingSkeleton />
+          ) : hasContent ? (
+            <div className="space-y-6">
+              {/* Main Explanation */}
+              {theoryData?.explanation && (
+                <TheorySection
+                  icon={<Lightbulb className="w-4 h-4" />}
+                  title="Concept Explanation"
+                  accentColor="primary"
+                >
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <MathRenderer segments={createSegmentsFromSolution(theoryData.explanation)} />
+                  </div>
+                </TheorySection>
               )}
-              <Skeleton className="h-8 w-3/4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-5/6" />
-              <Skeleton className="h-24 w-full mt-4" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-4/5" />
+
+              {/* Worked Examples */}
+              {theoryData?.workedExamples && theoryData.workedExamples.length > 0 && (
+                <TheorySection
+                  icon={<Calculator className="w-4 h-4" />}
+                  title="Worked Examples"
+                  accentColor="emerald"
+                >
+                  <div className="space-y-4">
+                    {theoryData.workedExamples.map((example, index) => (
+                      <WorkedExampleCard 
+                        key={index} 
+                        example={example} 
+                        number={index + 1}
+                      />
+                    ))}
+                  </div>
+                </TheorySection>
+              )}
+
+              {/* Ready to Practice Note */}
+              <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
+                <div className="flex items-start gap-3">
+                  <CheckCircle2 className="w-5 h-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-sm">Ready to Practice</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Review the concepts above, then try the exercises. Start with Easy 
+                      difficulty to build confidence before moving to harder problems.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : theoryContent ? (
-            <div className="prose prose-sm dark:prose-invert max-w-none space-y-4">
-              <MathRenderer segments={createSegmentsFromSolution(theoryContent)} />
-            </div>
-          ) : null}
+          ) : (
+            <NoContentMessage lessonName={lessonName} />
+          )}
         </ScrollArea>
       </SheetContent>
     </Sheet>
   );
 }
 
-function generateFallbackTheory(lessonName: string, lessonIndex: number): string {
-  return `# ${lessonName}
+// Section component for consistent styling
+interface TheorySectionProps {
+  icon: React.ReactNode;
+  title: string;
+  accentColor: 'primary' | 'emerald' | 'amber' | 'blue';
+  children: React.ReactNode;
+}
 
-## What You'll Learn
+function TheorySection({ icon, title, accentColor, children }: TheorySectionProps) {
+  const colorStyles = {
+    primary: 'bg-primary/10 text-primary border-primary/20',
+    emerald: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    blue: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  };
 
-This lesson covers the essential concepts of **${lessonName}**. By the end of this lesson, you'll be able to:
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <div className={cn("p-1.5 rounded-lg", colorStyles[accentColor])}>
+          {icon}
+        </div>
+        <h3 className="font-semibold text-sm">{title}</h3>
+      </div>
+      <div className="pl-1">{children}</div>
+    </div>
+  );
+}
 
-- Understand the core principles
-- Apply the concepts to solve problems
-- Recognize patterns and common approaches
+// Worked example card
+interface WorkedExampleCardProps {
+  example: WorkedExample;
+  number: number;
+}
 
-## Key Concepts
+function WorkedExampleCard({ example, number }: WorkedExampleCardProps) {
+  return (
+    <div className="rounded-xl border border-border/60 overflow-hidden">
+      {/* Problem */}
+      <div className="p-4 bg-muted/30">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+            Example {number}
+          </span>
+          {example.title && (
+            <span className="text-xs text-muted-foreground">{example.title}</span>
+          )}
+        </div>
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <MathRenderer segments={createSegmentsFromSolution(example.problem)} />
+        </div>
+      </div>
+      
+      {/* Solution */}
+      <div className="p-4 border-t border-border/40">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            Solution
+          </span>
+        </div>
+        <div className="prose prose-sm dark:prose-invert max-w-none">
+          <MathRenderer segments={createSegmentsFromSolution(example.solution)} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-${lessonName} is a fundamental building block in mathematics. Let's break it down step by step.
+// Loading skeleton
+function TheoryLoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-5 w-40" />
+        </div>
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-5/6" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-5 w-36" />
+        </div>
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+    </div>
+  );
+}
 
-### Getting Started
-
-Before diving in, make sure you're comfortable with the concepts from earlier lessons in this topic. Each lesson builds on what you've learned before.
-
-### Core Idea
-
-The main idea behind ${lessonName} involves understanding relationships and applying logical reasoning to find solutions.
-
-## Practice Tips
-
-1. **Start with simple examples** - Don't rush to complex problems
-2. **Work through each step** - Understanding the process is key
-3. **Check your answers** - Verification builds confidence
-
-Ready to practice? Try the Easy exercises first to build your foundation.`;
+// No content message
+function NoContentMessage({ lessonName }: { lessonName: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="p-4 rounded-full bg-muted/50 mb-4">
+        <BookOpen className="w-8 h-8 text-muted-foreground" />
+      </div>
+      <h3 className="font-semibold text-lg mb-2">Theory Content Coming Soon</h3>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        The theory content for "{lessonName}" is being prepared. 
+        In the meantime, try the exercises or ask the AI tutor for help.
+      </p>
+    </div>
+  );
 }
