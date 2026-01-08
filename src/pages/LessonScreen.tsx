@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BookOpen, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-react';
-import AnimatedMathVideo from '@/components/AnimatedMathVideo';
+import { ArrowLeft, BookOpen, MessageCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { NodeTheorySheet, NodeTutorChat } from '@/components/lesson';
 import { cn } from '@/lib/utils';
 
 interface SubtopicData {
@@ -32,93 +32,6 @@ interface ProgressData {
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
-// Generate AI explanation steps based on lesson content
-function generateLessonExplanation(lessonName: string, theoryContent: string | null): any[] {
-  const steps: any[] = [];
-  
-  // Welcome step
-  steps.push({
-    type: 'title',
-    content: lessonName,
-    duration: 3500,
-    voiceover: `Welcome! Today we'll learn about ${lessonName}.`
-  });
-
-  // Introduction
-  steps.push({
-    type: 'text',
-    content: `Let's build a solid understanding of ${lessonName} step by step. Take your time with each concept.`,
-    duration: 4500,
-    voiceover: `We'll build understanding step by step.`
-  });
-
-  // If we have theory content, parse it into steps
-  if (theoryContent) {
-    const paragraphs = theoryContent.split('\n\n').filter(p => p.trim());
-    
-    paragraphs.slice(0, 5).forEach((paragraph, i) => {
-      const cleanParagraph = paragraph.replace(/\*\*/g, '').trim();
-      
-      if (cleanParagraph.includes('=') || cleanParagraph.includes('\\frac')) {
-        steps.push({
-          type: 'equation',
-          content: cleanParagraph,
-          duration: 5500,
-          highlight: 'true',
-          voiceover: `Here's an important formula.`
-        });
-      } else if (cleanParagraph.toLowerCase().includes('key') || 
-                 cleanParagraph.toLowerCase().includes('important') ||
-                 cleanParagraph.toLowerCase().includes('remember')) {
-        steps.push({
-          type: 'highlight',
-          content: cleanParagraph,
-          duration: 6000,
-          voiceover: `This is important: ${cleanParagraph.substring(0, 100)}...`
-        });
-      } else {
-        steps.push({
-          type: 'text',
-          content: cleanParagraph,
-          duration: 4500,
-          voiceover: cleanParagraph.substring(0, 150)
-        });
-      }
-    });
-  } else {
-    // Generate generic helpful content for the lesson
-    steps.push({
-      type: 'text',
-      content: `Understanding ${lessonName} is an important skill. Let's explore the key concepts together.`,
-      duration: 4500,
-      voiceover: `Understanding this concept is important.`
-    });
-
-    steps.push({
-      type: 'highlight',
-      content: `The goal is to understand the underlying principles, not just memorize formulas. Practice will help solidify your knowledge.`,
-      duration: 5500,
-      voiceover: `Focus on understanding, not just memorization.`
-    });
-  }
-
-  // Summary step
-  steps.push({
-    type: 'transition',
-    content: '',
-    duration: 2000
-  });
-
-  steps.push({
-    type: 'text',
-    content: `Great job! Now try the practice exercises to test your understanding. Start with Easy to build confidence.`,
-    duration: 4500,
-    voiceover: `Now practice what you've learned!`
-  });
-
-  return steps;
-}
-
 export default function LessonScreen() {
   const { topicId, lessonId } = useParams<{ topicId: string; lessonId: string }>();
   const navigate = useNavigate();
@@ -128,7 +41,8 @@ export default function LessonScreen() {
   const [lesson, setLesson] = useState<SubtopicData | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showAIExplanation, setShowAIExplanation] = useState(false);
+  const [showTheorySheet, setShowTheorySheet] = useState(false);
+  const [showTutorChat, setShowTutorChat] = useState(false);
   const [lessonIndex, setLessonIndex] = useState<number>(0);
   const [totalLessons, setTotalLessons] = useState<number>(1);
 
@@ -141,7 +55,6 @@ export default function LessonScreen() {
   const loadLessonData = async () => {
     setIsLoading(true);
     try {
-      // Fetch topic
       const { data: topicData } = await supabase
         .from('topics')
         .select('id, name')
@@ -150,7 +63,6 @@ export default function LessonScreen() {
       
       if (topicData) setTopic(topicData);
 
-      // Fetch subtopic (lesson)
       const { data: subtopicData } = await supabase
         .from('subtopics')
         .select('id, name, theory_explanation, worked_examples, topic_id')
@@ -166,7 +78,6 @@ export default function LessonScreen() {
         });
       }
 
-      // Get lesson position in topic
       const { data: allLessons } = await supabase
         .from('subtopics')
         .select('id')
@@ -179,7 +90,6 @@ export default function LessonScreen() {
         setLessonIndex(idx >= 0 ? idx : 0);
       }
 
-      // Fetch user progress if logged in
       if (user && lessonId) {
         const { data: progressData } = await supabase
           .from('user_subtopic_progress')
@@ -207,19 +117,12 @@ export default function LessonScreen() {
     }
   };
 
-  const handleTheory = () => {
-    if (lessonId && topicId) {
-      navigate(`/theory/${topicId}?subtopic=${lessonId}&name=${encodeURIComponent(lesson?.name || '')}`);
-    }
-  };
-
   const handleExercise = (difficulty: Difficulty) => {
     if (lessonId) {
       navigate(`/practice-question/${lessonId}?difficulty=${difficulty}`);
     }
   };
 
-  // Calculate overall progress percentage
   const calculateProgress = (): number => {
     if (!progress) return 0;
     let completed = 0;
@@ -239,7 +142,6 @@ export default function LessonScreen() {
     }
   };
 
-  // All difficulties are accessible, but we show recommendations
   const getDifficultyRecommendation = (difficulty: Difficulty): 'recommended' | 'advanced' | 'completed' | 'normal' => {
     const easyDone = progress?.easy_mastered ?? false;
     const mediumDone = progress?.medium_mastered ?? false;
@@ -287,12 +189,27 @@ export default function LessonScreen() {
     );
   }
 
-  // Generate animation steps
-  const animationSteps = generateLessonExplanation(lesson.name, lesson.theory_explanation);
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      <NodeTheorySheet
+        isOpen={showTheorySheet}
+        onClose={() => setShowTheorySheet(false)}
+        lessonId={lessonId || ''}
+        lessonName={lesson.name}
+        lessonIndex={lessonIndex}
+        topicName={topic?.name}
+      />
+
+      <NodeTutorChat
+        isOpen={showTutorChat}
+        onClose={() => setShowTutorChat(false)}
+        lessonId={lessonId || ''}
+        lessonName={lesson.name}
+        lessonIndex={lessonIndex}
+        topicName={topic?.name}
+        theoryContent={lesson.theory_explanation}
+      />
+
       <div className="border-b border-border/50 bg-card/50">
         <div className="max-w-5xl mx-auto px-6 py-4">
           <div className="flex items-center gap-4">
@@ -307,42 +224,37 @@ export default function LessonScreen() {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="max-w-5xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Learning Resources */}
           <div className="space-y-4">
             <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Learning Resources
             </h2>
             
-            {/* Theory Button */}
             <Button
               variant="outline"
               className="w-full justify-start gap-3 h-14"
-              onClick={handleTheory}
+              onClick={() => setShowTheorySheet(true)}
             >
               <BookOpen className="h-5 w-5 text-primary" />
               <div className="text-left">
                 <p className="font-medium">Theory</p>
-                <p className="text-xs text-muted-foreground">Read the concepts</p>
+                <p className="text-xs text-muted-foreground">Learn the concepts for this step</p>
               </div>
             </Button>
 
-            {/* AI Explanation Button */}
             <Button
               variant="outline"
               className="w-full justify-start gap-3 h-14"
-              onClick={() => setShowAIExplanation(!showAIExplanation)}
+              onClick={() => setShowTutorChat(true)}
             >
-              <Sparkles className="h-5 w-5 text-primary" />
+              <MessageCircle className="h-5 w-5 text-primary" />
               <div className="text-left">
-                <p className="font-medium">AI Explanation</p>
-                <p className="text-xs text-muted-foreground">Watch animated lesson</p>
+                <p className="font-medium">Ask Questions</p>
+                <p className="text-xs text-muted-foreground">Get help with this step</p>
               </div>
             </Button>
 
-            {/* Progress Bar */}
             <Card className="mt-6">
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">Lesson Progress</CardTitle>
@@ -376,59 +288,39 @@ export default function LessonScreen() {
             </Card>
           </div>
 
-          {/* Center/Right Column */}
           <div className="lg:col-span-2">
-            {showAIExplanation ? (
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  AI Animated Explanation
-                </h2>
-                <AnimatedMathVideo
-                  title={lesson.name}
-                  steps={animationSteps}
-                  onComplete={() => console.log('Animation complete')}
+            <div className="space-y-4">
+              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+                Practice Exercises
+              </h2>
+              
+              <div className="grid gap-4">
+                <DifficultyCard
+                  difficulty="easy"
+                  label="Easy"
+                  description="Start with the basics"
+                  recommendation={getDifficultyRecommendation('easy')}
+                  isCompleted={isDifficultyCompleted('easy')}
+                  onClick={() => handleExercise('easy')}
+                />
+                <DifficultyCard
+                  difficulty="medium"
+                  label="Medium"
+                  description="Challenge yourself"
+                  recommendation={getDifficultyRecommendation('medium')}
+                  isCompleted={isDifficultyCompleted('medium')}
+                  onClick={() => handleExercise('medium')}
+                />
+                <DifficultyCard
+                  difficulty="hard"
+                  label="Hard"
+                  description="Master the topic"
+                  recommendation={getDifficultyRecommendation('hard')}
+                  isCompleted={isDifficultyCompleted('hard')}
+                  onClick={() => handleExercise('hard')}
                 />
               </div>
-            ) : (
-              /* Exercise Difficulty Buttons */
-              <div className="space-y-4">
-                <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Practice Exercises
-                </h2>
-                
-                <div className="grid gap-4">
-                  {/* Easy */}
-                  <DifficultyCard
-                    difficulty="easy"
-                    label="Easy"
-                    description="Start with the basics"
-                    recommendation={getDifficultyRecommendation('easy')}
-                    isCompleted={isDifficultyCompleted('easy')}
-                    onClick={() => handleExercise('easy')}
-                  />
-
-                  {/* Medium */}
-                  <DifficultyCard
-                    difficulty="medium"
-                    label="Medium"
-                    description="Challenge yourself"
-                    recommendation={getDifficultyRecommendation('medium')}
-                    isCompleted={isDifficultyCompleted('medium')}
-                    onClick={() => handleExercise('medium')}
-                  />
-
-                  {/* Hard */}
-                  <DifficultyCard
-                    difficulty="hard"
-                    label="Hard"
-                    description="Master the topic"
-                    recommendation={getDifficultyRecommendation('hard')}
-                    isCompleted={isDifficultyCompleted('hard')}
-                    onClick={() => handleExercise('hard')}
-                  />
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
       </div>
@@ -445,14 +337,7 @@ interface DifficultyCardProps {
   onClick: () => void;
 }
 
-function DifficultyCard({
-  difficulty,
-  label,
-  description,
-  recommendation,
-  isCompleted,
-  onClick,
-}: DifficultyCardProps) {
+function DifficultyCard({ difficulty, label, description, recommendation, isCompleted, onClick }: DifficultyCardProps) {
   const colorMap = {
     easy: { text: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
     medium: { text: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
@@ -476,16 +361,11 @@ function DifficultyCard({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={cn(
-            "w-12 h-12 rounded-full flex items-center justify-center",
-            colors.bg
-          )}>
+          <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", colors.bg)}>
             {isCompleted ? (
               <CheckCircle2 className={`h-6 w-6 ${colors.text}`} />
             ) : (
-              <span className={`text-xl font-bold ${colors.text}`}>
-                {label.charAt(0)}
-              </span>
+              <span className={`text-xl font-bold ${colors.text}`}>{label.charAt(0)}</span>
             )}
           </div>
           <div>
