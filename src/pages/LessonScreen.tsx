@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, BookOpen, MessageCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { NodeTheorySheet, NodeTutorChat } from '@/components/lesson';
+import { TopicTheorySheet, NodeTutorChat } from '@/components/lesson';
 import { cn } from '@/lib/utils';
 
 interface SubtopicData {
@@ -191,13 +191,11 @@ export default function LessonScreen() {
 
   return (
     <div className="min-h-screen bg-background">
-      <NodeTheorySheet
+      <TopicTheorySheet
         isOpen={showTheorySheet}
         onClose={() => setShowTheorySheet(false)}
-        lessonId={lessonId || ''}
-        lessonName={lesson.name}
-        lessonIndex={lessonIndex}
-        topicName={topic?.name}
+        topicId={topicId || ''}
+        topicName={topic?.name || 'Theory'}
       />
 
       <NodeTutorChat
