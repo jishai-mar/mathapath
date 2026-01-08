@@ -5,9 +5,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
-import { BookOpen, Lightbulb, CheckCircle2, Calculator, AlertCircle } from 'lucide-react';
+import { BookOpen, Lightbulb, CheckCircle2, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 
 interface WorkedExample {
   title?: string;
@@ -187,6 +186,17 @@ export function NodeTheorySheet({
         }
       }
 
+      const hasExistingContent = subtopicData?.theory_explanation || workedExamples.length > 0;
+
+      // If no content exists, automatically generate it in the background
+      if (!hasExistingContent) {
+        setTheoryData({ explanation: null, workedExamples: [] });
+        setIsLoading(false);
+        // Trigger automatic generation
+        generateAndSaveTheory();
+        return;
+      }
+
       setTheoryData({
         explanation: subtopicData?.theory_explanation || null,
         workedExamples,
@@ -269,12 +279,10 @@ export function NodeTheorySheet({
                 </div>
               </div>
             </div>
+          ) : isGenerating ? (
+            <GeneratingMessage lessonName={lessonName} />
           ) : (
-            <NoContentMessage 
-              lessonName={lessonName} 
-              onGenerate={generateAndSaveTheory}
-              isGenerating={isGenerating}
-            />
+            <TheoryLoadingSkeleton />
           )}
         </ScrollArea>
       </SheetContent>
@@ -375,42 +383,20 @@ function TheoryLoadingSkeleton() {
   );
 }
 
-// No content message with generate button
-interface NoContentMessageProps {
+// Generating message shown during automatic background generation
+interface GeneratingMessageProps {
   lessonName: string;
-  onGenerate: () => void;
-  isGenerating: boolean;
 }
 
-function NoContentMessage({ lessonName, onGenerate, isGenerating }: NoContentMessageProps) {
+function GeneratingMessage({ lessonName }: GeneratingMessageProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="p-4 rounded-full bg-muted/50 mb-4">
-        <BookOpen className="w-8 h-8 text-muted-foreground" />
+      <div className="p-4 rounded-full bg-primary/10 mb-4">
+        <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
-      <h3 className="font-semibold text-lg mb-2">Theory Content Not Yet Available</h3>
-      <p className="text-sm text-muted-foreground max-w-sm mb-4">
-        The theory content for "{lessonName}" hasn't been created yet.
-      </p>
-      <Button 
-        onClick={onGenerate} 
-        disabled={isGenerating}
-        className="gap-2"
-      >
-        {isGenerating ? (
-          <>
-            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            Generating Theory...
-          </>
-        ) : (
-          <>
-            <Lightbulb className="w-4 h-4" />
-            Generate Theory Content
-          </>
-        )}
-      </Button>
-      <p className="text-xs text-muted-foreground mt-3 max-w-xs">
-        This will create permanent theory content for all students.
+      <h3 className="font-semibold text-lg mb-2">Preparing Theory Content</h3>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        Creating comprehensive theory for "{lessonName}". This only happens once and will be available for all students.
       </p>
     </div>
   );
