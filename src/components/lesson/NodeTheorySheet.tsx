@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import { BookOpen, Lightbulb, CheckCircle2, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import MathRenderer from '@/components/MathRenderer';
 
 interface WorkedExample {
   title?: string;
@@ -35,7 +36,6 @@ export function NodeTheorySheet({
   topicName 
 }: NodeTheorySheetProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [theoryData, setTheoryData] = useState<TheoryData | null>(null);
 
   useEffect(() => {
@@ -44,57 +44,10 @@ export function NodeTheorySheet({
     }
   }, [isOpen, lessonId]);
 
-  const generateAndSaveTheory = async () => {
-    setIsGenerating(true);
-    
-    try {
-      // Call edge function to generate plain-text theory content
-      const { data: aiContent, error: genError } = await supabase.functions.invoke(
-        'generate-theory-content',
-        {
-          body: { subtopicName: lessonName, topicName: topicName || '' }
-        }
-      );
-
-      if (genError || !aiContent || aiContent.fallback || aiContent.error) {
-        console.error('Failed to generate theory:', genError || aiContent?.error);
-        setIsGenerating(false);
-        return;
-      }
-
-      // The edge function now returns { explanation, workedExamples } directly
-      const explanation = aiContent.explanation || '';
-      const workedExamples: WorkedExample[] = aiContent.workedExamples || [];
-
-      // Save to database for future use (precomputed, static content)
-      const { error: updateError } = await supabase
-        .from('subtopics')
-        .update({
-          theory_explanation: explanation,
-          worked_examples: workedExamples as unknown as import('@/integrations/supabase/types').Json
-        })
-        .eq('id', lessonId);
-
-      if (updateError) {
-        console.error('Failed to save theory to database:', updateError);
-      } else {
-        console.log('Theory content saved to database for subtopic:', lessonId);
-      }
-
-      // Update local state with generated content
-      setTheoryData({ explanation, workedExamples });
-    } catch (err) {
-      console.error('Error generating theory:', err);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
   const fetchTheory = async () => {
     setIsLoading(true);
 
     try {
-      // Fetch static theory content from the database
       const { data: subtopicData, error } = await supabase
         .from('subtopics')
         .select('theory_explanation, worked_examples')
@@ -125,17 +78,6 @@ export function NodeTheorySheet({
         } catch (e) {
           console.error('Error parsing worked examples:', e);
         }
-      }
-
-      const hasExistingContent = subtopicData?.theory_explanation || workedExamples.length > 0;
-
-      // If no content exists, automatically generate it in the background
-      if (!hasExistingContent) {
-        setTheoryData({ explanation: null, workedExamples: [] });
-        setIsLoading(false);
-        // Trigger automatic generation
-        generateAndSaveTheory();
-        return;
       }
 
       setTheoryData({
@@ -181,9 +123,7 @@ export function NodeTheorySheet({
                   title="Concept Explanation"
                   accentColor="primary"
                 >
-                  <div className="text-sm text-foreground leading-relaxed whitespace-pre-line">
-                    {theoryData.explanation}
-                  </div>
+                  <TheoryContent content={theoryData.explanation} />
                 </TheorySection>
               )}
 
@@ -220,14 +160,21 @@ export function NodeTheorySheet({
                 </div>
               </div>
             </div>
-          ) : isGenerating ? (
-            <GeneratingMessage lessonName={lessonName} />
           ) : (
-            <TheoryLoadingSkeleton />
+            <EmptyTheoryMessage lessonName={lessonName} />
           )}
         </ScrollArea>
       </SheetContent>
     </Sheet>
+  );
+}
+
+// Renders content with math support
+function TheoryContent({ content }: { content: string }) {
+  return (
+    <div className="text-sm text-foreground leading-relaxed space-y-2">
+      <MathRenderer latex={content} className="whitespace-pre-line" />
+    </div>
   );
 }
 
@@ -260,7 +207,7 @@ function TheorySection({ icon, title, accentColor, children }: TheorySectionProp
   );
 }
 
-// Worked example card
+// Worked example card with math rendering
 interface WorkedExampleCardProps {
   example: WorkedExample;
   number: number;
@@ -279,8 +226,8 @@ function WorkedExampleCard({ example, number }: WorkedExampleCardProps) {
             <span className="text-xs text-muted-foreground">{example.title}</span>
           )}
         </div>
-        <div className="text-sm text-foreground whitespace-pre-line">
-          {example.problem}
+        <div className="text-sm text-foreground">
+          <MathRenderer latex={example.problem} className="whitespace-pre-line" />
         </div>
       </div>
       
@@ -291,8 +238,8 @@ function WorkedExampleCard({ example, number }: WorkedExampleCardProps) {
             Solution
           </span>
         </div>
-        <div className="text-sm text-foreground whitespace-pre-line">
-          {example.solution}
+        <div className="text-sm text-foreground">
+          <MathRenderer latex={example.solution} className="whitespace-pre-line" />
         </div>
       </div>
     </div>
@@ -324,20 +271,16 @@ function TheoryLoadingSkeleton() {
   );
 }
 
-// Generating message shown during automatic background generation
-interface GeneratingMessageProps {
-  lessonName: string;
-}
-
-function GeneratingMessage({ lessonName }: GeneratingMessageProps) {
+// Empty state when no theory content exists
+function EmptyTheoryMessage({ lessonName }: { lessonName: string }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
-      <div className="p-4 rounded-full bg-primary/10 mb-4">
-        <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+      <div className="p-4 rounded-full bg-muted mb-4">
+        <BookOpen className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="font-semibold text-lg mb-2">Preparing Theory Content</h3>
+      <h3 className="font-semibold text-lg mb-2">No Theory Content</h3>
       <p className="text-sm text-muted-foreground max-w-sm">
-        Creating comprehensive theory for "{lessonName}". This only happens once and will be available for all students.
+        Theory content for "{lessonName}" has not been added yet.
       </p>
     </div>
   );
