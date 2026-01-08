@@ -3,8 +3,6 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
-import MathRenderer from '@/components/MathRenderer';
-import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { BookOpen, Lightbulb, CheckCircle2, Calculator } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -46,70 +44,11 @@ export function NodeTheorySheet({
     }
   }, [isOpen, lessonId]);
 
-  // Convert AI response format to storage format
-  const convertAIResponseToStorageFormat = (aiContent: {
-    definition?: string;
-    key_rule?: string;
-    formula?: string;
-    when_to_use?: string;
-    worked_example?: { problem: string; steps: string[]; answer: string };
-    additional_examples?: { problem: string; steps: string[]; answer: string }[];
-    common_mistake?: { wrong: string; right: string };
-  }) => {
-    // Build comprehensive explanation from AI response
-    const explanationParts: string[] = [];
-    
-    if (aiContent.definition) {
-      explanationParts.push(`**Definition:** ${aiContent.definition}`);
-    }
-    if (aiContent.key_rule) {
-      explanationParts.push(`**Key Rule:** ${aiContent.key_rule}`);
-    }
-    if (aiContent.formula) {
-      explanationParts.push(`**Formula:** $${aiContent.formula}$`);
-    }
-    if (aiContent.when_to_use) {
-      explanationParts.push(`**When to use:** ${aiContent.when_to_use}`);
-    }
-    if (aiContent.common_mistake?.wrong && aiContent.common_mistake?.right) {
-      explanationParts.push(`\n**Common Mistake:**\n- ❌ ${aiContent.common_mistake.wrong}\n- ✓ ${aiContent.common_mistake.right}`);
-    }
-
-    const explanation = explanationParts.join('\n\n');
-
-    // Convert worked examples to storage format
-    const workedExamples: WorkedExample[] = [];
-    
-    if (aiContent.worked_example?.problem) {
-      const stepsText = aiContent.worked_example.steps?.join('\n') || '';
-      workedExamples.push({
-        title: 'Primary Example',
-        problem: aiContent.worked_example.problem,
-        solution: `${stepsText}\n\n**Answer:** ${aiContent.worked_example.answer || ''}`
-      });
-    }
-
-    if (aiContent.additional_examples) {
-      aiContent.additional_examples.forEach((ex, idx) => {
-        if (ex.problem) {
-          const stepsText = ex.steps?.join('\n') || '';
-          workedExamples.push({
-            title: `Example ${idx + 2}`,
-            problem: ex.problem,
-            solution: `${stepsText}\n\n**Answer:** ${ex.answer || ''}`
-          });
-        }
-      });
-    }
-
-    return { explanation, workedExamples };
-  };
-
   const generateAndSaveTheory = async () => {
     setIsGenerating(true);
     
     try {
-      // Call edge function to generate theory content
+      // Call edge function to generate plain-text theory content
       const { data: aiContent, error: genError } = await supabase.functions.invoke(
         'generate-theory-content',
         {
@@ -117,12 +56,15 @@ export function NodeTheorySheet({
         }
       );
 
-      if (genError || !aiContent || aiContent.fallback) {
-        console.error('Failed to generate theory:', genError);
+      if (genError || !aiContent || aiContent.fallback || aiContent.error) {
+        console.error('Failed to generate theory:', genError || aiContent?.error);
+        setIsGenerating(false);
         return;
       }
 
-      const { explanation, workedExamples } = convertAIResponseToStorageFormat(aiContent);
+      // The edge function now returns { explanation, workedExamples } directly
+      const explanation = aiContent.explanation || '';
+      const workedExamples: WorkedExample[] = aiContent.workedExamples || [];
 
       // Save to database for future use (precomputed, static content)
       const { error: updateError } = await supabase
@@ -135,7 +77,6 @@ export function NodeTheorySheet({
 
       if (updateError) {
         console.error('Failed to save theory to database:', updateError);
-        // Still show the generated content even if save fails
       } else {
         console.log('Theory content saved to database for subtopic:', lessonId);
       }
@@ -240,8 +181,8 @@ export function NodeTheorySheet({
                   title="Concept Explanation"
                   accentColor="primary"
                 >
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <MathRenderer segments={createSegmentsFromSolution(theoryData.explanation)} />
+                  <div className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                    {theoryData.explanation}
                   </div>
                 </TheorySection>
               )}
@@ -338,8 +279,8 @@ function WorkedExampleCard({ example, number }: WorkedExampleCardProps) {
             <span className="text-xs text-muted-foreground">{example.title}</span>
           )}
         </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <MathRenderer segments={createSegmentsFromSolution(example.problem)} />
+        <div className="text-sm text-foreground whitespace-pre-line">
+          {example.problem}
         </div>
       </div>
       
@@ -350,8 +291,8 @@ function WorkedExampleCard({ example, number }: WorkedExampleCardProps) {
             Solution
           </span>
         </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none">
-          <MathRenderer segments={createSegmentsFromSolution(example.solution)} />
+        <div className="text-sm text-foreground whitespace-pre-line">
+          {example.solution}
         </div>
       </div>
     </div>
