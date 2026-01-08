@@ -237,7 +237,7 @@ export function MasteryTestResults({
                         <AccordionContent className="pb-4 space-y-4">
                           {/* Question */}
                           <div className="p-4 rounded-lg bg-muted">
-                            <MathRenderer content={question.question} />
+                            <MathRenderer latex={question.question} />
                           </div>
                           
                           {/* Answers */}
@@ -267,7 +267,7 @@ export function MasteryTestResults({
                                     <div>{step.action}</div>
                                     {step.calculation && (
                                       <div className="p-2 rounded bg-muted">
-                                        <MathRenderer content={step.calculation} />
+                                        <MathRenderer latex={step.calculation} />
                                       </div>
                                     )}
                                     <div className="text-xs text-muted-foreground flex items-center gap-1">

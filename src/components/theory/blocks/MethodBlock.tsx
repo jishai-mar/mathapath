@@ -1,7 +1,10 @@
 import { motion } from 'framer-motion';
 import { ListOrdered, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import MathRenderer from '@/components/MathRenderer';
 import type { MethodBlock as MethodBlockType, MethodStep } from '../types/blocks';
+import { TheoryBlockMedia } from '../TheoryBlockMedia';
+import { useTheoryBlockMedia } from '@/hooks/useTheoryBlockMedia';
 
 interface MethodBlockProps {
   block: MethodBlockType;
@@ -10,6 +13,26 @@ interface MethodBlockProps {
 
 export function MethodBlock({ block, showBlockNumber = true }: MethodBlockProps) {
   const { content } = block;
+  const { fetchMediaStatus, generateMedia } = useTheoryBlockMedia(block.id);
+  const [mediaState, setMediaState] = useState<{
+    videoStatus: 'none' | 'pending' | 'processing' | 'ready' | 'failed';
+    audioUrl: string | null;
+    videoUrl: string | null;
+    visualPlan: unknown;
+    generationMode: 'full' | 'fallback';
+    generationError: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    fetchMediaStatus().then(setMediaState);
+  }, [fetchMediaStatus]);
+
+  const handleRegenerate = async () => {
+    const result = await generateMedia();
+    if (result) {
+      setMediaState(result);
+    }
+  };
 
   return (
     <motion.section
@@ -108,6 +131,22 @@ export function MethodBlock({ block, showBlockNumber = true }: MethodBlockProps)
               ))}
             </ul>
           </div>
+        )}
+
+        {/* Media Player */}
+        {mediaState && (
+          <TheoryBlockMedia
+            blockId={block.id}
+            blockNumber={block.blockNumber}
+            blockTitle={block.title}
+            videoStatus={mediaState.videoStatus}
+            videoUrl={mediaState.videoUrl}
+            audioUrl={mediaState.audioUrl}
+            visualPlan={mediaState.visualPlan as any}
+            generationMode={mediaState.generationMode}
+            generationError={mediaState.generationError}
+            onRegenerate={handleRegenerate}
+          />
         )}
       </div>
     </motion.section>

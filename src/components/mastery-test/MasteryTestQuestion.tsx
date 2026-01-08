@@ -80,7 +80,7 @@ export function MasteryTestQuestion({
           
           {/* Question */}
           <div className="py-4 px-6 rounded-xl bg-muted/50">
-            <MathRenderer content={question.question} />
+            <MathRenderer latex={question.question} />
           </div>
           
           {/* Answer Input */}
