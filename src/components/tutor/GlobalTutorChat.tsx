@@ -1,13 +1,13 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Loader2, Sparkles, HelpCircle, BookOpen, Calculator } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, HelpCircle, BookOpen, Calculator, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useTutor } from '@/contexts/TutorContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { useAppContext } from '@/contexts/AppContext';
+import { useExerciseContext } from '@/contexts/ExerciseContext';
 import { TutorAvatar } from './TutorAvatar';
 import MathRenderer from '@/components/MathRenderer';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,18 +39,28 @@ const STUCK_PHRASES = [
   "part c",
   "this problem",
   "this question",
+  "why is this wrong",
+  "what's wrong",
+  "explain this",
+  "help with this",
 ];
 
 export function GlobalTutorChat({ isOpen, onClose }: GlobalTutorChatProps) {
   const { preferences } = useTutor();
   const { user } = useAuth();
-  const { state, getContextSummary } = useAppContext();
+  const exerciseContext = useExerciseContext();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Derived state from exercise context
+  const hasActiveExercise = exerciseContext?.hasActiveExercise?.() ?? false;
+  const currentQuestion = exerciseContext?.questionText;
+  const lessonName = exerciseContext?.lessonName;
+  const topicName = exerciseContext?.topicName;
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -67,20 +77,17 @@ export function GlobalTutorChat({ isOpen, onClose }: GlobalTutorChatProps) {
   }, [isOpen]);
 
   const generateGreeting = async () => {
-    const hasContext = state.currentQuestion || state.selectedLesson;
-    
     let greeting = `Hi! I'm ${preferences.tutorName}, your math tutor. `;
     
-    if (hasContext) {
-      if (state.selectedLesson) {
-        greeting += `I see you're working on "${state.selectedLesson.name}". `;
+    if (hasActiveExercise && currentQuestion) {
+      if (lessonName) {
+        greeting += `I see you're working on "${lessonName}". `;
       }
-      if (state.currentQuestion) {
-        greeting += `I can see the problem you're looking at. `;
-      }
-      greeting += `How can I help you? Feel free to ask me anything or just say "I'm stuck" and I'll help you with what's on screen.`;
+      greeting += `I can see the problem on your screen right now. Just say "I'm stuck" or ask me anything - I can see exactly what you're looking at!`;
+    } else if (topicName || lessonName) {
+      greeting += `I see you're studying ${topicName || lessonName}. How can I help you?`;
     } else {
-      greeting += `What would you like to work on today? I can help you with any math topic.`;
+      greeting += `What would you like to work on today? I can help you with any math topic. If you're working on a problem, I'll be able to see it automatically!`;
     }
     
     setMessages([{ role: 'assistant', content: greeting }]);
@@ -92,31 +99,50 @@ export function GlobalTutorChat({ isOpen, onClose }: GlobalTutorChatProps) {
   };
 
   const buildContextAwarePrompt = (userMessage: string): string => {
-    const contextSummary = getContextSummary();
+    // Always get the full exercise context if available
+    const fullContext = exerciseContext?.getFullContextForTutor?.() || '';
     const isStuckRequest = detectStuckRequest(userMessage);
     
     let prompt = userMessage;
     
-    if (isStuckRequest && state.currentQuestion) {
+    if (hasActiveExercise && currentQuestion) {
+      if (isStuckRequest) {
+        // User is explicitly asking for help with what's on screen
+        prompt = `The student says: "${userMessage}"
+
+CRITICAL CONTEXT - You can see EXACTLY what the student is working on:
+
+${fullContext}
+
+YOUR TASK:
+1. Acknowledge the specific problem and part they're working on
+2. Look at their current answer attempt and identify any misconceptions
+3. Start by briefly restating what you see: "I see you're working on [problem description]..."
+4. If their answer shows a pattern of error, explain what concept they might be missing
+5. Guide them step-by-step WITHOUT giving away the final answer
+6. Use the Socratic method - ask questions that lead them to discover the solution
+7. If they've made a specific calculation error, point to WHERE the error is, not WHAT the answer should be
+
+Remember: You're sitting right next to this student, looking at their screen. Be specific and direct about what you see.`;
+      } else {
+        // Regular question but still provide context
+        prompt = `Student's question: "${userMessage}"
+
+CONTEXT (What the student is currently viewing on their screen):
+${fullContext}
+
+Respond helpfully, being aware of what they're working on. If their question relates to the current exercise, reference it directly. Don't ask them to paste or describe the problem - you can already see it.`;
+      }
+    } else if (isStuckRequest) {
+      // User says they're stuck but no exercise is active
       prompt = `The student says: "${userMessage}"
 
-IMPORTANT: The student is asking for help with what they're currently working on. Here is the full context of what they're seeing:
+NOTE: The student seems to be asking for help, but they're not currently on an exercise screen. 
 
-${contextSummary}
-
-Based on this context:
-1. Identify what specific part or concept they might be stuck on
-2. If they have answers entered, analyze if those answers show any misconceptions
-3. Start by briefly acknowledging the problem they're working on
-4. Then provide step-by-step guidance without giving away the answer
-5. Use the Socratic method to guide them to discover the solution`;
-    } else if (contextSummary && state.currentQuestion) {
-      prompt = `User message: "${userMessage}"
-
-Current app context (what the student is viewing):
-${contextSummary}
-
-Respond helpfully while being aware of what they're currently working on.`;
+Please:
+1. Acknowledge their request
+2. Ask what topic or problem they'd like help with
+3. Offer to help if they navigate to an exercise, or if they can describe what they're working on`;
     }
     
     return prompt;
@@ -135,8 +161,8 @@ Respond helpfully while being aware of what they're currently working on.`;
       const { data, error } = await supabase.functions.invoke('ask-tutor', {
         body: {
           question: contextAwarePrompt,
-          subtopicName: state.selectedLesson?.name || state.selectedTopic?.name || 'General Math',
-          theoryContext: state.additionalContext || '',
+          subtopicName: lessonName || topicName || 'General Math',
+          theoryContext: '',
           conversationHistory: messages.map(m => ({ role: m.role, content: m.content })),
           tutorName: preferences.tutorName,
           personality: preferences.personality,
@@ -151,6 +177,10 @@ Respond helpfully while being aware of what they're currently working on.`;
       const answer = data.answer || "I'm sorry, I couldn't generate a response. Please try again.";
       
       setMessages(prev => [...prev, { role: 'assistant', content: answer }]);
+      
+      // Add to conversation history in exercise context
+      exerciseContext?.addConversationMessage?.('student', userMessage);
+      exerciseContext?.addConversationMessage?.('tutor', answer);
     } catch (error) {
       console.error('Error asking tutor:', error);
       setMessages(prev => [...prev, { 
@@ -171,16 +201,23 @@ Respond helpfully while being aware of what they're currently working on.`;
   const handleQuickAction = (action: string) => {
     switch (action) {
       case 'stuck':
-        sendMessage("I'm stuck on this problem. Can you help me understand it?");
+        sendMessage("I'm stuck on this problem. Can you help me understand what to do?");
         break;
       case 'explain':
-        sendMessage("Can you explain the concept behind this?");
+        sendMessage("Can you explain the concept behind this step-by-step?");
         break;
       case 'check':
-        sendMessage("Can you check if my approach is correct?");
+        sendMessage("Can you check if my approach is correct so far?");
+        break;
+      case 'hint':
+        sendMessage("Can you give me a hint without telling me the answer?");
         break;
     }
   };
+
+  // Get current part info for display
+  const activePartInfo = exerciseContext?.subparts?.[exerciseContext.activeSubpartIndex];
+  const currentUserAnswer = activePartInfo?.userAnswer;
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -198,9 +235,11 @@ Respond helpfully while being aware of what they're currently working on.`;
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-foreground">{preferences.tutorName}</h3>
             <p className="text-xs text-muted-foreground">
-              {state.selectedLesson 
-                ? `Helping with: ${state.selectedLesson.name}`
-                : 'Your math tutor'
+              {lessonName 
+                ? `Helping with: ${lessonName}`
+                : topicName
+                  ? `Topic: ${topicName}`
+                  : 'Your math tutor'
               }
             </p>
           </div>
@@ -209,12 +248,30 @@ Respond helpfully while being aware of what they're currently working on.`;
           </Button>
         </div>
 
-        {/* Context Banner */}
-        {state.currentQuestion && (
-          <div className="px-4 py-2 bg-primary/5 border-b">
+        {/* Context Banner - Shows when exercise is active */}
+        {hasActiveExercise && (
+          <div className="px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20">
+            <div className="flex items-center gap-2 text-xs">
+              <Eye className="w-3 h-3 text-emerald-600" />
+              <span className="text-emerald-700 dark:text-emerald-400 font-medium">
+                I can see your current problem
+              </span>
+            </div>
+            {activePartInfo && (
+              <p className="text-xs text-muted-foreground mt-1 pl-5">
+                Working on part ({activePartInfo.label})
+                {currentUserAnswer && ` • Your answer: "${currentUserAnswer}"`}
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* No Exercise Banner */}
+        {!hasActiveExercise && (
+          <div className="px-4 py-2 bg-muted/50 border-b">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Sparkles className="w-3 h-3 text-primary" />
-              <span>I can see your current problem. Say "I'm stuck" for help!</span>
+              <Sparkles className="w-3 h-3" />
+              <span>Navigate to an exercise and I'll be able to see it!</span>
             </div>
           </div>
         )}
@@ -270,7 +327,7 @@ Respond helpfully while being aware of what they're currently working on.`;
                 <div className="bg-muted rounded-2xl px-4 py-3">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span className="text-sm">Thinking...</span>
+                    <span className="text-sm">Looking at your work...</span>
                   </div>
                 </div>
               </motion.div>
@@ -290,6 +347,15 @@ Respond helpfully while being aware of what they're currently working on.`;
               >
                 <HelpCircle className="w-3 h-3 mr-1" />
                 I'm stuck
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleQuickAction('hint')}
+                className="text-xs"
+              >
+                <Sparkles className="w-3 h-3 mr-1" />
+                Give me a hint
               </Button>
               <Button
                 variant="outline"
@@ -335,7 +401,7 @@ Respond helpfully while being aware of what they're currently working on.`;
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask me anything about math..."
+              placeholder={hasActiveExercise ? "Ask about this problem..." : "Ask me anything about math..."}
               disabled={isLoading}
               className="flex-1"
             />

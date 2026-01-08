@@ -406,9 +406,9 @@ export default function Dashboard() {
               
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 pt-2">
-              <Button onClick={() => navigate('/practice-quiz')} className="px-6 py-3 h-auto rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
+              <Button onClick={() => navigate('/find-your-level')} className="px-6 py-3 h-auto rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
                   <Play className="w-4 h-4 mr-2" />
-                  Make Practice Quiz
+                  Make practice quiz
                 </Button>
                 <Button variant="outline" onClick={() => setShowTutorChat(true)} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
                   <MessageCircle className="w-4 h-4 mr-2" />

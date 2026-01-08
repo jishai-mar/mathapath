@@ -63,7 +63,7 @@ interface Exam {
   questions: ExamQuestionData[];
 }
 
-export default function PracticeQuiz() {
+export default function LevelAssessment() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [exam, setExam] = useState<Exam | null>(null);
