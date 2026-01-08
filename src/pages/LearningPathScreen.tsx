@@ -11,7 +11,8 @@ import {
   Play, 
   Star,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -210,12 +211,21 @@ export default function LearningPathScreen() {
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-semibold text-foreground">{topic?.name || 'Learning Path'}</h1>
             <p className="text-sm text-muted-foreground">
               {lessons.filter(l => l.isCompleted).length} of {lessons.length} lessons completed
             </p>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate(`/topic-theory/${topicId}`)}
+            className="flex items-center gap-2"
+          >
+            <BookOpen className="w-4 h-4" />
+            <span className="hidden sm:inline">Topic Theory</span>
+          </Button>
         </div>
       </header>
 

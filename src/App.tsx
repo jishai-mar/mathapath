@@ -38,6 +38,7 @@ import TopicExam from "./pages/TopicExam";
 import LearningPathScreen from "./pages/LearningPathScreen";
 import LessonScreen from "./pages/LessonScreen";
 import TopicMasteryTest from "./pages/TopicMasteryTest";
+import TopicTheoryBlocks from "./pages/TopicTheoryBlocks";
 
 const queryClient = new QueryClient();
 
@@ -92,6 +93,7 @@ function AppRoutes() {
       <Route path="/learning-path/:topicId" element={<LearningPathScreen />} />
       <Route path="/lesson/:topicId/:lessonId" element={<LessonScreen />} />
       <Route path="/topic-mastery-test/:topicId" element={<TopicMasteryTest />} />
+      <Route path="/topic-theory/:topicId" element={<TopicTheoryBlocks />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
