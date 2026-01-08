@@ -58,14 +58,49 @@ const iconMap: Record<string, LucideIcon> = {
   sigma: Sigma,
 };
 
-// Group topics into categories
-const topicCategories: Record<string, string[]> = {
-  'Foundations': ['Linear Equations', 'Fractions & Algebraic Expressions', 'Quadratic Equations'],
-  'Advanced Algebra': ['Radical Equations', 'Higher Degree Equations', 'Inequalities'],
-  'Exponential & Logarithmic': ['Exponents & Exponential Equations', 'Logarithms & Logarithmic Equations'],
-  'Functions & Graphs': ['Linear Functions & Lines', 'Quadratic Functions & Parabolas'],
-  'Calculus': ['Limits', 'Derivatives & Applications'],
-};
+// Curriculum structure - topics grouped by category with increasing difficulty
+const CURRICULUM_CATEGORIES = [
+  {
+    id: 'foundations',
+    name: 'Foundations',
+    description: 'Essential building blocks for all math topics',
+    topicNames: ['Fractions', 'Exponents', 'First-Degree Equations'],
+  },
+  {
+    id: 'quadratics',
+    name: 'Quadratic & Polynomial Equations',
+    description: 'Solving equations with squared terms and beyond',
+    topicNames: ['Quadratic Equations', 'Higher Degree Equations', 'Inequalities'],
+  },
+  {
+    id: 'exp-log',
+    name: 'Exponential & Logarithmic',
+    description: 'Working with growth, decay, and inverse operations',
+    topicNames: ['Exponential Equations', 'Logarithms', 'Logarithmic Equations'],
+  },
+  {
+    id: 'functions',
+    name: 'Functions & Graphs',
+    description: 'Understanding relationships and their visualizations',
+    topicNames: ['Linear Functions', 'Quadratic Functions', 'Rational Functions'],
+  },
+  {
+    id: 'calculus',
+    name: 'Introduction to Calculus',
+    description: 'Rates of change and advanced analysis',
+    topicNames: ['Limits', 'Derivatives Basics', 'Derivative Applications', 'Chain Rule'],
+  },
+];
+
+// Helper to organize topics into categories
+function organizeTopicsByCategory(topics: Topic[]) {
+  return CURRICULUM_CATEGORIES.map(category => ({
+    ...category,
+    topics: category.topicNames
+      .map(name => topics.find(t => t.name === name))
+      .filter((t): t is Topic => t !== undefined),
+  })).filter(cat => cat.topics.length > 0);
+}
 
 function getMasteryLevel(percentage: number): { label: string; color: string; bgColor: string; borderColor: string } {
   if (percentage >= 80) return { 
@@ -287,6 +322,10 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
       onTopicClick(topicId);
     }
   };
+
+  // Organize topics into curriculum categories
+  const organizedCategories = organizeTopicsByCategory(topics);
+
   // Find current topic (first incomplete)
   const currentTopicId = topics.find(t => {
     const diagnostic = diagnosticStatuses.find(d => d.topic_id === t.id);
@@ -296,11 +335,13 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
 
   // Calculate overall progress
   const totalMastery = topics.reduce((sum, t) => sum + getTopicProgress(t.id).masteryPercentage, 0);
-  const averageMastery = Math.round(totalMastery / topics.length);
+  const averageMastery = topics.length > 0 ? Math.round(totalMastery / topics.length) : 0;
   const masteredCount = topics.filter(t => getTopicProgress(t.id).masteryPercentage >= 80).length;
 
+  let globalIndex = 0;
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Section Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
@@ -327,30 +368,67 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
         </div>
       </div>
 
-      {/* Topics Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {/* Practice Quiz Card - First in grid */}
+      {/* Practice Quiz - Standalone */}
+      <div>
         <PracticeQuizCard index={0} />
-        
-        {topics.map((topic, index) => {
-          const progress = getTopicProgress(topic.id);
-          const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
-          const isCompleted = diagnostic?.status === 'completed';
-          const isCurrent = topic.id === currentTopicId;
-          
-          return (
-            <TopicCard
-              key={topic.id}
-              topic={topic}
-              progress={progress}
-              isCurrent={isCurrent}
-              isCompleted={isCompleted}
-              onClick={() => handleTopicClick(topic.id)}
-              index={index + 1}
-            />
-          );
-        })}
       </div>
+
+      {/* Curriculum Categories */}
+      {organizedCategories.map((category, catIndex) => {
+        // Calculate category progress
+        const categoryMastery = category.topics.length > 0
+          ? Math.round(category.topics.reduce((sum, t) => sum + getTopicProgress(t.id).masteryPercentage, 0) / category.topics.length)
+          : 0;
+
+        return (
+          <motion.div 
+            key={category.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: catIndex * 0.1, duration: 0.4 }}
+            className="space-y-4"
+          >
+            {/* Category Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary text-sm font-bold">
+                  {catIndex + 1}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">{category.name}</h3>
+                  <p className="text-xs text-muted-foreground">{category.description}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-secondary/50 text-xs">
+                <span className="text-muted-foreground">{categoryMastery}% complete</span>
+              </div>
+            </div>
+
+            {/* Category Topics Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pl-11">
+              {category.topics.map((topic) => {
+                const progress = getTopicProgress(topic.id);
+                const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
+                const isCompleted = diagnostic?.status === 'completed';
+                const isCurrent = topic.id === currentTopicId;
+                const currentIndex = ++globalIndex;
+                
+                return (
+                  <TopicCard
+                    key={topic.id}
+                    topic={topic}
+                    progress={progress}
+                    isCurrent={isCurrent}
+                    isCompleted={isCompleted}
+                    onClick={() => handleTopicClick(topic.id)}
+                    index={currentIndex}
+                  />
+                );
+              })}
+            </div>
+          </motion.div>
+        );
+      })}
     </div>
   );
 }
