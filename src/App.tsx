@@ -37,6 +37,7 @@ import SetLearningGoal from "./pages/SetLearningGoal";
 import TopicExam from "./pages/TopicExam";
 import LearningPathScreen from "./pages/LearningPathScreen";
 import LessonScreen from "./pages/LessonScreen";
+import TopicMasteryTest from "./pages/TopicMasteryTest";
 
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ function AppRoutes() {
       <Route path="/topic-exam/:topicId" element={<TopicExam />} />
       <Route path="/learning-path/:topicId" element={<LearningPathScreen />} />
       <Route path="/lesson/:topicId/:lessonId" element={<LessonScreen />} />
+      <Route path="/topic-mastery-test/:topicId" element={<TopicMasteryTest />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

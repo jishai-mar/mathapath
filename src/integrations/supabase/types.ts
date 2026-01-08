@@ -942,6 +942,119 @@ export type Database = {
           },
         ]
       }
+      topic_mastery_results: {
+        Row: {
+          completed_at: string
+          correct_count: number
+          created_at: string | null
+          id: string
+          overall_percentage: number
+          strong_blocks: string[] | null
+          subtopic_coverage: Json
+          test_id: string | null
+          theory_block_scores: Json
+          time_spent_minutes: number | null
+          topic_id: string
+          total_questions: number
+          user_id: string
+          weak_blocks: string[] | null
+        }
+        Insert: {
+          completed_at?: string
+          correct_count: number
+          created_at?: string | null
+          id?: string
+          overall_percentage: number
+          strong_blocks?: string[] | null
+          subtopic_coverage?: Json
+          test_id?: string | null
+          theory_block_scores?: Json
+          time_spent_minutes?: number | null
+          topic_id: string
+          total_questions: number
+          user_id: string
+          weak_blocks?: string[] | null
+        }
+        Update: {
+          completed_at?: string
+          correct_count?: number
+          created_at?: string | null
+          id?: string
+          overall_percentage?: number
+          strong_blocks?: string[] | null
+          subtopic_coverage?: Json
+          test_id?: string | null
+          theory_block_scores?: Json
+          time_spent_minutes?: number | null
+          topic_id?: string
+          total_questions?: number
+          user_id?: string
+          weak_blocks?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_mastery_results_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "topic_mastery_tests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_mastery_results_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_mastery_tests: {
+        Row: {
+          answers: Json
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          questions: Json
+          started_at: string
+          status: string
+          time_spent_minutes: number | null
+          topic_id: string
+          user_id: string
+        }
+        Insert: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          questions?: Json
+          started_at?: string
+          status?: string
+          time_spent_minutes?: number | null
+          topic_id: string
+          user_id: string
+        }
+        Update: {
+          answers?: Json
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          questions?: Json
+          started_at?: string
+          status?: string
+          time_spent_minutes?: number | null
+          topic_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_mastery_tests_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       topic_prerequisites: {
         Row: {
           created_at: string | null
