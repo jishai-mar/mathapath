@@ -39,6 +39,7 @@ interface TopicGridProps {
   getTopicProgress: (topicId: string) => TopicProgress;
   diagnosticStatuses: Array<{ topic_id: string; status: string }>;
   onTopicClick: (topicId: string) => void;
+  useLearningPath?: boolean;
 }
 
 const iconMap: Record<string, LucideIcon> = {
@@ -276,7 +277,16 @@ function PracticeQuizCard({ index }: { index: number }) {
   );
 }
 
-export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses, onTopicClick }: TopicGridProps) {
+export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses, onTopicClick, useLearningPath = true }: TopicGridProps) {
+  const navigate = useNavigate();
+  
+  const handleTopicClick = (topicId: string) => {
+    if (useLearningPath) {
+      navigate(`/learning-path/${topicId}`);
+    } else {
+      onTopicClick(topicId);
+    }
+  };
   // Find current topic (first incomplete)
   const currentTopicId = topics.find(t => {
     const diagnostic = diagnosticStatuses.find(d => d.topic_id === t.id);
@@ -335,7 +345,7 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
               progress={progress}
               isCurrent={isCurrent}
               isCompleted={isCompleted}
-              onClick={() => onTopicClick(topic.id)}
+              onClick={() => handleTopicClick(topic.id)}
               index={index + 1}
             />
           );
