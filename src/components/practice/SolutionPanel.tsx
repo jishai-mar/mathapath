@@ -1,11 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CheckCircle2, ArrowRight, Lightbulb } from 'lucide-react';
+import { X, CheckCircle2, Lightbulb, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { SolutionStep } from './types';
+import { TheoryLinkBadge } from '@/components/exercise/TheoryLinkBadge';
 
 interface SolutionPanelProps {
   isOpen: boolean;
@@ -55,7 +55,7 @@ export function SolutionPanel({
                 </div>
                 <div>
                   <h2 className="font-semibold text-lg">Full Solution</h2>
-                  <p className="text-sm text-muted-foreground">Step-by-step walkthrough</p>
+                  <p className="text-sm text-muted-foreground">Step-by-step with theory citations</p>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={onClose}>
@@ -109,9 +109,26 @@ export function SolutionPanel({
                               </div>
                             </div>
                             
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-muted-foreground mb-2">
                               {step.explanation}
                             </p>
+
+                            {/* Theory Citation - Shows when available */}
+                            {(step.theoryCitation || step.theoryBlockReference) && (
+                              <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
+                                <BookOpen className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                                <span className="text-xs text-blue-600 dark:text-blue-400">
+                                  {step.theoryCitation || `By ${step.theoryBlockReference}`}
+                                </span>
+                                {step.theoryBlockReference && (
+                                  <TheoryLinkBadge 
+                                    blockNumber={step.theoryBlockReference}
+                                    blockId={step.theoryBlockId}
+                                    relevance="secondary"
+                                  />
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </motion.div>

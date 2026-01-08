@@ -275,9 +275,11 @@ export type Database = {
           explanation: string | null
           hints: string[] | null
           id: string
+          primary_method_block_id: string | null
           question: string
           requires_visual: boolean | null
           subtopic_id: string
+          supporting_theorem_ids: string[] | null
         }
         Insert: {
           concepts_tested?: string[] | null
@@ -287,9 +289,11 @@ export type Database = {
           explanation?: string | null
           hints?: string[] | null
           id?: string
+          primary_method_block_id?: string | null
           question: string
           requires_visual?: boolean | null
           subtopic_id: string
+          supporting_theorem_ids?: string[] | null
         }
         Update: {
           concepts_tested?: string[] | null
@@ -299,11 +303,20 @@ export type Database = {
           explanation?: string | null
           hints?: string[] | null
           id?: string
+          primary_method_block_id?: string | null
           question?: string
           requires_visual?: boolean | null
           subtopic_id?: string
+          supporting_theorem_ids?: string[] | null
         }
         Relationships: [
+          {
+            foreignKeyName: "exercises_primary_method_block_id_fkey"
+            columns: ["primary_method_block_id"]
+            isOneToOne: false
+            referencedRelation: "theory_blocks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "exercises_subtopic_id_fkey"
             columns: ["subtopic_id"]
