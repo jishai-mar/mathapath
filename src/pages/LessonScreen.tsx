@@ -6,14 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, BookOpen, Sparkles, CheckCircle2, Lock } from 'lucide-react';
-import AnimatedMathVideo, { generateAnimationSteps } from '@/components/AnimatedMathVideo';
+import { ArrowLeft, BookOpen, Sparkles, CheckCircle2, AlertTriangle } from 'lucide-react';
+import AnimatedMathVideo from '@/components/AnimatedMathVideo';
+import { cn } from '@/lib/utils';
 
 interface SubtopicData {
   id: string;
   name: string;
   theory_explanation: string | null;
   worked_examples: any[];
+  topic_id: string;
 }
 
 interface TopicData {
@@ -30,6 +32,93 @@ interface ProgressData {
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
+// Generate AI explanation steps based on lesson content
+function generateLessonExplanation(lessonName: string, theoryContent: string | null): any[] {
+  const steps: any[] = [];
+  
+  // Welcome step
+  steps.push({
+    type: 'title',
+    content: lessonName,
+    duration: 3500,
+    voiceover: `Welcome! Today we'll learn about ${lessonName}.`
+  });
+
+  // Introduction
+  steps.push({
+    type: 'text',
+    content: `Let's build a solid understanding of ${lessonName} step by step. Take your time with each concept.`,
+    duration: 4500,
+    voiceover: `We'll build understanding step by step.`
+  });
+
+  // If we have theory content, parse it into steps
+  if (theoryContent) {
+    const paragraphs = theoryContent.split('\n\n').filter(p => p.trim());
+    
+    paragraphs.slice(0, 5).forEach((paragraph, i) => {
+      const cleanParagraph = paragraph.replace(/\*\*/g, '').trim();
+      
+      if (cleanParagraph.includes('=') || cleanParagraph.includes('\\frac')) {
+        steps.push({
+          type: 'equation',
+          content: cleanParagraph,
+          duration: 5500,
+          highlight: 'true',
+          voiceover: `Here's an important formula.`
+        });
+      } else if (cleanParagraph.toLowerCase().includes('key') || 
+                 cleanParagraph.toLowerCase().includes('important') ||
+                 cleanParagraph.toLowerCase().includes('remember')) {
+        steps.push({
+          type: 'highlight',
+          content: cleanParagraph,
+          duration: 6000,
+          voiceover: `This is important: ${cleanParagraph.substring(0, 100)}...`
+        });
+      } else {
+        steps.push({
+          type: 'text',
+          content: cleanParagraph,
+          duration: 4500,
+          voiceover: cleanParagraph.substring(0, 150)
+        });
+      }
+    });
+  } else {
+    // Generate generic helpful content for the lesson
+    steps.push({
+      type: 'text',
+      content: `Understanding ${lessonName} is an important skill. Let's explore the key concepts together.`,
+      duration: 4500,
+      voiceover: `Understanding this concept is important.`
+    });
+
+    steps.push({
+      type: 'highlight',
+      content: `The goal is to understand the underlying principles, not just memorize formulas. Practice will help solidify your knowledge.`,
+      duration: 5500,
+      voiceover: `Focus on understanding, not just memorization.`
+    });
+  }
+
+  // Summary step
+  steps.push({
+    type: 'transition',
+    content: '',
+    duration: 2000
+  });
+
+  steps.push({
+    type: 'text',
+    content: `Great job! Now try the practice exercises to test your understanding. Start with Easy to build confidence.`,
+    duration: 4500,
+    voiceover: `Now practice what you've learned!`
+  });
+
+  return steps;
+}
+
 export default function LessonScreen() {
   const { topicId, lessonId } = useParams<{ topicId: string; lessonId: string }>();
   const navigate = useNavigate();
@@ -40,6 +129,8 @@ export default function LessonScreen() {
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showAIExplanation, setShowAIExplanation] = useState(false);
+  const [lessonIndex, setLessonIndex] = useState<number>(0);
+  const [totalLessons, setTotalLessons] = useState<number>(1);
 
   useEffect(() => {
     if (topicId && lessonId) {
@@ -62,7 +153,7 @@ export default function LessonScreen() {
       // Fetch subtopic (lesson)
       const { data: subtopicData } = await supabase
         .from('subtopics')
-        .select('id, name, theory_explanation, worked_examples')
+        .select('id, name, theory_explanation, worked_examples, topic_id')
         .eq('id', lessonId)
         .single();
       
@@ -75,6 +166,19 @@ export default function LessonScreen() {
         });
       }
 
+      // Get lesson position in topic
+      const { data: allLessons } = await supabase
+        .from('subtopics')
+        .select('id')
+        .eq('topic_id', topicId)
+        .order('order_index');
+      
+      if (allLessons) {
+        setTotalLessons(allLessons.length);
+        const idx = allLessons.findIndex(l => l.id === lessonId);
+        setLessonIndex(idx >= 0 ? idx : 0);
+      }
+
       // Fetch user progress if logged in
       if (user && lessonId) {
         const { data: progressData } = await supabase
@@ -82,7 +186,7 @@ export default function LessonScreen() {
           .select('easy_mastered, medium_mastered, hard_mastered, mastery_percentage')
           .eq('user_id', user.id)
           .eq('subtopic_id', lessonId)
-          .single();
+          .maybeSingle();
         
         if (progressData) {
           setProgress(progressData);
@@ -105,7 +209,7 @@ export default function LessonScreen() {
 
   const handleTheory = () => {
     if (lessonId && topicId) {
-      navigate(`/theory/${topicId}/${lessonId}`);
+      navigate(`/theory/${topicId}?subtopic=${lessonId}&name=${encodeURIComponent(lesson?.name || '')}`);
     }
   };
 
@@ -135,15 +239,27 @@ export default function LessonScreen() {
     }
   };
 
-  const isDifficultyUnlocked = (difficulty: Difficulty): boolean => {
-    if (difficulty === 'easy') return true;
-    if (!progress) return false;
-    
-    switch (difficulty) {
-      case 'medium': return progress.easy_mastered ?? false;
-      case 'hard': return progress.medium_mastered ?? false;
-      default: return false;
+  // All difficulties are accessible, but we show recommendations
+  const getDifficultyRecommendation = (difficulty: Difficulty): 'recommended' | 'advanced' | 'completed' | 'normal' => {
+    const easyDone = progress?.easy_mastered ?? false;
+    const mediumDone = progress?.medium_mastered ?? false;
+    const hardDone = progress?.hard_mastered ?? false;
+
+    if (difficulty === 'easy') {
+      if (easyDone) return 'completed';
+      return 'recommended';
     }
+    if (difficulty === 'medium') {
+      if (mediumDone) return 'completed';
+      if (!easyDone) return 'advanced';
+      return 'recommended';
+    }
+    if (difficulty === 'hard') {
+      if (hardDone) return 'completed';
+      if (!easyDone || !mediumDone) return 'advanced';
+      return 'recommended';
+    }
+    return 'normal';
   };
 
   const progressPercentage = calculateProgress();
@@ -171,12 +287,8 @@ export default function LessonScreen() {
     );
   }
 
-  // Generate animation steps for AI explanation
-  const animationSteps = lesson ? generateAnimationSteps(
-    lesson.name,
-    lesson.theory_explanation || '',
-    lesson.worked_examples?.[0]
-  ) : [];
+  // Generate animation steps
+  const animationSteps = generateLessonExplanation(lesson.name, lesson.theory_explanation);
 
   return (
     <div className="min-h-screen bg-background">
@@ -188,7 +300,7 @@ export default function LessonScreen() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <p className="text-sm text-muted-foreground">{topic?.name}</p>
+              <p className="text-sm text-muted-foreground">{topic?.name} • Lesson {lessonIndex + 1}/{totalLessons}</p>
               <h1 className="text-xl font-semibold">{lesson.name}</h1>
             </div>
           </div>
@@ -264,7 +376,7 @@ export default function LessonScreen() {
             </Card>
           </div>
 
-          {/* Center Column - AI Explanation (when shown) */}
+          {/* Center/Right Column */}
           <div className="lg:col-span-2">
             {showAIExplanation ? (
               <div className="space-y-4">
@@ -278,7 +390,7 @@ export default function LessonScreen() {
                 />
               </div>
             ) : (
-              /* Right Side - Exercise Difficulty Buttons */
+              /* Exercise Difficulty Buttons */
               <div className="space-y-4">
                 <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
                   Practice Exercises
@@ -290,11 +402,8 @@ export default function LessonScreen() {
                     difficulty="easy"
                     label="Easy"
                     description="Start with the basics"
-                    color="text-green-500"
-                    bgColor="bg-green-500/10"
-                    borderColor="border-green-500/30"
+                    recommendation={getDifficultyRecommendation('easy')}
                     isCompleted={isDifficultyCompleted('easy')}
-                    isUnlocked={isDifficultyUnlocked('easy')}
                     onClick={() => handleExercise('easy')}
                   />
 
@@ -303,11 +412,8 @@ export default function LessonScreen() {
                     difficulty="medium"
                     label="Medium"
                     description="Challenge yourself"
-                    color="text-yellow-500"
-                    bgColor="bg-yellow-500/10"
-                    borderColor="border-yellow-500/30"
+                    recommendation={getDifficultyRecommendation('medium')}
                     isCompleted={isDifficultyCompleted('medium')}
-                    isUnlocked={isDifficultyUnlocked('medium')}
                     onClick={() => handleExercise('medium')}
                   />
 
@@ -316,11 +422,8 @@ export default function LessonScreen() {
                     difficulty="hard"
                     label="Hard"
                     description="Master the topic"
-                    color="text-red-500"
-                    bgColor="bg-red-500/10"
-                    borderColor="border-red-500/30"
+                    recommendation={getDifficultyRecommendation('hard')}
                     isCompleted={isDifficultyCompleted('hard')}
-                    isUnlocked={isDifficultyUnlocked('hard')}
                     onClick={() => handleExercise('hard')}
                   />
                 </div>
@@ -337,60 +440,76 @@ interface DifficultyCardProps {
   difficulty: Difficulty;
   label: string;
   description: string;
-  color: string;
-  bgColor: string;
-  borderColor: string;
+  recommendation: 'recommended' | 'advanced' | 'completed' | 'normal';
   isCompleted: boolean;
-  isUnlocked: boolean;
   onClick: () => void;
 }
 
 function DifficultyCard({
+  difficulty,
   label,
   description,
-  color,
-  bgColor,
-  borderColor,
+  recommendation,
   isCompleted,
-  isUnlocked,
   onClick,
 }: DifficultyCardProps) {
+  const colorMap = {
+    easy: { text: 'text-emerald-500', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30' },
+    medium: { text: 'text-amber-500', bg: 'bg-amber-500/10', border: 'border-amber-500/30' },
+    hard: { text: 'text-red-500', bg: 'bg-red-500/10', border: 'border-red-500/30' },
+  };
+  
+  const colors = colorMap[difficulty];
+  const isAdvanced = recommendation === 'advanced';
+
   return (
     <button
       onClick={onClick}
-      disabled={!isUnlocked}
-      className={`w-full text-left p-6 rounded-xl border-2 transition-all ${
-        !isUnlocked
-          ? 'bg-muted/50 border-border cursor-not-allowed opacity-60'
-          : isCompleted
-          ? `${bgColor} ${borderColor} hover:shadow-md`
-          : `bg-card border-border hover:${borderColor} hover:shadow-md`
-      }`}
+      className={cn(
+        "w-full text-left p-6 rounded-xl border-2 transition-all hover:shadow-md",
+        isCompleted
+          ? `${colors.bg} ${colors.border}`
+          : isAdvanced
+            ? "bg-card border-amber-400/50"
+            : "bg-card border-border hover:border-primary/50"
+      )}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
-            !isUnlocked ? 'bg-muted' : bgColor
-          }`}>
-            {!isUnlocked ? (
-              <Lock className="h-5 w-5 text-muted-foreground" />
-            ) : isCompleted ? (
-              <CheckCircle2 className={`h-6 w-6 ${color}`} />
+          <div className={cn(
+            "w-12 h-12 rounded-full flex items-center justify-center",
+            colors.bg
+          )}>
+            {isCompleted ? (
+              <CheckCircle2 className={`h-6 w-6 ${colors.text}`} />
             ) : (
-              <span className={`text-xl font-bold ${color}`}>
+              <span className={`text-xl font-bold ${colors.text}`}>
                 {label.charAt(0)}
               </span>
             )}
           </div>
           <div>
-            <h3 className={`font-semibold ${!isUnlocked ? 'text-muted-foreground' : ''}`}>
-              {label}
-            </h3>
-            <p className="text-sm text-muted-foreground">{description}</p>
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold">{label}</h3>
+              {isAdvanced && (
+                <span className="flex items-center gap-1 text-xs text-amber-500 font-medium">
+                  <AlertTriangle className="w-3 h-3" />
+                  Advanced
+                </span>
+              )}
+              {recommendation === 'recommended' && !isCompleted && (
+                <span className="text-xs text-primary font-medium px-2 py-0.5 rounded-full bg-primary/10">
+                  Recommended
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {isAdvanced ? 'Complete easier levels first for best results' : description}
+            </p>
           </div>
         </div>
         {isCompleted && (
-          <span className={`text-xs font-medium px-2 py-1 rounded-full ${bgColor} ${color}`}>
+          <span className={`text-xs font-medium px-2 py-1 rounded-full ${colors.bg} ${colors.text}`}>
             Completed
           </span>
         )}
