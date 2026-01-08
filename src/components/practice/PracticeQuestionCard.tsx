@@ -1,14 +1,12 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BookOpen, 
   CheckCircle2, 
   Eye, 
-  ChevronRight, 
   Send,
   Loader2,
   Trophy,
-  Target
+  AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,9 +14,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
-import { Exercise, ExerciseDetails, PracticeMode } from './types';
+import { Exercise, ExerciseDetails, PracticeMode, LinkedTheoryBlock } from './types';
 import { HintStepper } from './HintStepper';
 import { FeedbackBanner } from './FeedbackBanner';
+import { TheoryLinkBadges } from '@/components/exercise/TheoryLinkBadge';
 import ToolPanel from '@/components/tools/ToolPanel';
 
 interface PracticeQuestionCardProps {
@@ -42,6 +41,7 @@ interface PracticeQuestionCardProps {
   mode: PracticeMode;
   exerciseCount: number;
   correctCount: number;
+  linkedTheoryBlocks?: LinkedTheoryBlock[];
 }
 
 export function PracticeQuestionCard({
@@ -64,7 +64,8 @@ export function PracticeQuestionCard({
   isLoading,
   mode,
   exerciseCount,
-  correctCount
+  correctCount,
+  linkedTheoryBlocks
 }: PracticeQuestionCardProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isSubmitting && studentAnswer.trim()) {
@@ -117,6 +118,20 @@ export function PracticeQuestionCard({
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Required Theory Blocks */}
+        {linkedTheoryBlocks && linkedTheoryBlocks.length > 0 && (
+          <div className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/20">
+            <TheoryLinkBadges 
+              links={linkedTheoryBlocks.map(block => ({
+                blockNumber: block.blockNumber,
+                blockId: block.id,
+                relevance: block.relevance
+              }))}
+              label="Required Theory"
+            />
+          </div>
+        )}
+
         {/* Question */}
         <div className="p-6 rounded-2xl bg-muted/30 border border-border">
           <div className="text-lg font-medium leading-relaxed">

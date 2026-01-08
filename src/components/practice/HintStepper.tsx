@@ -1,23 +1,26 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronRight, Eye, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Eye, CheckCircle2, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
-import { SolutionStep } from './types';
+import { SolutionStep, TheoryBasedHint } from './types';
+import { TheoryLinkBadge } from '@/components/exercise/TheoryLinkBadge';
 
 interface HintStepperProps {
   steps: SolutionStep[] | null;
   revealedCount: number;
   onRevealNext: () => void;
   isLoading?: boolean;
+  theoryHints?: TheoryBasedHint[];
 }
 
 export function HintStepper({ 
   steps, 
   revealedCount, 
   onRevealNext,
-  isLoading = false 
+  isLoading = false,
+  theoryHints
 }: HintStepperProps) {
   const totalSteps = steps?.length || 0;
   const hasMoreSteps = revealedCount < totalSteps;
@@ -84,6 +87,23 @@ export function HintStepper({
                   
                   {/* Explanation */}
                   <p className="text-sm text-muted-foreground">{step.explanation}</p>
+
+                  {/* Theory Citation */}
+                  {(step.theoryCitation || step.theoryBlockReference) && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <BookOpen className="w-3 h-3 text-blue-500" />
+                      <span className="text-xs text-blue-600 dark:text-blue-400">
+                        {step.theoryCitation || `By ${step.theoryBlockReference}`}
+                      </span>
+                      {step.theoryBlockReference && (
+                        <TheoryLinkBadge 
+                          blockNumber={step.theoryBlockReference}
+                          blockId={step.theoryBlockId}
+                          relevance="reference"
+                        />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
