@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   ArrowLeft, 
-  Lock, 
   CheckCircle2, 
   Play, 
   Star,
-  Sparkles
+  Sparkles,
+  AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +20,8 @@ interface Lesson {
   name: string;
   order_index: number;
   isCompleted: boolean;
-  isUnlocked: boolean;
+  isRecommended: boolean;
+  isAdvanced: boolean;
   masteryPercentage: number;
 }
 
@@ -83,33 +84,43 @@ export default function LearningPathScreen() {
         });
       }
 
-      // Build lessons with unlock logic
+      // Build lessons - all accessible, but mark advanced ones
       const builtLessons: Lesson[] = (subtopicsData || []).map((subtopic, index) => {
         const mastery = progressMap.get(subtopic.id) || 0;
         const isCompleted = mastery >= 80;
         
-        // First lesson always unlocked, others unlocked if previous is completed
-        let isUnlocked = index === 0;
-        if (index > 0) {
-          const prevSubtopicId = subtopicsData[index - 1].id;
-          const prevMastery = progressMap.get(prevSubtopicId) || 0;
-          isUnlocked = prevMastery >= 80;
+        // Check if all previous lessons are completed
+        let allPreviousCompleted = true;
+        for (let i = 0; i < index; i++) {
+          const prevId = subtopicsData[i].id;
+          const prevMastery = progressMap.get(prevId) || 0;
+          if (prevMastery < 80) {
+            allPreviousCompleted = false;
+            break;
+          }
         }
+        
+        // Find the first incomplete lesson to recommend
+        const isRecommended = index === 0 || allPreviousCompleted;
+        const isAdvanced = !allPreviousCompleted && index > 0;
         
         return {
           id: subtopic.id,
           name: subtopic.name,
           order_index: subtopic.order_index,
           isCompleted,
-          isUnlocked,
+          isRecommended,
+          isAdvanced,
           masteryPercentage: mastery,
         };
       });
 
       setLessons(builtLessons);
       
-      // Auto-select first unlocked incomplete lesson
-      const nextLesson = builtLessons.find(l => l.isUnlocked && !l.isCompleted) || builtLessons[0];
+      // Auto-select first incomplete lesson or first lesson
+      const nextLesson = builtLessons.find(l => !l.isCompleted && l.isRecommended) 
+        || builtLessons.find(l => !l.isCompleted) 
+        || builtLessons[0];
       if (nextLesson) setSelectedLesson(nextLesson);
       
     } catch (error) {
@@ -125,27 +136,24 @@ export default function LearningPathScreen() {
     }
   };
 
-  const getNodePosition = (index: number, total: number) => {
-    // Zig-zag pattern: alternate left and right
+  // Calculate node positions for the zig-zag path
+  const NODE_SPACING = 100; // Vertical spacing between nodes
+  const ZIGZAG_OFFSET = 50; // Horizontal offset for zig-zag
+  const NODE_SIZE = 64; // Node diameter
+  const CENTER_X = 80; // Center of the path area
+
+  const getNodePosition = (index: number) => {
     const isEven = index % 2 === 0;
-    const baseOffset = 60; // px from center
-    const xOffset = isEven ? -baseOffset : baseOffset;
-    return { xOffset };
+    const x = CENTER_X + (isEven ? -ZIGZAG_OFFSET : ZIGZAG_OFFSET);
+    const y = index * NODE_SPACING + NODE_SIZE / 2;
+    return { x, y };
   };
 
   const getSelectedNodePosition = () => {
-    if (!selectedLesson) return { top: 0, left: 0 };
-    const node = nodeRefs.current.get(selectedLesson.id);
-    const container = containerRef.current;
-    if (!node || !container) return { top: 0, left: 0 };
-    
-    const nodeRect = node.getBoundingClientRect();
-    const containerRect = container.getBoundingClientRect();
-    
-    return {
-      top: nodeRect.top - containerRect.top + nodeRect.height / 2 - 60,
-      left: nodeRect.left - containerRect.left + nodeRect.width + 20,
-    };
+    if (!selectedLesson) return { top: 0 };
+    const index = lessons.findIndex(l => l.id === selectedLesson.id);
+    const { y } = getNodePosition(index);
+    return { top: y - 60 }; // Center panel with node
   };
 
   if (isLoading) {
@@ -160,12 +168,13 @@ export default function LearningPathScreen() {
   }
 
   const panelPos = getSelectedNodePosition();
+  const pathHeight = lessons.length * NODE_SPACING + NODE_SIZE;
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       {/* Background effects */}
       <div className="fixed inset-0 pointer-events-none" style={{
-        background: 'radial-gradient(circle at 30% 20%, hsla(239, 84%, 67%, 0.08) 0%, transparent 30%), radial-gradient(circle at 70% 80%, hsla(160, 84%, 39%, 0.05) 0%, transparent 30%)'
+        background: 'radial-gradient(circle at 30% 20%, hsl(var(--primary) / 0.08) 0%, transparent 30%), radial-gradient(circle at 70% 80%, hsl(var(--accent) / 0.05) 0%, transparent 30%)'
       }} />
 
       {/* Header */}
@@ -189,11 +198,13 @@ export default function LearningPathScreen() {
       {/* Main content with path */}
       <main className="max-w-4xl mx-auto px-6 py-10 relative" ref={containerRef}>
         <div className="flex">
-          {/* Path column - centered left */}
-          <div className="flex-1 flex flex-col items-center relative">
-            {/* Connecting line (SVG) */}
+          {/* Path column */}
+          <div className="flex-1 flex flex-col items-center relative" style={{ minHeight: pathHeight }}>
+            {/* SVG connecting lines - aligned precisely with nodes */}
             <svg 
-              className="absolute top-0 left-1/2 -translate-x-1/2 h-full w-40 pointer-events-none"
+              className="absolute top-0 left-1/2 -translate-x-1/2 pointer-events-none"
+              width="200"
+              height={pathHeight}
               style={{ zIndex: 0 }}
             >
               <defs>
@@ -204,21 +215,26 @@ export default function LearningPathScreen() {
               </defs>
               {lessons.map((lesson, index) => {
                 if (index === 0) return null;
-                const prev = getNodePosition(index - 1, lessons.length);
-                const curr = getNodePosition(index, lessons.length);
-                const prevX = 80 + prev.xOffset;
-                const currX = 80 + curr.xOffset;
-                const prevY = (index - 1) * 120 + 40;
-                const currY = index * 120 + 40;
+                
+                const prev = getNodePosition(index - 1);
+                const curr = getNodePosition(index);
+                
+                // Offset for SVG coordinate system (centered at 100)
+                const svgCenterOffset = 100 - CENTER_X;
+                const prevX = prev.x + svgCenterOffset;
+                const currX = curr.x + svgCenterOffset;
                 
                 const isCompleted = lessons[index - 1].isCompleted;
+                
+                // Use quadratic bezier for smooth curves
+                const midY = (prev.y + curr.y) / 2;
                 
                 return (
                   <path
                     key={`line-${index}`}
-                    d={`M ${prevX} ${prevY} Q ${(prevX + currX) / 2} ${(prevY + currY) / 2} ${currX} ${currY}`}
+                    d={`M ${prevX} ${prev.y} Q ${prevX} ${midY} ${currX} ${curr.y}`}
                     fill="none"
-                    stroke={isCompleted ? "hsl(var(--primary))" : "hsl(var(--muted))"}
+                    stroke={isCompleted ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.3)"}
                     strokeWidth="4"
                     strokeLinecap="round"
                     strokeDasharray={isCompleted ? "none" : "8 8"}
@@ -229,9 +245,9 @@ export default function LearningPathScreen() {
             </svg>
 
             {/* Lesson nodes */}
-            <div className="relative z-10 flex flex-col gap-[80px] py-8">
+            <div className="relative z-10 w-full" style={{ height: pathHeight }}>
               {lessons.map((lesson, index) => {
-                const { xOffset } = getNodePosition(index, lessons.length);
+                const { x, y } = getNodePosition(index);
                 const isSelected = selectedLesson?.id === lesson.id;
                 
                 return (
@@ -243,27 +259,41 @@ export default function LearningPathScreen() {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: index * 0.05, duration: 0.3 }}
-                    onClick={() => lesson.isUnlocked && setSelectedLesson(lesson)}
-                    disabled={!lesson.isUnlocked}
-                    style={{ marginLeft: xOffset }}
+                    onClick={() => setSelectedLesson(lesson)}
+                    style={{ 
+                      position: 'absolute',
+                      left: `calc(50% + ${x - CENTER_X}px - ${NODE_SIZE / 2}px)`,
+                      top: y - NODE_SIZE / 2,
+                      width: NODE_SIZE,
+                      height: NODE_SIZE,
+                    }}
                     className={cn(
-                      "relative w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300",
-                      "border-4 shadow-lg",
+                      "rounded-full flex items-center justify-center transition-all duration-300",
+                      "border-4 shadow-lg cursor-pointer",
                       lesson.isCompleted
                         ? "bg-emerald-500 border-emerald-400 text-white shadow-emerald-500/30"
-                        : lesson.isUnlocked
+                        : lesson.isAdvanced
                           ? isSelected
+                            ? "bg-amber-500/20 border-amber-400 text-amber-400 shadow-amber-400/30 ring-4 ring-amber-400/30 scale-110"
+                            : "bg-card border-amber-400/50 text-amber-500 hover:scale-105 hover:border-amber-400"
+                          : isSelected
                             ? "bg-primary border-primary text-primary-foreground shadow-primary/40 ring-4 ring-primary/30 scale-110"
-                            : "bg-card border-primary/50 text-primary hover:scale-105 hover:border-primary cursor-pointer"
-                          : "bg-muted border-muted-foreground/30 text-muted-foreground cursor-not-allowed opacity-60"
+                            : "bg-card border-primary/50 text-primary hover:scale-105 hover:border-primary"
                     )}
                   >
                     {lesson.isCompleted ? (
                       <CheckCircle2 className="w-7 h-7" />
-                    ) : lesson.isUnlocked ? (
+                    ) : lesson.isAdvanced ? (
                       <span className="text-lg font-bold">{index + 1}</span>
                     ) : (
-                      <Lock className="w-5 h-5" />
+                      <span className="text-lg font-bold">{index + 1}</span>
+                    )}
+                    
+                    {/* Advanced indicator */}
+                    {lesson.isAdvanced && !lesson.isCompleted && (
+                      <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center">
+                        <AlertTriangle className="w-3 h-3 text-white" />
+                      </div>
                     )}
                     
                     {/* Stars for completed */}
@@ -284,9 +314,12 @@ export default function LearningPathScreen() {
                     )}
 
                     {/* Glow effect for selected */}
-                    {isSelected && lesson.isUnlocked && (
+                    {isSelected && (
                       <motion.div
-                        className="absolute inset-0 rounded-full bg-primary/20"
+                        className={cn(
+                          "absolute inset-0 rounded-full",
+                          lesson.isAdvanced ? "bg-amber-400/20" : "bg-primary/20"
+                        )}
                         animate={{ scale: [1, 1.3, 1] }}
                         transition={{ duration: 1.5, repeat: Infinity }}
                       />
@@ -297,8 +330,8 @@ export default function LearningPathScreen() {
             </div>
           </div>
 
-          {/* Side panel area - takes up right side */}
-          <div className="w-64 relative">
+          {/* Side panel area */}
+          <div className="w-72 relative ml-4">
             <AnimatePresence mode="wait">
               {selectedLesson && (
                 <motion.div
@@ -311,11 +344,28 @@ export default function LearningPathScreen() {
                     position: 'absolute',
                     top: panelPos.top,
                   }}
-                  className="w-full bg-card border border-border rounded-2xl p-5 shadow-xl"
+                  className={cn(
+                    "w-full border rounded-2xl p-5 shadow-xl",
+                    selectedLesson.isAdvanced && !selectedLesson.isCompleted
+                      ? "bg-card border-amber-400/50"
+                      : "bg-card border-border"
+                  )}
                 >
                   {/* Arrow pointing to node */}
-                  <div className="absolute left-0 top-1/2 -translate-x-2 -translate-y-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent border-r-border" />
-                  <div className="absolute left-0 top-1/2 -translate-x-[6px] -translate-y-1/2 w-0 h-0 border-t-7 border-b-7 border-r-7 border-transparent border-r-card" />
+                  <div className={cn(
+                    "absolute left-0 top-1/2 -translate-x-2 -translate-y-1/2 w-0 h-0 border-t-8 border-b-8 border-r-8 border-transparent",
+                    selectedLesson.isAdvanced && !selectedLesson.isCompleted
+                      ? "border-r-amber-400/50"
+                      : "border-r-border"
+                  )} />
+                  
+                  {/* Advanced warning banner */}
+                  {selectedLesson.isAdvanced && !selectedLesson.isCompleted && (
+                    <div className="flex items-center gap-2 mb-3 p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                      <span className="text-xs font-medium">Advanced - earlier lessons recommended</span>
+                    </div>
+                  )}
                   
                   {/* Content */}
                   <div className="flex items-start gap-3 mb-4">
@@ -323,7 +373,9 @@ export default function LearningPathScreen() {
                       "w-10 h-10 rounded-lg flex items-center justify-center",
                       selectedLesson.isCompleted 
                         ? "bg-emerald-500/20 text-emerald-400" 
-                        : "bg-primary/20 text-primary"
+                        : selectedLesson.isAdvanced
+                          ? "bg-amber-500/20 text-amber-400"
+                          : "bg-primary/20 text-primary"
                     )}>
                       {selectedLesson.isCompleted ? (
                         <CheckCircle2 className="w-5 h-5" />
@@ -371,11 +423,20 @@ export default function LearningPathScreen() {
                   
                   <Button
                     onClick={handleStartLesson}
-                    className="w-full gap-2"
+                    className={cn(
+                      "w-full gap-2",
+                      selectedLesson.isAdvanced && !selectedLesson.isCompleted
+                        ? "bg-amber-500 hover:bg-amber-600 text-white"
+                        : ""
+                    )}
                     size="sm"
                   >
                     <Play className="w-4 h-4" />
-                    {selectedLesson.isCompleted ? 'Practice Again' : selectedLesson.masteryPercentage > 0 ? 'Continue' : 'Start'}
+                    {selectedLesson.isCompleted 
+                      ? 'Practice Again' 
+                      : selectedLesson.masteryPercentage > 0 
+                        ? 'Continue' 
+                        : 'Start'}
                   </Button>
                 </motion.div>
               )}
