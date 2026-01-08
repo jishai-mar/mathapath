@@ -5,8 +5,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
-import { BookOpen, Lightbulb, CheckCircle2, Calculator } from 'lucide-react';
+import { BookOpen, Lightbulb, CheckCircle2, Calculator, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface WorkedExample {
   title?: string;
@@ -37,6 +38,7 @@ export function NodeTheorySheet({
   topicName 
 }: NodeTheorySheetProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [theoryData, setTheoryData] = useState<TheoryData | null>(null);
 
   useEffect(() => {
@@ -44,6 +46,109 @@ export function NodeTheorySheet({
       fetchTheory();
     }
   }, [isOpen, lessonId]);
+
+  // Convert AI response format to storage format
+  const convertAIResponseToStorageFormat = (aiContent: {
+    definition?: string;
+    key_rule?: string;
+    formula?: string;
+    when_to_use?: string;
+    worked_example?: { problem: string; steps: string[]; answer: string };
+    additional_examples?: { problem: string; steps: string[]; answer: string }[];
+    common_mistake?: { wrong: string; right: string };
+  }) => {
+    // Build comprehensive explanation from AI response
+    const explanationParts: string[] = [];
+    
+    if (aiContent.definition) {
+      explanationParts.push(`**Definition:** ${aiContent.definition}`);
+    }
+    if (aiContent.key_rule) {
+      explanationParts.push(`**Key Rule:** ${aiContent.key_rule}`);
+    }
+    if (aiContent.formula) {
+      explanationParts.push(`**Formula:** $${aiContent.formula}$`);
+    }
+    if (aiContent.when_to_use) {
+      explanationParts.push(`**When to use:** ${aiContent.when_to_use}`);
+    }
+    if (aiContent.common_mistake?.wrong && aiContent.common_mistake?.right) {
+      explanationParts.push(`\n**Common Mistake:**\n- ❌ ${aiContent.common_mistake.wrong}\n- ✓ ${aiContent.common_mistake.right}`);
+    }
+
+    const explanation = explanationParts.join('\n\n');
+
+    // Convert worked examples to storage format
+    const workedExamples: WorkedExample[] = [];
+    
+    if (aiContent.worked_example?.problem) {
+      const stepsText = aiContent.worked_example.steps?.join('\n') || '';
+      workedExamples.push({
+        title: 'Primary Example',
+        problem: aiContent.worked_example.problem,
+        solution: `${stepsText}\n\n**Answer:** ${aiContent.worked_example.answer || ''}`
+      });
+    }
+
+    if (aiContent.additional_examples) {
+      aiContent.additional_examples.forEach((ex, idx) => {
+        if (ex.problem) {
+          const stepsText = ex.steps?.join('\n') || '';
+          workedExamples.push({
+            title: `Example ${idx + 2}`,
+            problem: ex.problem,
+            solution: `${stepsText}\n\n**Answer:** ${ex.answer || ''}`
+          });
+        }
+      });
+    }
+
+    return { explanation, workedExamples };
+  };
+
+  const generateAndSaveTheory = async () => {
+    setIsGenerating(true);
+    
+    try {
+      // Call edge function to generate theory content
+      const { data: aiContent, error: genError } = await supabase.functions.invoke(
+        'generate-theory-content',
+        {
+          body: { subtopicName: lessonName, topicName: topicName || '' }
+        }
+      );
+
+      if (genError || !aiContent || aiContent.fallback) {
+        console.error('Failed to generate theory:', genError);
+        return;
+      }
+
+      const { explanation, workedExamples } = convertAIResponseToStorageFormat(aiContent);
+
+      // Save to database for future use (precomputed, static content)
+      const { error: updateError } = await supabase
+        .from('subtopics')
+        .update({
+          theory_explanation: explanation,
+          worked_examples: workedExamples as unknown as import('@/integrations/supabase/types').Json
+        })
+        .eq('id', lessonId);
+
+      if (updateError) {
+        console.error('Failed to save theory to database:', updateError);
+        // Still show the generated content even if save fails
+      } else {
+        console.log('Theory content saved to database for subtopic:', lessonId);
+      }
+
+      // Update local state with generated content
+      setTheoryData({ explanation, workedExamples });
+    } catch (err) {
+      console.error('Error generating theory:', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const fetchTheory = async () => {
     setIsLoading(true);
@@ -165,7 +270,11 @@ export function NodeTheorySheet({
               </div>
             </div>
           ) : (
-            <NoContentMessage lessonName={lessonName} />
+            <NoContentMessage 
+              lessonName={lessonName} 
+              onGenerate={generateAndSaveTheory}
+              isGenerating={isGenerating}
+            />
           )}
         </ScrollArea>
       </SheetContent>
@@ -266,17 +375,42 @@ function TheoryLoadingSkeleton() {
   );
 }
 
-// No content message
-function NoContentMessage({ lessonName }: { lessonName: string }) {
+// No content message with generate button
+interface NoContentMessageProps {
+  lessonName: string;
+  onGenerate: () => void;
+  isGenerating: boolean;
+}
+
+function NoContentMessage({ lessonName, onGenerate, isGenerating }: NoContentMessageProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="p-4 rounded-full bg-muted/50 mb-4">
         <BookOpen className="w-8 h-8 text-muted-foreground" />
       </div>
-      <h3 className="font-semibold text-lg mb-2">Theory Content Coming Soon</h3>
-      <p className="text-sm text-muted-foreground max-w-sm">
-        The theory content for "{lessonName}" is being prepared. 
-        In the meantime, try the exercises or ask the AI tutor for help.
+      <h3 className="font-semibold text-lg mb-2">Theory Content Not Yet Available</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mb-4">
+        The theory content for "{lessonName}" hasn't been created yet.
+      </p>
+      <Button 
+        onClick={onGenerate} 
+        disabled={isGenerating}
+        className="gap-2"
+      >
+        {isGenerating ? (
+          <>
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            Generating Theory...
+          </>
+        ) : (
+          <>
+            <Lightbulb className="w-4 h-4" />
+            Generate Theory Content
+          </>
+        )}
+      </Button>
+      <p className="text-xs text-muted-foreground mt-3 max-w-xs">
+        This will create permanent theory content for all students.
       </p>
     </div>
   );
