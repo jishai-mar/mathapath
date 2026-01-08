@@ -253,8 +253,8 @@ function TopicCard({
   );
 }
 
-// Practice Quiz Card Component
-function PracticeQuizCard({ index }: { index: number }) {
+// Find Your Level Card Component
+function FindYourLevelCard({ index }: { index: number }) {
   const navigate = useNavigate();
   
   return (
@@ -264,7 +264,7 @@ function PracticeQuizCard({ index }: { index: number }) {
       transition={{ delay: index * 0.03, duration: 0.4 }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
       whileTap={{ scale: 0.98 }}
-      onClick={() => navigate('/practice-quiz')}
+      onClick={() => navigate('/find-your-level')}
       className="group relative text-left p-5 rounded-xl border transition-all duration-300 bg-gradient-to-br from-primary/10 to-accent/10 backdrop-blur-sm hover:from-primary/20 hover:to-accent/20 border-primary/30 hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
     >
       {/* Gradient accent line */}
@@ -278,13 +278,13 @@ function PracticeQuizCard({ index }: { index: number }) {
         
         {/* Badge */}
         <div className="flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide bg-primary/20 text-primary">
-          Mixed
+          Assessment
         </div>
       </div>
       
       {/* Content */}
       <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-        Practice Quiz
+        Let's find your level
       </h3>
       <p className="text-xs text-muted-foreground line-clamp-2 mb-4 min-h-[32px]">
         Mixed questions from all topics. Perfect for exam prep!
@@ -368,9 +368,9 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
         </div>
       </div>
 
-      {/* Practice Quiz - Standalone */}
+      {/* Find Your Level - Standalone */}
       <div>
-        <PracticeQuizCard index={0} />
+        <FindYourLevelCard index={0} />
       </div>
 
       {/* Curriculum Categories */}
