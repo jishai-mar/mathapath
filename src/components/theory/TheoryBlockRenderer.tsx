@@ -7,6 +7,8 @@ import { FormalDefinition } from './blocks/FormalDefinition';
 import { IntuitiveExplanation } from './blocks/IntuitiveExplanation';
 import { WorkedExample } from './blocks/WorkedExample';
 import { DeepDive } from './blocks/DeepDive';
+import { CommonMistakeBlock } from './blocks/CommonMistakeBlock';
+import { DeepDiveBlock } from './blocks/DeepDiveBlock';
 import type { TheoryBlockData, TheoryBlockRow, parseTheoryBlock } from './types/blocks';
 import type { TheoryBlock } from './types';
 
@@ -59,6 +61,10 @@ export function TheoryBlockRenderer({ block, showBlockNumber = true }: TheoryBlo
       case 'property':
         // Property blocks use similar styling to theorems
         return <TheoremBlock block={block as any} showBlockNumber={showBlockNumber} />;
+      case 'common-mistake':
+        return <CommonMistakeBlock block={block as any} showBlockNumber={showBlockNumber} />;
+      case 'deep-dive':
+        return <DeepDiveBlock block={block as any} showBlockNumber={showBlockNumber} />;
       case 'proof':
       case 'remark':
         // Fallback for proof and remark - render as simple cards for now

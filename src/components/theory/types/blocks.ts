@@ -168,6 +168,32 @@ export interface RemarkBlock extends BaseTheoryBlock {
   };
 }
 
+// Common mistake block - typical errors students make
+export interface CommonMistakeBlock extends BaseTheoryBlock {
+  type: 'common-mistake';
+  content: {
+    mistakeTitle: string;
+    incorrectReasoning: string;
+    whyWrong: string;
+    correction: string;
+    miniExample?: {
+      wrong: string;
+      right: string;
+    };
+  };
+}
+
+// Deep dive block - advanced exploration
+export interface DeepDiveBlock extends BaseTheoryBlock {
+  type: 'deep-dive';
+  content: {
+    question: string;
+    answerExplanation: string;
+    boundaryCases?: string[];
+    extension?: string;
+  };
+}
+
 // Union type for all theory blocks
 export type TheoryBlockData = 
   | DefinitionBlock 
@@ -177,7 +203,9 @@ export type TheoryBlockData =
   | VisualBlock 
   | WorkedExampleBlock
   | ProofBlock
-  | RemarkBlock;
+  | RemarkBlock
+  | CommonMistakeBlock
+  | DeepDiveBlock;
 
 // Database row type (matches Supabase table structure)
 export interface TheoryBlockRow {

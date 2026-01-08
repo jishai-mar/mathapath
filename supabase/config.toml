@@ -107,3 +107,6 @@ verify_jwt = false
 
 [functions.generate-theory-media]
 verify_jwt = false
+
+[functions.generate-theory-blocks]
+verify_jwt = false
