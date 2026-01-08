@@ -98,3 +98,9 @@ verify_jwt = false
 
 [functions.analyze-practice-exam]
 verify_jwt = false
+
+[functions.generate-topic-mastery-test]
+verify_jwt = false
+
+[functions.grade-mastery-test]
+verify_jwt = false
