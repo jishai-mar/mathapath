@@ -1120,8 +1120,8 @@ export default function DiagnosticTest() {
                 </div>
               )}
 
-              <Button onClick={goToPractice} className="w-full" size="lg">
-                Start Learning
+              <Button onClick={() => navigate(`/learning-path/${topicId}`)} className="w-full" size="lg">
+                Start Learning Path
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>

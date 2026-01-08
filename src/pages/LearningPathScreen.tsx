@@ -46,10 +46,34 @@ export default function LearningPathScreen() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (topicId) {
-      loadTopicAndLessons();
+    if (topicId && user) {
+      checkAssessmentAndLoad();
     }
   }, [topicId, user]);
+
+  // Check if assessment is completed before allowing access to learning path
+  const checkAssessmentAndLoad = async () => {
+    try {
+      const { data: diagnosticTest } = await supabase
+        .from('diagnostic_tests')
+        .select('status')
+        .eq('user_id', user!.id)
+        .eq('topic_id', topicId)
+        .single();
+
+      if (!diagnosticTest || diagnosticTest.status !== 'completed') {
+        // Redirect to assessment if not completed
+        navigate(`/diagnostic/${topicId}`, { replace: true });
+        return;
+      }
+
+      // Assessment completed, load the learning path
+      loadTopicAndLessons();
+    } catch (error) {
+      // No diagnostic found, redirect to assessment
+      navigate(`/diagnostic/${topicId}`, { replace: true });
+    }
+  };
 
   const loadTopicAndLessons = async () => {
     setIsLoading(true);
