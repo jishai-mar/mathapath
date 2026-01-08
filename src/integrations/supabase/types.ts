@@ -801,42 +801,119 @@ export type Database = {
           },
         ]
       }
+      theory_block_media_jobs: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          job_type: string
+          max_attempts: number | null
+          priority: number | null
+          started_at: string | null
+          status: string
+          theory_block_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type: string
+          max_attempts?: number | null
+          priority?: number | null
+          started_at?: string | null
+          status?: string
+          theory_block_id: string
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          max_attempts?: number | null
+          priority?: number | null
+          started_at?: string | null
+          status?: string
+          theory_block_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "theory_block_media_jobs_theory_block_id_fkey"
+            columns: ["theory_block_id"]
+            isOneToOne: false
+            referencedRelation: "theory_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       theory_blocks: {
         Row: {
+          audio_url: string | null
           block_number: string | null
           block_type: string
           content: Json
           created_at: string | null
+          generation_error: string | null
+          generation_mode: string | null
           id: string
+          last_generated_at: string | null
           latex_content: string | null
+          narration_script: string | null
+          narration_voice_id: string | null
           order_index: number
           prerequisites: string[] | null
           title: string
           topic_id: string | null
+          video_status: string | null
+          video_url: string | null
+          visual_plan: Json | null
         }
         Insert: {
+          audio_url?: string | null
           block_number?: string | null
           block_type: string
           content: Json
           created_at?: string | null
+          generation_error?: string | null
+          generation_mode?: string | null
           id?: string
+          last_generated_at?: string | null
           latex_content?: string | null
+          narration_script?: string | null
+          narration_voice_id?: string | null
           order_index: number
           prerequisites?: string[] | null
           title: string
           topic_id?: string | null
+          video_status?: string | null
+          video_url?: string | null
+          visual_plan?: Json | null
         }
         Update: {
+          audio_url?: string | null
           block_number?: string | null
           block_type?: string
           content?: Json
           created_at?: string | null
+          generation_error?: string | null
+          generation_mode?: string | null
           id?: string
+          last_generated_at?: string | null
           latex_content?: string | null
+          narration_script?: string | null
+          narration_voice_id?: string | null
           order_index?: number
           prerequisites?: string[] | null
           title?: string
           topic_id?: string | null
+          video_status?: string | null
+          video_url?: string | null
+          visual_plan?: Json | null
         }
         Relationships: [
           {

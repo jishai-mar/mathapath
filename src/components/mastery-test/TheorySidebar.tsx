@@ -68,7 +68,7 @@ export function TheorySidebar({
               <>
                 {content.formalStatement && (
                   <div className="p-3 rounded-lg bg-muted">
-                    <MathRenderer content={content.formalStatement} />
+                    <MathRenderer latex={content.formalStatement} />
                   </div>
                 )}
                 {content.intuition && (
@@ -82,7 +82,7 @@ export function TheorySidebar({
               <>
                 {content.formalStatement && (
                   <div className="p-3 rounded-lg bg-muted">
-                    <MathRenderer content={content.formalStatement} />
+                    <MathRenderer latex={content.formalStatement} />
                   </div>
                 )}
                 {content.intuition && (
@@ -119,7 +119,7 @@ export function TheorySidebar({
             {/* Fallback: show latex content or raw content */}
             {block.latexContent && !content && (
               <div className="p-3 rounded-lg bg-muted">
-                <MathRenderer content={block.latexContent} />
+                <MathRenderer latex={block.latexContent} />
               </div>
             )}
           </div>

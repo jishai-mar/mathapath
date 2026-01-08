@@ -1,9 +1,11 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, ChevronDown, Lightbulb } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MathRenderer from '@/components/MathRenderer';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { TheoremBlock as TheoremBlockType, ProofStep } from '../types/blocks';
+import { TheoryBlockMedia } from '../TheoryBlockMedia';
+import { useTheoryBlockMedia } from '@/hooks/useTheoryBlockMedia';
 
 interface TheoremBlockProps {
   block: TheoremBlockType;
@@ -14,6 +16,26 @@ export function TheoremBlock({ block, showBlockNumber = true }: TheoremBlockProp
   const [proofOpen, setProofOpen] = useState(false);
   const [intuitionOpen, setIntuitionOpen] = useState(false);
   const { content } = block;
+  const { fetchMediaStatus, generateMedia } = useTheoryBlockMedia(block.id);
+  const [mediaState, setMediaState] = useState<{
+    videoStatus: 'none' | 'pending' | 'processing' | 'ready' | 'failed';
+    audioUrl: string | null;
+    videoUrl: string | null;
+    visualPlan: unknown;
+    generationMode: 'full' | 'fallback';
+    generationError: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    fetchMediaStatus().then(setMediaState);
+  }, [fetchMediaStatus]);
+
+  const handleRegenerate = async () => {
+    const result = await generateMedia();
+    if (result) {
+      setMediaState(result);
+    }
+  };
 
   return (
     <motion.section
@@ -136,6 +158,22 @@ export function TheoremBlock({ block, showBlockNumber = true }: TheoremBlockProp
               ))}
             </ul>
           </div>
+        )}
+
+        {/* Media Player */}
+        {mediaState && (
+          <TheoryBlockMedia
+            blockId={block.id}
+            blockNumber={block.blockNumber}
+            blockTitle={block.title}
+            videoStatus={mediaState.videoStatus}
+            videoUrl={mediaState.videoUrl}
+            audioUrl={mediaState.audioUrl}
+            visualPlan={mediaState.visualPlan as any}
+            generationMode={mediaState.generationMode}
+            generationError={mediaState.generationError}
+            onRegenerate={handleRegenerate}
+          />
         )}
       </div>
     </motion.section>
