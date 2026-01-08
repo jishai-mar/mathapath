@@ -7,6 +7,8 @@ import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TutorProvider, useTutor } from "@/contexts/TutorContext";
 import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
 import { ExerciseProvider } from "@/contexts/ExerciseContext";
+import { AppProvider } from "@/contexts/AppContext";
+import { GlobalTutorButton } from "@/components/tutor/GlobalTutorButton";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 // import { PersistentGilbert } from "@/components/tutor/PersistentGilbert";
@@ -100,12 +102,14 @@ const App = () => (
         <TutorProvider>
           <TutorSessionProvider>
             <ExerciseProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <AppRoutes />
-              </BrowserRouter>
-              {/* <PersistentGilbert /> */}
+              <AppProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <AppRoutes />
+                  <GlobalTutorButton />
+                </BrowserRouter>
+              </AppProvider>
             </ExerciseProvider>
           </TutorSessionProvider>
         </TutorProvider>
