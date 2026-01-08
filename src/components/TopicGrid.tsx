@@ -133,19 +133,24 @@ function TopicCard({
   topic, 
   progress, 
   isCurrent, 
-  isCompleted,
+  isAssessmentCompleted,
   onClick,
   index 
 }: { 
   topic: Topic; 
   progress: TopicProgress;
   isCurrent: boolean;
-  isCompleted: boolean;
+  isAssessmentCompleted: boolean;
   onClick: () => void;
   index: number;
 }) {
   const Icon = iconMap[topic.icon] || Calculator;
-  const masteryLevel = getMasteryLevel(progress.masteryPercentage);
+  const masteryLevel = isAssessmentCompleted ? getMasteryLevel(progress.masteryPercentage) : { 
+    label: 'Take Assessment', 
+    color: 'text-primary', 
+    bgColor: 'bg-primary/10',
+    borderColor: 'border-primary/30'
+  };
   
   return (
     <motion.button
@@ -181,15 +186,15 @@ function TopicCard({
           <Icon className="w-5 h-5" />
         </div>
         
-        {/* Status badge */}
+      {/* Status badge */}
         <div className={cn(
           "flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-semibold uppercase tracking-wide",
           isCurrent 
             ? "bg-primary/20 text-primary"
             : masteryLevel.bgColor, masteryLevel.color
         )}>
-          {progress.masteryPercentage >= 80 && <CheckCircle2 className="w-3 h-3" />}
-          {isCurrent ? 'Current' : masteryLevel.label}
+          {isAssessmentCompleted && progress.masteryPercentage >= 80 && <CheckCircle2 className="w-3 h-3" />}
+          {!isAssessmentCompleted ? 'Take Assessment' : isCurrent ? 'Current' : masteryLevel.label}
         </div>
       </div>
       
@@ -201,44 +206,60 @@ function TopicCard({
         {topic.description || 'Master this fundamental concept.'}
       </p>
       
-      {/* Mastery bar */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Mastery</span>
-          <span className={cn(
-            "font-medium tabular-nums",
-            progress.masteryPercentage >= 80 ? "text-emerald-400" :
-            progress.masteryPercentage >= 50 ? "text-blue-400" :
-            progress.masteryPercentage > 0 ? "text-amber-400" : "text-muted-foreground"
-          )}>
-            {progress.masteryPercentage}%
-          </span>
+      {/* Mastery bar - only show if assessment completed */}
+      {isAssessmentCompleted ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Mastery</span>
+            <span className={cn(
+              "font-medium tabular-nums",
+              progress.masteryPercentage >= 80 ? "text-emerald-400" :
+              progress.masteryPercentage >= 50 ? "text-blue-400" :
+              progress.masteryPercentage > 0 ? "text-amber-400" : "text-muted-foreground"
+            )}>
+              {progress.masteryPercentage}%
+            </span>
+          </div>
+          <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden">
+            <motion.div 
+              className={cn(
+                "h-full rounded-full",
+                progress.masteryPercentage >= 80 ? "bg-gradient-to-r from-emerald-500 to-emerald-400" :
+                progress.masteryPercentage >= 50 ? "bg-gradient-to-r from-blue-500 to-blue-400" :
+                progress.masteryPercentage > 0 ? "bg-gradient-to-r from-amber-500 to-amber-400" : "bg-muted"
+              )}
+              initial={{ width: 0 }}
+              animate={{ width: `${progress.masteryPercentage}%` }}
+              transition={{ duration: 0.8, ease: 'easeOut', delay: index * 0.03 }}
+            />
+          </div>
         </div>
-        <div className="h-1.5 bg-secondary/50 rounded-full overflow-hidden">
-          <motion.div 
-            className={cn(
-              "h-full rounded-full",
-              progress.masteryPercentage >= 80 ? "bg-gradient-to-r from-emerald-500 to-emerald-400" :
-              progress.masteryPercentage >= 50 ? "bg-gradient-to-r from-blue-500 to-blue-400" :
-              progress.masteryPercentage > 0 ? "bg-gradient-to-r from-amber-500 to-amber-400" : "bg-muted"
-            )}
-            initial={{ width: 0 }}
-            animate={{ width: `${progress.masteryPercentage}%` }}
-            transition={{ duration: 0.8, ease: 'easeOut', delay: index * 0.03 }}
-          />
+      ) : (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Level</span>
+            <span className="text-primary font-medium">Not assessed</span>
+          </div>
+          <div className="h-1.5 bg-primary/20 rounded-full overflow-hidden">
+            <div className="h-full w-full bg-gradient-to-r from-primary/30 to-primary/50 rounded-full animate-pulse" />
+          </div>
         </div>
-      </div>
+      )}
       
       {/* Action hint */}
       <div className="mt-4 flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
-          {progress.exercisesCompleted} exercises
+          {isAssessmentCompleted ? `${progress.exercisesCompleted} exercises` : 'Quick assessment'}
         </span>
         <div className={cn(
           "flex items-center gap-1 text-xs font-medium transition-all",
-          isCurrent ? "text-primary" : "text-muted-foreground group-hover:text-primary"
+          isCurrent || !isAssessmentCompleted ? "text-primary" : "text-muted-foreground group-hover:text-primary"
         )}>
-          {isCurrent ? (
+          {!isAssessmentCompleted ? (
+            <>
+              Assess Level <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+            </>
+          ) : isCurrent ? (
             <>
               Continue <Play className="w-3 h-3" />
             </>
@@ -316,7 +337,15 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
   const navigate = useNavigate();
   
   const handleTopicClick = (topicId: string) => {
-    if (useLearningPath) {
+    // Check if diagnostic assessment is completed for this topic
+    const diagnostic = diagnosticStatuses.find(d => d.topic_id === topicId);
+    const isAssessmentCompleted = diagnostic?.status === 'completed';
+    
+    if (!isAssessmentCompleted) {
+      // Must complete assessment first
+      navigate(`/diagnostic/${topicId}`);
+    } else if (useLearningPath) {
+      // Assessment done, go to learning path
       navigate(`/learning-path/${topicId}`);
     } else {
       onTopicClick(topicId);
@@ -406,10 +435,10 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
 
             {/* Category Topics Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 pl-11">
-              {category.topics.map((topic) => {
+            {category.topics.map((topic) => {
                 const progress = getTopicProgress(topic.id);
                 const diagnostic = diagnosticStatuses.find(d => d.topic_id === topic.id);
-                const isCompleted = diagnostic?.status === 'completed';
+                const isAssessmentCompleted = diagnostic?.status === 'completed';
                 const isCurrent = topic.id === currentTopicId;
                 const currentIndex = ++globalIndex;
                 
@@ -419,7 +448,7 @@ export default function TopicGrid({ topics, getTopicProgress, diagnosticStatuses
                     topic={topic}
                     progress={progress}
                     isCurrent={isCurrent}
-                    isCompleted={isCompleted}
+                    isAssessmentCompleted={isAssessmentCompleted}
                     onClick={() => handleTopicClick(topic.id)}
                     index={currentIndex}
                   />
