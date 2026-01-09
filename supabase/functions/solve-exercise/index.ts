@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, solveExerciseFullSchema } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -30,11 +31,12 @@ serve(async (req) => {
   }
 
   try {
-    const { question, subtopicName, correctAnswer, exerciseId, diagnosticQuestionId } = await req.json();
-
-    if (!question) {
-      throw new Error('Question is required');
+    // Validate input
+    const validation = await parseAndValidate(req, solveExerciseFullSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { question, subtopicName, correctAnswer, exerciseId, diagnosticQuestionId } = validation.data;
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');

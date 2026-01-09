@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, notebookTutorFullSchema } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,13 @@ serve(async (req) => {
   }
 
   try {
-    const { message, selectedEntry, allEntries, conversationHistory } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, notebookTutorFullSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { message, selectedEntry, allEntries, conversationHistory } = validation.data;
+    
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     
     if (!OPENAI_API_KEY) {
