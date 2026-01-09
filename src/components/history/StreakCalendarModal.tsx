@@ -62,10 +62,14 @@ export function StreakCalendarModal({
 
         <div className="space-y-4">
           {/* Current streak info */}
-          {currentStreak > 0 && streakStartDate && (
+          {currentStreak > 0 && streakStartDate ? (
             <div className="bg-amber-500/10 rounded-lg p-3 text-sm">
               <span className="font-medium">Current streak:</span>{' '}
               {format(streakStartDate, 'MMM d')} → Today ({currentStreak} days)
+            </div>
+          ) : (
+            <div className="bg-muted/50 rounded-lg p-3 text-sm text-muted-foreground">
+              No active streak. Practice today to start one!
             </div>
           )}
 

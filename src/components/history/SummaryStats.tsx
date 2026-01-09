@@ -18,24 +18,29 @@ export function SummaryStats({
   lastPracticedDate,
   bestTopic,
 }: SummaryStatsProps) {
+  const hasNoData = totalQuestions === 0;
+
   const stats = [
     {
       label: 'Total Questions',
       value: totalQuestions.toLocaleString(),
       icon: Sparkles,
       gradient: 'from-primary/20 to-primary/5',
+      emptyHint: 'Start practicing!',
     },
     {
       label: 'Average Accuracy',
       value: `${averageAccuracy}%`,
       icon: Target,
       gradient: 'from-green-500/20 to-green-500/5',
+      emptyHint: 'No data yet',
     },
     {
       label: 'Practice Sessions',
       value: totalSessions.toLocaleString(),
       icon: Clock,
       gradient: 'from-blue-500/20 to-blue-500/5',
+      emptyHint: 'Days practiced',
     },
     {
       label: 'Last Practiced',
@@ -51,6 +56,7 @@ export function SummaryStats({
       subtitle: bestTopic ? `${bestTopic.accuracy}% accuracy` : undefined,
       icon: Trophy,
       gradient: 'from-amber-500/20 to-amber-500/5',
+      emptyHint: 'Complete exercises',
     },
   ];
 
@@ -72,6 +78,9 @@ export function SummaryStats({
               <p className="text-xl font-bold truncate">{stat.value}</p>
               {stat.subtitle && (
                 <p className="text-xs text-muted-foreground mt-1">{stat.subtitle}</p>
+              )}
+              {hasNoData && stat.emptyHint && !stat.subtitle && (
+                <p className="text-xs text-muted-foreground/70 mt-1">{stat.emptyHint}</p>
               )}
             </CardContent>
           </Card>
