@@ -41,8 +41,6 @@ import TopicMasteryTest from "./pages/TopicMasteryTest";
 import TopicTheoryBlocks from "./pages/TopicTheoryBlocks";
 import AdminTheoryGenerator from "./pages/AdminTheoryGenerator";
 import History from "./pages/History";
-import TopicTheoryScreen from "./pages/TopicTheoryScreen";
-import LessonTheoryScreen from "./pages/LessonTheoryScreen";
 
 const queryClient = new QueryClient();
 
@@ -86,10 +84,7 @@ function AppRoutes() {
       <Route path="/notebook" element={<Notebook />} />
       <Route path="/bookmarks" element={<Bookmarks />} />
       <Route path="/voice-tutor" element={<VoiceFirstTutoring />} />
-      {/* Theory routes - new TopicTheoryScreen and LessonTheoryScreen */}
-      <Route path="/theory/:topicSlug" element={<TopicTheoryScreen />} />
-      <Route path="/theory/:topicSlug/:lessonId" element={<LessonTheoryScreen />} />
-      {/* Legacy route for backward compatibility */}
+      {/* Theory route */}
       <Route path="/theory-legacy/:topicId" element={<TheoryTopic />} />
       <Route path="/practice-exam" element={<PracticeExam />} />
       <Route path="/find-your-level" element={<LevelAssessment />} />
