@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 interface VisualPlanSegment {
   startTime: number;
@@ -34,18 +35,10 @@ export function useTheoryBlockMedia(blockId: string) {
     
     try {
       // Call the edge function to generate media
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-theory-media`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ theoryBlockId: blockId }),
-        }
-      );
+      const response = await authenticatedFetch('generate-theory-media', {
+        method: 'POST',
+        body: JSON.stringify({ theoryBlockId: blockId }),
+      });
 
       if (!response.ok) {
         const error = await response.json();

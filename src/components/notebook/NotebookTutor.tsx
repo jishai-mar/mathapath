@@ -7,6 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { NotebookEntry } from '@/hooks/useNotebook';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -65,12 +66,8 @@ export function NotebookTutor({ selectedEntry, allEntries, onPracticeRequest }: 
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notebook-tutor`, {
+      const response = await authenticatedFetch('notebook-tutor', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
         body: JSON.stringify({
           message: messageText,
           selectedEntry,

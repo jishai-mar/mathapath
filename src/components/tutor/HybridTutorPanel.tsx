@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useExerciseContext } from '@/contexts/ExerciseContext';
-import { supabase } from '@/integrations/supabase/client';
 import MathRenderer from '@/components/MathRenderer';
 import { createSegmentsFromSolution } from '@/lib/solutionSegments';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import { 
   X, 
   Send, 
@@ -115,22 +115,15 @@ export function HybridTutorPanel({ isOpen, onClose }: HybridTutorPanelProps) {
       // Add the new user message
       conversationHistory.push({ role: 'user' as const, content: input.trim() });
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-tutor`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            message: input.trim(),
-            context,
-            conversationHistory,
-            mode: 'help_with_exercise',
-          }),
-        }
-      );
+      const response = await authenticatedFetch('ask-tutor', {
+        method: 'POST',
+        body: JSON.stringify({
+          message: input.trim(),
+          context,
+          conversationHistory,
+          mode: 'help_with_exercise',
+        }),
+      });
 
       if (!response.ok) throw new Error('Failed to get response');
 

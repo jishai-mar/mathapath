@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Mic, MicOff, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 interface VoiceControlsProps {
   onTranscription: (text: string) => void;
@@ -89,18 +90,10 @@ export function VoiceControls({
       const base64Audio = await base64Promise;
 
       // Send to STT endpoint
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-stt`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ audio: base64Audio }),
-        }
-      );
+      const response = await authenticatedFetch('tutor-stt', {
+        method: 'POST',
+        body: JSON.stringify({ audio: base64Audio }),
+      });
 
       if (!response.ok) {
         throw new Error('Transcription failed');
@@ -138,18 +131,10 @@ export function VoiceControls({
 
     setIsSpeaking(true);
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-tts`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: cleanText }),
-        }
-      );
+      const response = await authenticatedFetch('tutor-tts', {
+        method: 'POST',
+        body: JSON.stringify({ text: cleanText }),
+      });
 
       if (!response.ok) {
         throw new Error('TTS failed');

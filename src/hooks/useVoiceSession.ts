@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 export type VoiceState = 'idle' | 'listening' | 'processing' | 'speaking' | 'thinking';
 
@@ -119,18 +120,10 @@ export function useVoiceSession({ onTranscription, autoSpeak = true }: UseVoiceS
       reader.readAsDataURL(audioBlob);
       const base64Audio = await base64Promise;
 
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-stt`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ audio: base64Audio }),
-        }
-      );
+      const response = await authenticatedFetch('tutor-stt', {
+        method: 'POST',
+        body: JSON.stringify({ audio: base64Audio }),
+      });
 
       if (!response.ok) {
         throw new Error('Transcription failed');
@@ -176,18 +169,10 @@ export function useVoiceSession({ onTranscription, autoSpeak = true }: UseVoiceS
 
     setVoiceState('speaking');
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-tts`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text: cleanText }),
-        }
-      );
+      const response = await authenticatedFetch('tutor-tts', {
+        method: 'POST',
+        body: JSON.stringify({ text: cleanText }),
+      });
 
       if (!response.ok) {
         throw new Error('TTS failed');

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { useScribe, CommitStrategy } from '@elevenlabs/react';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 interface UseRealtimeTranscriptionOptions {
   onPartialTranscript?: (text: string) => void;
@@ -39,17 +40,9 @@ export function useRealtimeTranscription(options: UseRealtimeTranscriptionOption
 
     try {
       // Get token from edge function
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-stt-token`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-        }
-      );
+      const response = await authenticatedFetch('tutor-stt-token', {
+        method: 'POST',
+      });
 
       if (!response.ok) {
         throw new Error('Failed to get STT token');

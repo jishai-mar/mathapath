@@ -8,6 +8,7 @@ import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 import { useTutor } from '@/contexts/TutorContext';
 import { useVoiceSession, VoiceState } from '@/hooks/useVoiceSession';
 import { useWakeWordDetection } from '@/hooks/useWakeWordDetection';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 import { X, Mic, MicOff, Volume2, VolumeX, Sparkles, ArrowLeft, HelpCircle, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -155,28 +156,20 @@ export default function VoiceFirstTutoring() {
       // Build context for the tutor
       const contextMessages = messages.slice(-6);
       
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ask-tutor`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            question: pendingQuestion ? `${pendingQuestion} - Student clarification: ${text}` : text,
-            subtopicName: 'Voice Tutoring Session',
-            theoryContext: '',
-            conversationHistory: contextMessages,
-            tutorName: preferences.tutorName,
-            personality: preferences.personality,
-            tutoringMode: 'hint', // Start with hints, let student ask for more
-            sessionPhase: 'learning',
-          }),
-          signal: abortControllerRef.current.signal,
-        }
-      );
+      const response = await authenticatedFetch('ask-tutor', {
+        method: 'POST',
+        body: JSON.stringify({
+          question: pendingQuestion ? `${pendingQuestion} - Student clarification: ${text}` : text,
+          subtopicName: 'Voice Tutoring Session',
+          theoryContext: '',
+          conversationHistory: contextMessages,
+          tutorName: preferences.tutorName,
+          personality: preferences.personality,
+          tutoringMode: 'hint', // Start with hints, let student ask for more
+          sessionPhase: 'learning',
+        }),
+        signal: abortControllerRef.current.signal,
+      } as RequestInit);
 
       if (!response.ok) throw new Error('Failed to get response');
 
@@ -500,123 +493,87 @@ export default function VoiceFirstTutoring() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className={cn(
-                "mt-8 max-w-2xl w-full",
-                isUserMessage ? "text-muted-foreground italic text-center" : "text-foreground"
-              )}
+              className="mt-8 w-full max-w-2xl"
             >
-              {isUserMessage ? (
-                <p className="text-lg">"{displayContent}"</p>
-              ) : (
-                <ScrollArea className="max-h-[300px]">
-                  <div className="text-lg leading-relaxed prose prose-invert max-w-none px-4">
+              <ScrollArea className="max-h-[300px]">
+                <div className={cn(
+                  "p-6 rounded-2xl",
+                  isUserMessage 
+                    ? "bg-primary/10 border border-primary/20" 
+                    : "bg-card/80 backdrop-blur-sm border border-border/50"
+                )}>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    {isUserMessage ? 'You said:' : `${preferences.tutorName}:`}
+                  </p>
+                  <div className="text-foreground leading-relaxed">
                     <MathRenderer segments={createSegmentsFromSolution(displayContent)} />
                   </div>
-                </ScrollArea>
-              )}
+                </div>
+              </ScrollArea>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
 
-      {/* Transcript panel */}
-      <AnimatePresence>
-        {showTranscript && messages.length > 0 && (
+      {/* Bottom controls */}
+      <div className="absolute bottom-0 left-0 right-0 p-8 flex flex-col items-center gap-4">
+        {/* Conversation history toggle */}
+        {showTranscript && messages.length > 1 && (
           <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            className="absolute right-0 top-0 bottom-0 w-96 bg-card/90 backdrop-blur-lg border-l border-border p-4 pt-20 overflow-hidden"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full max-w-md"
           >
-            <h3 className="text-sm font-semibold text-muted-foreground mb-4">Conversation</h3>
-            <ScrollArea className="h-[calc(100%-3rem)]">
-              <div className="space-y-4 pr-4">
-                {messages.map((msg, i) => (
+            <ScrollArea className="h-32 bg-card/50 backdrop-blur-sm rounded-xl border border-border/50 p-3">
+              <div className="space-y-2">
+                {messages.slice(0, -1).map((msg, i) => (
                   <div 
-                    key={i}
+                    key={i} 
                     className={cn(
-                      "text-sm",
-                      msg.role === 'user' ? "text-muted-foreground" : "text-foreground"
+                      "text-xs p-2 rounded-lg",
+                      msg.role === 'user' ? "bg-primary/10 ml-8" : "bg-muted mr-8"
                     )}
                   >
-                    <span className="font-medium block mb-1">
-                      {msg.role === 'user' ? 'You' : preferences.tutorName}:
+                    <span className="text-muted-foreground">
+                      {msg.role === 'user' ? 'You: ' : `${preferences.tutorName}: `}
                     </span>
-                    <div className="prose prose-sm prose-invert max-w-none">
-                      <MathRenderer segments={createSegmentsFromSolution(msg.content)} />
-                    </div>
+                    {msg.content.length > 100 ? msg.content.slice(0, 100) + '...' : msg.content}
                   </div>
                 ))}
-                {currentResponse && (
-                  <div className="text-sm text-foreground">
-                    <span className="font-medium block mb-1">{preferences.tutorName}:</span>
-                    <div className="prose prose-sm prose-invert max-w-none">
-                      <MathRenderer segments={createSegmentsFromSolution(currentResponse)} />
-                    </div>
-                  </div>
-                )}
               </div>
             </ScrollArea>
           </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* Large microphone button */}
-      <div className="absolute bottom-0 left-0 right-0 pb-12 flex flex-col items-center">
-        {/* Audio level indicator */}
-        {voiceState === 'listening' && (
-          <motion.div
-            className="mb-4 h-1 bg-primary/30 rounded-full overflow-hidden"
-            style={{ width: 120 }}
-          >
-            <motion.div
-              className="h-full bg-primary rounded-full"
-              animate={{ width: `${audioLevel * 100}%` }}
-              transition={{ duration: 0.05 }}
-            />
-          </motion.div>
-        )}
-
+        {/* Main mic button */}
         <motion.button
-          className={cn(
-            "w-24 h-24 rounded-full flex items-center justify-center transition-all shadow-lg",
-            voiceState === 'listening' 
-              ? "bg-destructive text-destructive-foreground ring-4 ring-destructive/30" 
-              : voiceState === 'speaking'
-              ? "bg-secondary text-secondary-foreground ring-4 ring-secondary/30"
-              : tutorPhase === 'idle' && isWakeWordListening
-              ? "bg-muted text-muted-foreground ring-4 ring-muted/30"
-              : "bg-primary text-primary-foreground hover:bg-primary/90",
-            (voiceState === 'processing' || voiceState === 'thinking' || isLoading) && "opacity-50 cursor-not-allowed"
-          )}
-          onClick={handleMicClick}
-          disabled={voiceState === 'processing' || voiceState === 'thinking' || isLoading}
           whileTap={{ scale: 0.95 }}
-          animate={voiceState === 'listening' ? { scale: [1, 1.05, 1] } : {}}
-          transition={voiceState === 'listening' ? { duration: 0.5, repeat: Infinity } : {}}
+          onClick={handleMicClick}
+          disabled={isLoading || voiceState === 'processing'}
+          className={cn(
+            "w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg",
+            voiceState === 'listening' 
+              ? "bg-destructive text-destructive-foreground animate-pulse" 
+              : voiceState === 'speaking'
+              ? "bg-secondary text-secondary-foreground"
+              : "bg-primary text-primary-foreground hover:bg-primary/90",
+            (isLoading || voiceState === 'processing') && "opacity-50 cursor-not-allowed"
+          )}
         >
           {voiceState === 'listening' ? (
-            <MicOff className="w-10 h-10" />
+            <MicOff className="w-8 h-8" />
           ) : voiceState === 'speaking' ? (
-            <Volume2 className="w-10 h-10" />
-          ) : voiceState === 'processing' || voiceState === 'thinking' || isLoading ? (
-            <motion.div
-              className="w-10 h-10 border-3 border-current border-t-transparent rounded-full"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            />
+            <VolumeX className="w-8 h-8" />
           ) : (
-            <Mic className="w-10 h-10" />
+            <Mic className="w-8 h-8" />
           )}
         </motion.button>
 
-        <p className="mt-4 text-sm text-muted-foreground text-center max-w-xs">
-          {tutorPhase === 'idle' && isWakeWordListening 
-            ? 'Listening for wake word or tap to speak'
-            : voiceState === 'listening' 
+        <p className="text-sm text-muted-foreground text-center">
+          {voiceState === 'listening' 
             ? 'Tap to stop' 
-            : voiceState === 'speaking' 
-            ? 'Tap to interrupt' 
+            : voiceState === 'speaking'
+            ? 'Tap to interrupt'
             : 'Tap to speak'}
         </p>
       </div>

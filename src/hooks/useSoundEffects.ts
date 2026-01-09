@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 export type SoundEffectType = 
   | 'correct' 
@@ -33,18 +34,10 @@ export function useSoundEffects(options: UseSoundEffectsOptions = {}) {
       if (!audioUrl) {
         setIsLoading(true);
         
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-sfx`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({ type }),
-          }
-        );
+        const response = await authenticatedFetch('tutor-sfx', {
+          method: 'POST',
+          body: JSON.stringify({ type }),
+        });
 
         if (!response.ok) {
           throw new Error(`SFX request failed: ${response.status}`);
@@ -95,18 +88,10 @@ export function useSoundEffects(options: UseSoundEffectsOptions = {}) {
     for (const type of types) {
       if (!sfxCache.has(type)) {
         try {
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-sfx`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-                'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ type }),
-            }
-          );
+          const response = await authenticatedFetch('tutor-sfx', {
+            method: 'POST',
+            body: JSON.stringify({ type }),
+          });
 
           if (response.ok) {
             const audioBlob = await response.blob();

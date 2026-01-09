@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 export type VoiceContext = 'explaining' | 'encouraging' | 'correcting' | 'celebrating' | 'thinking' | 'default';
 export type TutorPersonality = 'patient' | 'encouraging' | 'strict' | 'friendly';
@@ -108,22 +108,14 @@ export function useTutorTTS(options: UseTutorTTSOptions = {}) {
     setState(prev => ({ ...prev, isLoading: true, error: null }));
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-tts`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({
-            text,
-            personality,
-            context,
-          }),
-        }
-      );
+      const response = await authenticatedFetch('tutor-tts', {
+        method: 'POST',
+        body: JSON.stringify({
+          text,
+          personality,
+          context,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error(`TTS request failed: ${response.status}`);
