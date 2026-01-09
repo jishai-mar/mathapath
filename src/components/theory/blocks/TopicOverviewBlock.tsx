@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import MathRenderer from '@/components/MathRenderer';
+import { TheoryMathRenderer } from '../TheoryMathRenderer';
 
 interface TheorySection {
   heading: string;
@@ -58,7 +58,7 @@ export function TopicOverviewBlock({ block }: TopicOverviewBlockProps) {
             <div className="space-y-3 mb-6">
               {section.content.map((paragraph, pIdx) => (
                 <p key={pIdx} className="text-foreground/90 leading-relaxed">
-                  <MathRenderer latex={paragraph} />
+                  <TheoryMathRenderer content={paragraph} />
                 </p>
               ))}
             </div>
@@ -72,7 +72,7 @@ export function TopicOverviewBlock({ block }: TopicOverviewBlockProps) {
                     className="p-4 bg-primary/5 border-l-4 border-primary rounded-r-lg"
                   >
                     <p className="font-medium text-foreground">
-                      <MathRenderer latex={rule} />
+                      <TheoryMathRenderer content={rule} />
                     </p>
                   </div>
                 ))}
@@ -95,7 +95,7 @@ export function TopicOverviewBlock({ block }: TopicOverviewBlockProps) {
                     
                     {/* Problem */}
                     <p className="font-medium text-foreground mb-4">
-                      <MathRenderer latex={example.problem} />
+                      <TheoryMathRenderer content={example.problem} />
                     </p>
 
                     {/* Steps */}
@@ -106,7 +106,7 @@ export function TopicOverviewBlock({ block }: TopicOverviewBlockProps) {
                             {sIdx + 1}.
                           </span>
                           <p className="text-foreground/90">
-                            <MathRenderer latex={step} />
+                            <TheoryMathRenderer content={step} />
                           </p>
                         </div>
                       ))}
@@ -116,7 +116,7 @@ export function TopicOverviewBlock({ block }: TopicOverviewBlockProps) {
                     {example.result && (
                       <div className="mt-4 pt-3 border-t border-border">
                         <p className="font-medium text-primary">
-                          <MathRenderer latex={example.result} />
+                          <TheoryMathRenderer content={example.result} />
                         </p>
                       </div>
                     )}
