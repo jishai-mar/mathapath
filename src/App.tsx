@@ -80,7 +80,7 @@ function AppRoutes() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/learning-profile" element={<LearningProfile />} />
       <Route path="/meet-tutor" element={<MeetYourTutor />} />
-      <Route path="/session-history" element={<SessionHistory />} />
+      <Route path="/session-history" element={<History />} />
       <Route path="/notebook" element={<Notebook />} />
       <Route path="/bookmarks" element={<Bookmarks />} />
       <Route path="/voice-tutor" element={<VoiceFirstTutoring />} />
