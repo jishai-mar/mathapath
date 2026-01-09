@@ -15,9 +15,9 @@ const iconMap: Record<string, React.ElementType> = {
 
 export function AchievementsSection() {
   const { allItems, unlockedItems, getProgressToUnlock, isItemUnlocked } = useUnlockableItems();
-  const loading = !allItems || allItems.length === 0;
+  const loading = !allItems;
 
-  if (loading && unlockedItems.length === 0) {
+  if (loading) {
     return (
       <Card>
         <CardHeader>
@@ -38,52 +38,49 @@ export function AchievementsSection() {
   // Get earned achievements
   const earnedAchievements = allItems.filter(item => isItemUnlocked(item.id));
   
-  // Get "almost there" achievements (progress > 50% but not unlocked)
+  // Get "almost there" achievements (progress > 0 but not unlocked) - show top 5
   const almostThere = allItems
     .filter(item => !isItemUnlocked(item.id))
     .map(item => {
       const progress = getProgressToUnlock(item);
       return { ...item, progress: progress.percentage };
     })
-    .filter(item => item.progress > 50)
     .sort((a, b) => b.progress - a.progress)
     .slice(0, 5);
 
-  if (earnedAchievements.length === 0 && almostThere.length === 0) {
-    return (
-      <Card className="border-dashed">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Trophy className="h-5 w-5" />
-            Achievements
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-center py-8">
-          <Trophy className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">No achievements yet</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            Keep practicing to unlock achievements!
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Get locked achievements to show (items with 0 progress)
+  const lockedAchievements = allItems
+    .filter(item => !isItemUnlocked(item.id))
+    .map(item => {
+      const progress = getProgressToUnlock(item);
+      return { ...item, progress: progress.percentage };
+    })
+    .filter(item => item.progress === 0)
+    .slice(0, 4);
+
+  const hasNoAchievements = earnedAchievements.length === 0 && almostThere.every(a => a.progress === 0);
 
   return (
     <div className="space-y-6">
       {/* Earned Achievements */}
-      {earnedAchievements.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-amber-500" />
-              Earned Achievements
-              <span className="text-sm font-normal text-muted-foreground">
-                ({earnedAchievements.length})
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+      <Card className={earnedAchievements.length === 0 ? 'border-dashed' : ''}>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Trophy className={`h-5 w-5 ${earnedAchievements.length > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
+            Earned Achievements
+            <span className="text-sm font-normal text-muted-foreground">
+              ({earnedAchievements.length})
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {earnedAchievements.length === 0 ? (
+            <div className="text-center py-6">
+              <Trophy className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground text-sm">No achievements unlocked yet</p>
+              <p className="text-xs text-muted-foreground/70 mt-1">Keep practicing to earn your first!</p>
+            </div>
+          ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {earnedAchievements.map((item, index) => {
                 const Icon = iconMap[item.icon_key] || Trophy;
@@ -109,21 +106,26 @@ export function AchievementsSection() {
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          )}
+        </CardContent>
+      </Card>
 
-      {/* Almost There */}
-      {almostThere.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Sparkles className="h-5 w-5" />
-              Almost There
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {almostThere.map(item => {
+      {/* Almost There / In Progress */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            {hasNoAchievements ? 'Locked Achievements' : 'Almost There'}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {almostThere.length === 0 && lockedAchievements.length === 0 ? (
+            <div className="text-center py-6">
+              <Lock className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground text-sm">No achievements available</p>
+            </div>
+          ) : (
+            (hasNoAchievements ? lockedAchievements : almostThere).map(item => {
               const Icon = iconMap[item.icon_key] || Lock;
               
               return (
@@ -148,10 +150,10 @@ export function AchievementsSection() {
                   </div>
                 </div>
               );
-            })}
-          </CardContent>
-        </Card>
-      )}
+            })
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

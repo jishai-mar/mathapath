@@ -42,17 +42,25 @@ export function useHistoryStats() {
           .eq('id', user.id)
           .single();
 
-        // Fetch exercise attempts for total questions and accuracy
+        // Fetch exercise attempts for total questions, accuracy, and streak days
         const { data: attempts } = await supabase
           .from('exercise_attempts')
           .select('is_correct, created_at')
           .eq('user_id', user.id);
 
-        // Fetch learning sessions for total sessions and streak days
-        const { data: sessions } = await supabase
-          .from('learning_sessions')
-          .select('started_at, ended_at')
-          .eq('user_id', user.id);
+        // Count unique days with attempts as sessions
+        const uniqueSessionDays = new Set<string>();
+        const streakDays: Date[] = [];
+        
+        if (attempts && attempts.length > 0) {
+          attempts.forEach(attempt => {
+            const date = new Date(attempt.created_at).toISOString().split('T')[0];
+            uniqueSessionDays.add(date);
+          });
+          uniqueSessionDays.forEach(dateStr => {
+            streakDays.push(new Date(dateStr));
+          });
+        }
 
         // Fetch topic progress for best topic
         const { data: topicProgress } = await supabase
@@ -69,7 +77,7 @@ export function useHistoryStats() {
         const totalQuestions = attempts?.length || 0;
         const correctAnswers = attempts?.filter(a => a.is_correct).length || 0;
         const averageAccuracy = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
-        const totalSessions = sessions?.length || 0;
+        const totalSessions = uniqueSessionDays.size;
 
         // Find best topic
         let bestTopic: { name: string; accuracy: number } | null = null;
@@ -86,19 +94,6 @@ export function useHistoryStats() {
           if (topicsWithAccuracy.length > 0) {
             bestTopic = topicsWithAccuracy[0];
           }
-        }
-
-        // Calculate streak days from sessions
-        const streakDays: Date[] = [];
-        if (sessions && sessions.length > 0) {
-          const uniqueDays = new Set<string>();
-          sessions.forEach(session => {
-            const date = new Date(session.started_at).toISOString().split('T')[0];
-            uniqueDays.add(date);
-          });
-          uniqueDays.forEach(dateStr => {
-            streakDays.push(new Date(dateStr));
-          });
         }
 
         setStats({
