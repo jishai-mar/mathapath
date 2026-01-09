@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, gradeExamAnswerFullSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -272,17 +273,17 @@ interface ExamPart {
   partLabel: string;
   question: string;
   points: number;
-  solution: string;
+  solution?: string;
   answer: string;
 }
 
 interface ExamQuestion {
   id: string;
-  questionNumber: number;
-  difficulty: string;
-  points: number;
-  subtopicName: string;
-  context: string;
+  questionNumber?: number;
+  difficulty?: string;
+  points?: number;
+  subtopicName?: string;
+  context?: string;
   parts: ExamPart[];
 }
 
@@ -313,14 +314,12 @@ serve(async (req) => {
   }
 
   try {
-    const { questions, userAnswers, userId, topicId } = await req.json();
-
-    if (!questions || !userAnswers) {
-      return new Response(
-        JSON.stringify({ error: "questions and userAnswers are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Validate input
+    const validation = await parseAndValidate(req, gradeExamAnswerFullSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { questions, userAnswers, userId, topicId } = validation.data;
 
     const partResults: PartGradingResult[] = [];
     const subtopicScores: Record<string, { earned: number; possible: number }> = {};
@@ -330,8 +329,9 @@ serve(async (req) => {
 
     // Grade each part using DETERMINISTIC equivalence checking
     for (const question of questions as ExamQuestion[]) {
-      if (!subtopicScores[question.subtopicName]) {
-        subtopicScores[question.subtopicName] = { earned: 0, possible: 0 };
+      const subtopicKey = question.subtopicName || 'Unknown';
+      if (!subtopicScores[subtopicKey]) {
+        subtopicScores[subtopicKey] = { earned: 0, possible: 0 };
       }
 
       for (const part of question.parts) {
@@ -354,13 +354,13 @@ serve(async (req) => {
 
         totalEarned += earnedPoints;
         totalPossible += part.points;
-        subtopicScores[question.subtopicName].possible += part.points;
-        subtopicScores[question.subtopicName].earned += earnedPoints;
+        subtopicScores[subtopicKey].possible += part.points;
+        subtopicScores[subtopicKey].earned += earnedPoints;
 
         partResults.push({
           questionId: question.id,
           partLabel: part.partLabel,
-          subtopicName: question.subtopicName,
+          subtopicName: subtopicKey,
           userAnswer: answer,
           correctAnswer: part.answer,
           maxPoints: part.points,

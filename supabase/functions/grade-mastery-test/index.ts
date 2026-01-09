@@ -1,29 +1,12 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, gradeMasteryTestFullSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-interface Answer {
-  questionId: string;
-  userAnswer: string;
-  timeSpentSeconds?: number;
-}
-
-interface Question {
-  id: string;
-  correctAnswer: string;
-  subtopicId: string;
-  subtopicName: string;
-  conceptsTested: string[];
-  primaryMethodBlockId: string;
-  primaryMethodBlockNumber: string;
-  supportingTheoremIds: string[];
-  definitionIds: string[];
-}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -31,14 +14,12 @@ serve(async (req) => {
   }
 
   try {
-    const { testId, topicId, questions, answers, timeSpentMinutes } = await req.json();
-
-    if (!topicId || !questions || !answers) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Validate input
+    const validation = await parseAndValidate(req, gradeMasteryTestFullSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { testId, topicId, questions, answers, timeSpentMinutes } = validation.data;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -73,8 +54,8 @@ serve(async (req) => {
     // Track scores by subtopic
     const subtopicScores = new Map<string, { correct: number; total: number; name: string }>();
 
-    for (const question of questions as Question[]) {
-      const answer = (answers as Answer[]).find(a => a.questionId === question.id);
+    for (const question of questions) {
+      const answer = answers.find((a: any) => a.questionId === question.id);
       const userAnswer = answer?.userAnswer?.trim() || "";
       const correctAnswer = question.correctAnswer?.trim() || "";
 

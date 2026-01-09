@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, tutorMusicSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,15 +21,21 @@ serve(async (req) => {
   }
 
   try {
-    const { type, customPrompt, duration } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, tutorMusicSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { type, customPrompt, duration } = validation.data;
+
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
-    const prompt = customPrompt || musicPrompts[type] || musicPrompts.calm;
-    const musicDuration = duration || 30; // Default 30 seconds
+    const prompt = customPrompt || (type ? musicPrompts[type] : undefined) || musicPrompts.calm;
+    const musicDuration = duration ?? 30; // Default 30 seconds
 
     console.log(`Generating music: type=${type}, duration=${musicDuration}s`);
 

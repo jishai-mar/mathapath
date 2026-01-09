@@ -402,8 +402,174 @@ export const analyzeComprehensiveDiagnosticSchema = z.object({
 
 // Generate prerequisite check
 export const generatePrerequisiteCheckSchema = z.object({
-  topicId: uuidSchema,
+  prerequisites: z.array(z.object({
+    id: uuidSchema,
+    name: z.string().max(255)
+  })).max(20),
+  targetTopicName: z.string().min(1).max(255)
+});
+
+// Tutor STT (speech-to-text) request
+export const tutorSttSchema = z.object({
+  audio: z.string().max(20_000_000, { message: "Audio data too large (max ~15MB base64)" })
+});
+
+// Tutor SFX request
+export const tutorSfxSchema = z.object({
+  type: z.string().max(50).optional(),
+  customPrompt: z.string().max(500).optional(),
+  duration: z.number().min(0.5).max(10).optional()
+});
+
+// Tutor music request
+export const tutorMusicSchema = z.object({
+  type: z.string().max(50).optional(),
+  customPrompt: z.string().max(500).optional(),
+  duration: z.number().min(5).max(120).optional()
+});
+
+// Session greeting request
+export const sessionGreetingSchema = z.object({
+  studentName: z.string().max(100).optional(),
+  tutorName: z.string().max(50).optional().default("Alex"),
+  personality: z.enum(["patient", "encouraging", "challenging", "humorous"]).optional().default("patient"),
+  currentStreak: z.number().int().min(0).max(10000).optional().default(0),
+  totalXp: z.number().int().min(0).optional().default(0),
+  recentAchievements: z.array(z.string().max(255)).max(10).optional().default([]),
+  weakestSubtopic: z.string().max(255).optional(),
+  lastSessionMood: z.string().max(50).optional(),
+  userId: uuidSchema.optional(),
+  subtopicName: z.string().max(255).optional(),
+  exerciseGoal: z.number().int().min(1).max(100).optional()
+});
+
+// Session summary request
+export const sessionSummarySchema = z.object({
+  userId: uuidSchema.optional(),
+  subtopicId: uuidSchema.optional(),
+  subtopicName: z.string().max(255).optional(),
+  topicName: z.string().max(255).optional(),
+  correctAnswers: z.number().int().min(0).default(0),
+  totalQuestions: z.number().int().min(0).default(0),
+  timeSpentSeconds: z.number().min(0).default(0),
+  difficultiesAttempted: z.array(z.string().max(50)).max(10).optional()
+});
+
+// Session wrapup request
+export const sessionWrapupSchema = z.object({
+  studentName: z.string().max(100).optional(),
+  tutorName: z.string().max(50).default("Alex"),
+  personality: z.enum(["patient", "encouraging", "challenging", "humorous"]).default("patient"),
+  sessionGoal: z.string().max(500).optional(),
+  progress: z.object({
+    topicsCovered: z.array(z.string().max(255)).max(20).default([]),
+    problemsSolved: z.number().int().min(0).default(0),
+    hintsUsed: z.number().int().min(0).default(0),
+    correctAnswers: z.number().int().min(0).default(0),
+    totalAttempts: z.number().int().min(0).default(0)
+  }),
+  sessionDurationMinutes: z.number().min(0).max(600).default(0),
+  keyBreakthroughs: z.array(z.string().max(500)).max(10).optional().default([]),
+  struggles: z.array(z.string().max(500)).max(10).optional().default([])
+});
+
+// Check diagnostic answer request
+export const checkDiagnosticAnswerFullSchema = z.object({
+  questionId: uuidSchema,
+  userAnswer: z.string().max(2000).optional().nullable(),
+  userId: uuidSchema
+});
+
+// Exponential tutor request
+export const exponentialTutorFullSchema = z.object({
+  action: z.enum(['generate-problem', 'check-answer', 'get-hint', 'explain-solution', 'generate-exam', 'assess-readiness']),
+  difficulty: z.enum(['easy', 'medium', 'hard']).optional(),
+  topic: z.string().max(255).optional(),
+  problem: z.string().max(2000).optional(),
+  studentAnswer: z.string().max(1000).optional(),
+  learningStyle: z.enum(['formal', 'intuitive']).optional().default('formal'),
+  conversationHistory: conversationHistorySchema.optional().default([]),
+  examAnswers: z.array(z.object({
+    questionId: z.string().max(100),
+    answer: z.string().max(1000),
+    correct: z.boolean(),
+    difficulty: z.string().max(50)
+  })).max(20).optional()
+});
+
+// Generate practice plan request (detailed)
+export const generatePracticePlanFullSchema = z.object({
+  subtopicId: uuidSchema.optional(),
+  subtopicName: z.string().max(255).optional(),
+  topicName: z.string().max(255).optional(),
   userId: uuidSchema.optional()
+});
+
+// Update learning path request (detailed)
+export const updateLearningPathFullSchema = z.object({
+  userId: uuidSchema,
+  performanceData: z.union([
+    z.array(z.object({
+      topicId: uuidSchema,
+      score: z.number().min(0).max(100),
+      weakSubtopics: z.array(uuidSchema).max(50).optional()
+    })).max(50),
+    z.object({
+      topicId: uuidSchema,
+      score: z.number().min(0).max(100),
+      weakSubtopics: z.array(uuidSchema).max(50).optional()
+    })
+  ]),
+  source: z.string().max(100).optional()
+});
+
+// Grade mastery test request
+export const gradeMasteryTestFullSchema = z.object({
+  testId: uuidSchema.optional(),
+  topicId: uuidSchema,
+  questions: z.array(z.object({
+    id: z.string().max(100),
+    correctAnswer: z.string().max(2000),
+    subtopicId: uuidSchema.optional(),
+    subtopicName: z.string().max(255).optional(),
+    conceptsTested: z.array(z.string().max(100)).max(20).optional(),
+    primaryMethodBlockId: uuidSchema.optional(),
+    primaryMethodBlockNumber: z.string().max(50).optional(),
+    supportingTheoremIds: z.array(uuidSchema).max(10).optional(),
+    definitionIds: z.array(uuidSchema).max(10).optional()
+  })).max(50),
+  answers: z.array(z.object({
+    questionId: z.string().max(100),
+    userAnswer: z.string().max(2000),
+    timeSpentSeconds: z.number().min(0).optional()
+  })).max(50),
+  timeSpentMinutes: z.number().min(0).max(600).optional()
+});
+
+// Grade exam answer request
+export const gradeExamAnswerFullSchema = z.object({
+  questions: z.array(z.object({
+    id: z.string().max(100),
+    questionNumber: z.number().int().min(1).optional(),
+    difficulty: z.string().max(50).optional(),
+    points: z.number().min(0).optional(),
+    subtopicName: z.string().max(255).optional(),
+    context: z.string().max(2000).optional(),
+    parts: z.array(z.object({
+      partLabel: z.string().max(10),
+      question: z.string().max(5000),
+      points: z.number().min(0),
+      solution: z.string().max(5000).optional(),
+      answer: z.string().max(2000)
+    })).max(20)
+  })).max(50),
+  userAnswers: z.array(z.object({
+    questionId: z.string().max(100),
+    partLabel: z.string().max(10),
+    answer: z.string().max(2000)
+  })).max(200),
+  userId: uuidSchema.optional(),
+  topicId: uuidSchema.optional()
 });
 
 // ============================================
