@@ -77,7 +77,7 @@ export function usePracticeExercise({
   const [exerciseCount, setExerciseCount] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [currentDifficulty, setCurrentDifficulty] = useState(initialDifficulty);
-  const [usedExerciseIds, setUsedExerciseIds] = useState<string[]>([]);
+  const [usedExercises, setUsedExercises] = useState<{ id: string; question: string }[]>([]);
 
   // Load exercise details when exercise changes
   useEffect(() => {
@@ -133,14 +133,15 @@ export function usePracticeExercise({
         .eq('subtopic_id', subtopicId)
         .eq('difficulty', currentDifficulty);
 
-      if (usedExerciseIds.length > 0) {
-        query = query.not('id', 'in', `(${usedExerciseIds.join(',')})`);
+      const usedIds = usedExercises.map(e => e.id);
+      if (usedIds.length > 0) {
+        query = query.not('id', 'in', `(${usedIds.join(',')})`);
       }
 
       const { data: exercises } = await query.limit(10);
 
       const availableExercises = exercises?.filter(
-        ex => ex.id && !usedExerciseIds.includes(ex.id)
+        ex => ex.id && !usedIds.includes(ex.id)
       ) || [];
 
       // Find a valid exercise (validate and auto-fix if needed)
@@ -159,7 +160,7 @@ export function usePracticeExercise({
       }
 
       if (selectedExercise) {
-        setUsedExerciseIds(prev => [...prev, selectedExercise.id!]);
+        setUsedExercises(prev => [...prev, { id: selectedExercise.id!, question: selectedExercise.question! }]);
         setCurrentExercise({
           id: selectedExercise.id!,
           question: selectedExercise.question!,
@@ -177,15 +178,15 @@ export function usePracticeExercise({
             subtopicId,
             difficulty: currentDifficulty,
             userId: user?.id,
-            existingExercises: usedExerciseIds
+            existingExercises: usedExercises.map(e => ({ question: e.question }))
           }
         });
 
         if (error) throw error;
 
         if (data && !data.error) {
-          if (data.id) {
-            setUsedExerciseIds(prev => [...prev, data.id]);
+          if (data.id && data.question) {
+            setUsedExercises(prev => [...prev, { id: data.id, question: data.question }]);
           }
           setCurrentExercise({
             id: data.id,
@@ -204,7 +205,7 @@ export function usePracticeExercise({
     } finally {
       setIsLoading(false);
     }
-  }, [subtopicId, subtopicName, currentDifficulty, usedExerciseIds, user?.id]);
+  }, [subtopicId, subtopicName, currentDifficulty, usedExercises, user?.id]);
 
   const submitAnswer = useCallback(async () => {
     if (!studentAnswer.trim() || !currentExercise || !user) return;
@@ -281,7 +282,7 @@ export function usePracticeExercise({
     setExerciseDetails(null);
     setExerciseCount(0);
     setCorrectCount(0);
-    setUsedExerciseIds([]);
+    setUsedExercises([]);
     setCurrentDifficulty(initialDifficulty);
   }, [initialDifficulty, resetExerciseState]);
 
