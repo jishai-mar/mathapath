@@ -42,7 +42,7 @@ export default function History() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/learning')}
+            onClick={() => navigate('/dashboard')}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
