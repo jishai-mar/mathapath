@@ -9,6 +9,7 @@ import { WorkedExample } from './blocks/WorkedExample';
 import { DeepDive } from './blocks/DeepDive';
 import { CommonMistakeBlock } from './blocks/CommonMistakeBlock';
 import { DeepDiveBlock } from './blocks/DeepDiveBlock';
+import { TopicOverviewBlock } from './blocks/TopicOverviewBlock';
 import type { TheoryBlockData, TheoryBlockRow, parseTheoryBlock } from './types/blocks';
 import type { TheoryBlock } from './types';
 
@@ -65,6 +66,8 @@ export function TheoryBlockRenderer({ block, showBlockNumber = true }: TheoryBlo
         return <CommonMistakeBlock block={block as any} showBlockNumber={showBlockNumber} />;
       case 'deep-dive':
         return <DeepDiveBlock block={block as any} showBlockNumber={showBlockNumber} />;
+      case 'topic-overview':
+        return <TopicOverviewBlock block={block as any} />;
       case 'proof':
       case 'remark':
         // Fallback for proof and remark - render as simple cards for now

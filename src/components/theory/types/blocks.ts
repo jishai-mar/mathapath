@@ -194,6 +194,28 @@ export interface DeepDiveBlock extends BaseTheoryBlock {
   };
 }
 
+// Topic overview block - comprehensive guide for a topic
+export interface TopicOverviewBlock extends BaseTheoryBlock {
+  type: 'topic-overview';
+  content: {
+    introduction?: string;
+    sections: {
+      heading: string;
+      content: string[];
+      examples?: {
+        problem: string;
+        steps: string[];
+        result?: string;
+      }[];
+      rules?: string[];
+      mistakes?: {
+        mistake: string;
+        why: string;
+      }[];
+    }[];
+  };
+}
+
 // Union type for all theory blocks
 export type TheoryBlockData = 
   | DefinitionBlock 
@@ -205,7 +227,8 @@ export type TheoryBlockData =
   | ProofBlock
   | RemarkBlock
   | CommonMistakeBlock
-  | DeepDiveBlock;
+  | DeepDiveBlock
+  | TopicOverviewBlock;
 
 // Database row type (matches Supabase table structure)
 export interface TheoryBlockRow {

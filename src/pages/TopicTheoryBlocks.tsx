@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface GroupedBlocks {
+  overview: TheoryBlockRow[];
   definitions: TheoryBlockRow[];
   theorems: TheoryBlockRow[];
   methods: TheoryBlockRow[];
@@ -32,6 +33,7 @@ interface GroupedBlocks {
 }
 
 const SECTION_CONFIG = [
+  { key: 'overview', label: 'Complete Guide', icon: BookOpen, color: 'text-emerald-500' },
   { key: 'definitions', label: 'Definitions', icon: BookOpen, color: 'text-blue-500' },
   { key: 'theorems', label: 'Theorems & Properties', icon: Lightbulb, color: 'text-amber-500' },
   { key: 'methods', label: 'Methods', icon: Calculator, color: 'text-green-500' },
@@ -66,6 +68,7 @@ export default function TopicTheoryBlocks() {
 
   // Group blocks by type
   const groupedBlocks: GroupedBlocks = {
+    overview: blocks?.filter(b => b.block_type === 'topic-overview') || [],
     definitions: blocks?.filter(b => b.block_type === 'definition') || [],
     theorems: blocks?.filter(b => b.block_type === 'theorem' || b.block_type === 'property') || [],
     methods: blocks?.filter(b => b.block_type === 'method') || [],
