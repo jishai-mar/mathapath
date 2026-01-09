@@ -193,7 +193,9 @@ export default function LessonScreen() {
   const theorySlug = topicId ? getTopicSlugFromDatabaseId(topicId) : null;
 
   const handleOpenTheory = () => {
-    if (theorySlug) {
+    if (theorySlug && lessonId) {
+      navigate(`/theory/${theorySlug}/${lessonId}`);
+    } else if (theorySlug) {
       navigate(`/theory/${theorySlug}`);
     }
   };

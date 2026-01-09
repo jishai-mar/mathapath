@@ -15,6 +15,7 @@ import {
   BookOpen
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DATABASE_ID_TO_SLUG } from '@/data/topicDatabaseMapping';
 
 interface Lesson {
   id: string;
@@ -220,7 +221,14 @@ export default function LearningPathScreen() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => navigate(`/topic-theory/${topicId}`)}
+            onClick={() => {
+              const slug = topicId ? DATABASE_ID_TO_SLUG[topicId] : null;
+              if (slug) {
+                navigate(`/theory/${slug}`);
+              } else {
+                navigate(`/topic-theory/${topicId}`);
+              }
+            }}
             className="flex items-center gap-2"
           >
             <BookOpen className="w-4 h-4" />
