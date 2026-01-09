@@ -5,6 +5,7 @@ import MathRenderer from '@/components/MathRenderer';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import type { WorkedExampleBlock as WorkedExampleBlockType, SolutionStep } from '../types/blocks';
+import { TheoryProse } from '../TheoryProse';
 
 interface WorkedExampleBlockNewProps {
   block: WorkedExampleBlockType;
@@ -54,7 +55,9 @@ export function WorkedExampleBlockNew({ block, showBlockNumber = true }: WorkedE
         {/* Problem Statement */}
         <div className="p-4 bg-muted/50 rounded-lg border border-border">
           <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Problem</h4>
-          <MathRenderer latex={content.problem} displayMode className="text-foreground" />
+          <TheoryProse>
+            <MathRenderer latex={content.problem} className="text-foreground" />
+          </TheoryProse>
         </div>
 
         {/* Concepts Applied */}
@@ -72,7 +75,7 @@ export function WorkedExampleBlockNew({ block, showBlockNumber = true }: WorkedE
           </div>
         )}
 
-        {/* Solution Steps */}
+        {/* Solution Steps - Vertical list layout */}
         <Collapsible open={solutionOpen} onOpenChange={setSolutionOpen}>
           <CollapsibleTrigger className="flex items-center gap-2 w-full p-3 bg-orange-500/10 hover:bg-orange-500/15 rounded-lg border border-orange-500/20 transition-colors">
             <span className="text-sm font-semibold text-orange-700 dark:text-orange-400">Solution</span>
@@ -95,17 +98,25 @@ export function WorkedExampleBlockNew({ block, showBlockNumber = true }: WorkedE
                       transition={{ delay: step.stepNumber * 0.05 }}
                       className="flex gap-4 p-4 bg-muted/30 rounded-lg border border-border"
                     >
+                      {/* Step number */}
                       <div className="flex-shrink-0">
                         <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-500 text-white text-sm font-bold">
                           {step.stepNumber}
                         </span>
                       </div>
+                      
+                      {/* Step content - vertical stack */}
                       <div className="flex-1 space-y-2">
-                        <p className="font-medium text-foreground">{step.action}</p>
+                        {/* Action sentence */}
+                        <p className="font-medium text-foreground leading-relaxed">{step.action}</p>
+                        
+                        {/* Calculation (LaTeX) - centered, display mode */}
                         <div className="p-3 bg-background rounded border border-border">
                           <MathRenderer latex={step.calculation} displayMode className="text-foreground" />
                         </div>
-                        <p className="text-sm text-muted-foreground">
+                        
+                        {/* Justification */}
+                        <p className="text-sm text-muted-foreground leading-relaxed">
                           <span className="font-medium">Justification:</span>{' '}
                           <span className="text-orange-600 dark:text-orange-400">
                             {step.justification}
@@ -119,11 +130,11 @@ export function WorkedExampleBlockNew({ block, showBlockNumber = true }: WorkedE
                   ))}
 
                   {/* Final Answer */}
-                  <div className="flex items-center gap-3 p-4 bg-green-500/10 rounded-lg border border-green-500/20">
-                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <div className="flex items-start gap-3 p-4 bg-green-500/10 rounded-lg border border-green-500/20">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <span className="text-sm font-semibold text-green-700 dark:text-green-400">Final Answer</span>
-                      <div className="mt-1">
+                      <div className="mt-2">
                         <MathRenderer 
                           latex={content.solution[content.solution.length - 1]?.calculation || ''} 
                           displayMode 
@@ -139,7 +150,9 @@ export function WorkedExampleBlockNew({ block, showBlockNumber = true }: WorkedE
                       <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                         Verification
                       </h4>
-                      <MathRenderer latex={content.verification} className="text-foreground text-sm" />
+                      <TheoryProse>
+                        <MathRenderer latex={content.verification} className="text-foreground text-sm" />
+                      </TheoryProse>
                     </div>
                   )}
                 </motion.div>
@@ -168,8 +181,8 @@ export function WorkedExampleBlockNew({ block, showBlockNumber = true }: WorkedE
                     <ul className="space-y-2">
                       {content.commonErrors.map((error, idx) => (
                         <li key={idx} className="flex items-start gap-2">
-                          <span className="text-destructive font-medium">✗</span>
-                          <span className="text-sm text-foreground">{error}</span>
+                          <span className="text-destructive font-medium mt-0.5">✗</span>
+                          <span className="text-sm text-foreground leading-relaxed">{error}</span>
                         </li>
                       ))}
                     </ul>

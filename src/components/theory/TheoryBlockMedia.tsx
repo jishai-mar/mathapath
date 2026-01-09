@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import MathRenderer from '@/components/MathRenderer';
 import { cn } from '@/lib/utils';
+import { normalizeNarrationText } from './TheoryProse';
 
 interface VisualPlanSegment {
   startTime: number;
@@ -221,7 +222,7 @@ export function TheoryBlockMedia({
                 />
               )}
 
-              {/* Fallback mode: Audio + Animated visuals */}
+              {/* Fallback mode: Audio + Animated visuals - CENTERED STACKED LAYOUT */}
               {generationMode === 'fallback' && (
                 <>
                   {/* Hidden audio element */}
@@ -229,7 +230,7 @@ export function TheoryBlockMedia({
                     <audio ref={audioRef} src={audioUrl} preload="metadata" />
                   )}
 
-                  {/* Visual display area */}
+                  {/* Visual display area - centered, fixed aspect, no arbitrary positioning */}
                   <div className="min-h-[200px] bg-card rounded-lg border border-border p-6 mb-4 flex flex-col items-center justify-center">
                     <AnimatePresence mode="wait">
                       {currentSegment ? (
@@ -238,11 +239,11 @@ export function TheoryBlockMedia({
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -20 }}
-                          className="text-center space-y-4"
+                          className="text-center space-y-4 max-w-[700px] w-full"
                         >
                           {/* Segment type badge */}
                           <span className={cn(
-                            "px-2 py-1 text-xs font-medium rounded-full",
+                            "inline-block px-2 py-1 text-xs font-medium rounded-full",
                             currentSegment.type === 'title' && "bg-primary/20 text-primary",
                             currentSegment.type === 'definition' && "bg-blue-500/20 text-blue-600",
                             currentSegment.type === 'formula' && "bg-purple-500/20 text-purple-600",
@@ -252,15 +253,19 @@ export function TheoryBlockMedia({
                             {currentSegment.type}
                           </span>
                           
-                          {/* Content */}
+                          {/* Content - properly normalized text or LaTeX */}
                           {currentSegment.latex ? (
-                            <MathRenderer 
-                              latex={currentSegment.latex} 
-                              displayMode 
-                              className="text-xl"
-                            />
+                            <div className="flex justify-center">
+                              <MathRenderer 
+                                latex={currentSegment.latex} 
+                                displayMode 
+                                className="text-xl"
+                              />
+                            </div>
                           ) : (
-                            <p className="text-lg font-medium">{currentSegment.content}</p>
+                            <p className="text-lg font-medium leading-relaxed text-foreground">
+                              {normalizeNarrationText(currentSegment.content)}
+                            </p>
                           )}
                         </motion.div>
                       ) : (
@@ -269,10 +274,10 @@ export function TheoryBlockMedia({
                           animate={{ opacity: 1 }}
                           className="text-center space-y-2"
                         >
-                          <span className="px-2 py-1 text-xs font-mono bg-muted rounded">
+                          <span className="inline-block px-2 py-1 text-xs font-mono bg-muted rounded">
                             {blockNumber}
                           </span>
-                          <h3 className="text-lg font-semibold">{blockTitle}</h3>
+                          <h3 className="text-lg font-semibold text-foreground">{blockTitle}</h3>
                           <p className="text-sm text-muted-foreground">
                             Press play to start the narration
                           </p>

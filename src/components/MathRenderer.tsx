@@ -3,6 +3,7 @@ import katex from 'katex';
 import 'katex/dist/katex.min.css';
 import { parseContentSegments, normalizeLatex, fixMalformedLatex } from '@/lib/normalizeLatex';
 import type { ContentSegment } from '@/lib/normalizeLatex';
+import { cn } from '@/lib/utils';
 
 interface MathRendererProps {
   latex?: string;
@@ -21,13 +22,27 @@ export default function MathRenderer({ latex, segments, displayMode = false, cla
     if (segments && segments.length > 0) {
       containerRef.current.innerHTML = '';
       
-      segments.forEach(segment => {
+      segments.forEach((segment, index) => {
         if (segment.type === 'text') {
           const textSpan = document.createElement('span');
+          textSpan.style.display = 'inline';
           textSpan.textContent = segment.content;
           containerRef.current?.appendChild(textSpan);
+          
+          // Add space between segments if needed
+          if (index < segments.length - 1) {
+            const nextSegment = segments[index + 1];
+            const needsSpace = segment.content && !segment.content.endsWith(' ') && 
+                              nextSegment && !nextSegment.content?.startsWith(' ');
+            if (needsSpace && nextSegment.type === 'text') {
+              const spaceSpan = document.createElement('span');
+              spaceSpan.textContent = ' ';
+              containerRef.current?.appendChild(spaceSpan);
+            }
+          }
         } else {
           const mathSpan = document.createElement('span');
+          mathSpan.style.display = 'inline';
           try {
             katex.render(segment.content, mathSpan, {
               displayMode: segment.displayMode ?? false,
@@ -108,16 +123,18 @@ export default function MathRenderer({ latex, segments, displayMode = false, cla
           containerRef.current.textContent = fixedLatex;
         }
       } else {
-        parsedSegments.forEach(segment => {
+        parsedSegments.forEach((segment, index) => {
           if (segment.type === 'text') {
-            // Create a text node for plain text
+            // Create a text span for plain text
             const textSpan = document.createElement('span');
+            textSpan.style.display = 'inline';
             textSpan.textContent = segment.content;
             containerRef.current?.appendChild(textSpan);
           } else {
             // Render math with KaTeX
             const mathSpan = document.createElement('span');
-            mathSpan.className = 'katex-container';
+            mathSpan.style.display = 'inline';
+            mathSpan.className = 'katex-math-inline';
             
             try {
               const normalizedContent = normalizeLatex(segment.content);
@@ -127,6 +144,7 @@ export default function MathRenderer({ latex, segments, displayMode = false, cla
                 normalizedContent.includes('\\begin{cases}') ||
                 normalizedContent.includes('\\begin{aligned}') ||
                 normalizedContent.includes('\\begin{array}');
+              
               katex.render(normalizedContent, mathSpan, {
                 displayMode: useDisplayMode,
                 throwOnError: false,
@@ -148,5 +166,16 @@ export default function MathRenderer({ latex, segments, displayMode = false, cla
 
   if (!latex && (!segments || segments.length === 0)) return null;
 
-  return <div ref={containerRef} className={`math-content inline ${className}`} />;
+  // Use block display only when displayMode is explicitly true and it's pure math
+  // Otherwise use inline-block for proper text flow
+  return (
+    <div 
+      ref={containerRef} 
+      className={cn(
+        "math-content",
+        displayMode ? "block text-center my-3" : "inline",
+        className
+      )} 
+    />
+  );
 }

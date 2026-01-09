@@ -6,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import type { TheoremBlock as TheoremBlockType, ProofStep } from '../types/blocks';
 import { TheoryBlockMedia } from '../TheoryBlockMedia';
 import { useTheoryBlockMedia } from '@/hooks/useTheoryBlockMedia';
+import { TheoryProse } from '../TheoryProse';
 
 interface TheoremBlockProps {
   block: TheoremBlockType;
@@ -65,18 +66,24 @@ export function TheoremBlock({ block, showBlockNumber = true }: TheoremBlockProp
       <div className="p-5 space-y-4">
         {/* Formal Statement */}
         <div className="p-4 bg-purple-500/5 rounded-lg border border-purple-500/20">
-          <MathRenderer latex={content.formalStatement} displayMode className="text-foreground" />
+          <TheoryProse>
+            <MathRenderer latex={content.formalStatement} className="text-foreground" />
+          </TheoryProse>
         </div>
 
         {/* Hypothesis and Conclusion */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="p-3 bg-muted/30 rounded-lg">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">If (Hypothesis)</h4>
-            <MathRenderer latex={content.hypothesis} className="text-foreground text-sm" />
+            <TheoryProse>
+              <MathRenderer latex={content.hypothesis} className="text-foreground text-sm" />
+            </TheoryProse>
           </div>
           <div className="p-3 bg-muted/30 rounded-lg">
             <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Then (Conclusion)</h4>
-            <MathRenderer latex={content.conclusion} className="text-foreground text-sm" />
+            <TheoryProse>
+              <MathRenderer latex={content.conclusion} className="text-foreground text-sm" />
+            </TheoryProse>
           </div>
         </div>
 
@@ -96,7 +103,9 @@ export function TheoremBlock({ block, showBlockNumber = true }: TheoremBlockProp
                   exit={{ opacity: 0, height: 0 }}
                   className="mt-2 p-4 bg-amber-500/5 rounded-lg border border-amber-500/10"
                 >
-                  <MathRenderer latex={content.intuition} className="text-foreground text-sm leading-relaxed" />
+                  <TheoryProse>
+                    <MathRenderer latex={content.intuition} className="text-foreground text-sm" />
+                  </TheoryProse>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -125,8 +134,10 @@ export function TheoremBlock({ block, showBlockNumber = true }: TheoremBlockProp
                           {step.stepNumber}
                         </span>
                         <div className="flex-1 space-y-1">
-                          <MathRenderer latex={step.statement} className="text-foreground text-sm" />
-                          <p className="text-xs text-muted-foreground italic">
+                          <TheoryProse>
+                            <MathRenderer latex={step.statement} className="text-foreground text-sm" />
+                          </TheoryProse>
+                          <p className="text-xs text-muted-foreground">
                             {step.justification}
                             {step.referencedBlocks && step.referencedBlocks.length > 0 && (
                               <span className="ml-1">
@@ -152,8 +163,8 @@ export function TheoremBlock({ block, showBlockNumber = true }: TheoremBlockProp
             <ul className="space-y-1 pl-4">
               {content.applications.map((app, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-purple-500 font-medium">→</span>
-                  <span className="text-sm text-foreground">{app}</span>
+                  <span className="text-purple-500 font-medium mt-0.5">→</span>
+                  <span className="text-sm text-foreground leading-relaxed">{app}</span>
                 </li>
               ))}
             </ul>
