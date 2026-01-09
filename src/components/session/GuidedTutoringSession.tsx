@@ -106,7 +106,7 @@ export function GuidedTutoringSession({
   const [tutorMood, setTutorMood] = useState<'idle' | 'explaining' | 'celebrating' | 'thinking' | 'encouraging'>('idle');
   
   // Track used exercises to prevent duplicates
-  const [usedExerciseIds, setUsedExerciseIds] = useState<string[]>([]);
+  const [usedExercises, setUsedExercises] = useState<{ id: string; question: string }[]>([]);
   
   // Track performance for progressive difficulty
   const [currentDifficulty, setCurrentDifficulty] = useState<'easy' | 'medium' | 'hard'>('easy');
@@ -382,15 +382,16 @@ export function GuidedTutoringSession({
         .eq('difficulty', difficulty);
       
       // Exclude used exercises
-      if (usedExerciseIds.length > 0) {
-        query = query.not('id', 'in', `(${usedExerciseIds.join(',')})`);
+      const usedIds = usedExercises.map(e => e.id);
+      if (usedIds.length > 0) {
+        query = query.not('id', 'in', `(${usedIds.join(',')})`);
       }
       
       const { data: exercises } = await query.limit(10);
 
       // Filter out any null IDs and already used (double check)
       const availableExercises = exercises?.filter(
-        ex => ex.id && !usedExerciseIds.includes(ex.id)
+        ex => ex.id && !usedIds.includes(ex.id)
       ) || [];
 
       // Find a valid exercise (validate and auto-fix if needed)
@@ -410,7 +411,7 @@ export function GuidedTutoringSession({
 
       if (validExercise) {
         // Track this exercise as used
-        setUsedExerciseIds(prev => [...prev, validExercise.id!]);
+        setUsedExercises(prev => [...prev, { id: validExercise.id!, question: validExercise.question || '' }]);
         setCurrentExercise(validExercise as Exercise);
         
         // Update exercise context for the AI tutor
@@ -437,7 +438,7 @@ export function GuidedTutoringSession({
             subtopicId, 
             difficulty, 
             userId: user?.id,
-            existingExercises: usedExerciseIds,
+            existingExercises: usedExercises.map(e => ({ question: e.question })),
             performanceData: {
               ...performanceData,
               sessionStats: stats,
@@ -455,8 +456,8 @@ export function GuidedTutoringSession({
           };
           
           // Track this new exercise as used
-          if (data.id) {
-            setUsedExerciseIds(prev => [...prev, data.id]);
+          if (data.id && data.question) {
+            setUsedExercises(prev => [...prev, { id: data.id, question: data.question }]);
           }
           setCurrentExercise(newExercise);
           
