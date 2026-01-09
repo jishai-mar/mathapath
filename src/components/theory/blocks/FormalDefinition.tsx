@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { FunctionSquare } from 'lucide-react';
-import MathRenderer from '@/components/MathRenderer';
-import { createSegmentsFromSolution } from '@/lib/solutionSegments';
+import { TheoryMathRenderer } from '../TheoryMathRenderer';
 import { FormalDefinitionBlock } from '../types';
 
 interface FormalDefinitionProps {
@@ -27,14 +26,14 @@ export function FormalDefinition({ block }: FormalDefinitionProps) {
 
       {/* Content */}
       <div className="text-muted-foreground leading-relaxed">
-        <MathRenderer segments={createSegmentsFromSolution(block.content)} />
+        <TheoryMathRenderer content={block.content} />
       </div>
 
       {/* Formula box */}
       {block.formula && (
         <div className="relative overflow-hidden rounded-xl bg-muted/50 border border-border/50 p-6">
           <div className="text-center text-lg">
-            <MathRenderer segments={createSegmentsFromSolution(block.formula)} />
+            <TheoryMathRenderer content={block.formula} displayMode />
           </div>
         </div>
       )}

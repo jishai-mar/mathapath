@@ -7,8 +7,9 @@ import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, BookOpen, MessageCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { TopicTheorySheet, NodeTutorChat } from '@/components/lesson';
+import { NodeTutorChat } from '@/components/lesson';
 import { cn } from '@/lib/utils';
+import { getTopicSlugFromDatabaseId } from '@/data/topicDatabaseMapping';
 
 interface SubtopicData {
   id: string;
@@ -41,7 +42,6 @@ export default function LessonScreen() {
   const [lesson, setLesson] = useState<SubtopicData | null>(null);
   const [progress, setProgress] = useState<ProgressData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showTheorySheet, setShowTheorySheet] = useState(false);
   const [showTutorChat, setShowTutorChat] = useState(false);
   const [lessonIndex, setLessonIndex] = useState<number>(0);
   const [totalLessons, setTotalLessons] = useState<number>(1);
@@ -189,15 +189,17 @@ export default function LessonScreen() {
     );
   }
 
+  // Get the theory slug for this topic
+  const theorySlug = topicId ? getTopicSlugFromDatabaseId(topicId) : null;
+
+  const handleOpenTheory = () => {
+    if (theorySlug) {
+      navigate(`/theory/${theorySlug}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <TopicTheorySheet
-        isOpen={showTheorySheet}
-        onClose={() => setShowTheorySheet(false)}
-        topicId={topicId || ''}
-        topicName={topic?.name || 'Theory'}
-      />
-
       <NodeTutorChat
         isOpen={showTutorChat}
         onClose={() => setShowTutorChat(false)}
@@ -232,12 +234,13 @@ export default function LessonScreen() {
             <Button
               variant="outline"
               className="w-full justify-start gap-3 h-14"
-              onClick={() => setShowTheorySheet(true)}
+              onClick={handleOpenTheory}
+              disabled={!theorySlug}
             >
               <BookOpen className="h-5 w-5 text-primary" />
               <div className="text-left">
                 <p className="font-medium">Theory</p>
-                <p className="text-xs text-muted-foreground">Learn the concepts for this step</p>
+                <p className="text-xs text-muted-foreground">Learn the concepts for this topic</p>
               </div>
             </Button>
 
