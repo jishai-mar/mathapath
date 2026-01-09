@@ -9,7 +9,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, BookOpen, MessageCircle, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { NodeTutorChat } from '@/components/lesson';
 import { cn } from '@/lib/utils';
-import { getTopicSlugFromDatabaseId } from '@/data/topicDatabaseMapping';
 
 interface SubtopicData {
   id: string;
@@ -189,14 +188,9 @@ export default function LessonScreen() {
     );
   }
 
-  // Get the theory slug for this topic
-  const theorySlug = topicId ? getTopicSlugFromDatabaseId(topicId) : null;
-
   const handleOpenTheory = () => {
-    if (theorySlug && lessonId) {
-      navigate(`/theory/${theorySlug}/${lessonId}`);
-    } else if (theorySlug) {
-      navigate(`/theory/${theorySlug}`);
+    if (topicId) {
+      navigate(`/topic-theory/${topicId}`);
     }
   };
 
@@ -237,7 +231,7 @@ export default function LessonScreen() {
               variant="outline"
               className="w-full justify-start gap-3 h-14"
               onClick={handleOpenTheory}
-              disabled={!theorySlug}
+              disabled={!topicId}
             >
               <BookOpen className="h-5 w-5 text-primary" />
               <div className="text-left">
