@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, generatePrerequisiteCheckSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,14 +18,12 @@ serve(async (req) => {
   }
 
   try {
-    const { prerequisites, targetTopicName } = await req.json();
-
-    if (!prerequisites?.length || !targetTopicName) {
-      return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Validate input
+    const validation = await parseAndValidate(req, generatePrerequisiteCheckSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { prerequisites, targetTopicName } = validation.data;
 
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY");
     if (!openaiApiKey) {

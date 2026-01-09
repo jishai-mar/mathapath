@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, tutorSttTokenSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +12,12 @@ serve(async (req) => {
   }
 
   try {
+    // Validate input (optional sessionId)
+    const validation = await parseAndValidate(req, tutorSttTokenSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!ELEVENLABS_API_KEY) {

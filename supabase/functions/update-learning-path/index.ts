@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, updateLearningPathFullSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,14 +20,12 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, performanceData, source } = await req.json();
-
-    if (!userId || !performanceData) {
-      return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Validate input
+    const validation = await parseAndValidate(req, updateLearningPathFullSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { userId, performanceData, source } = validation.data;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -56,24 +55,16 @@ serve(async (req) => {
     const strongTopics: string[] = [];
     const allWeakSubtopics: string[] = [];
 
-    if (Array.isArray(performanceData)) {
-      performanceData.forEach((pd: PerformanceData) => {
-        if (pd.score < 60) {
-          weakTopics.push(pd.topicId);
-        } else if (pd.score >= 80) {
-          strongTopics.push(pd.topicId);
-        }
-        if (pd.weakSubtopics?.length) {
-          allWeakSubtopics.push(...pd.weakSubtopics);
-        }
-      });
-    } else {
-      // Single topic performance
-      if (performanceData.score < 60) {
-        weakTopics.push(performanceData.topicId);
+    const perfDataArray = Array.isArray(performanceData) ? performanceData : [performanceData];
+    
+    for (const pd of perfDataArray) {
+      if (pd.score < 60) {
+        weakTopics.push(pd.topicId);
+      } else if (pd.score >= 80) {
+        strongTopics.push(pd.topicId);
       }
-      if (performanceData.weakSubtopics?.length) {
-        allWeakSubtopics.push(...performanceData.weakSubtopics);
+      if (pd.weakSubtopics?.length) {
+        allWeakSubtopics.push(...pd.weakSubtopics);
       }
     }
 

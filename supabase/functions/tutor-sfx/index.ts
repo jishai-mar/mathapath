@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, tutorSfxSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,7 +24,13 @@ serve(async (req) => {
   }
 
   try {
-    const { type, customPrompt, duration } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, tutorSfxSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { type, customPrompt, duration } = validation.data;
+
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!ELEVENLABS_API_KEY) {
@@ -31,9 +38,9 @@ serve(async (req) => {
     }
 
     // Get predefined effect or use custom prompt
-    const effect = soundEffects[type];
+    const effect = type ? soundEffects[type] : undefined;
     const prompt = customPrompt || effect?.prompt;
-    const effectDuration = duration || effect?.duration || 2;
+    const effectDuration = duration ?? effect?.duration ?? 2;
 
     if (!prompt) {
       throw new Error('Invalid sound effect type or no custom prompt provided');

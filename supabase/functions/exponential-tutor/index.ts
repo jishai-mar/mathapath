@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, exponentialTutorFullSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -87,24 +88,18 @@ const EXPLANATION_STYLES = {
   }
 };
 
-interface TutorRequest {
-  action: 'generate-problem' | 'check-answer' | 'get-hint' | 'explain-solution' | 'generate-exam' | 'assess-readiness';
-  difficulty?: 'easy' | 'medium' | 'hard';
-  topic?: string;
-  problem?: string;
-  studentAnswer?: string;
-  learningStyle?: 'formal' | 'intuitive';
-  conversationHistory?: { role: string; content: string }[];
-  examAnswers?: { questionId: string; answer: string; correct: boolean; difficulty: string }[];
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const request: TutorRequest = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, exponentialTutorFullSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const request = validation.data;
     const { action, difficulty, learningStyle = 'formal', conversationHistory = [] } = request;
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");

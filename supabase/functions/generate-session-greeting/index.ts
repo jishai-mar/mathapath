@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, sessionGreetingSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,22 +13,6 @@ interface SessionNote {
   content: string;
   subtopic_name?: string;
   detected_at: string;
-}
-
-interface RequestBody {
-  studentName?: string;
-  tutorName?: string;
-  personality?: string;
-  currentStreak?: number;
-  totalXp?: number;
-  recentAchievements?: string[];
-  weakestSubtopic?: string;
-  lastSessionMood?: string;
-  userId?: string;
-
-  // Used by GuidedTutoringSession
-  subtopicName?: string;
-  exerciseGoal?: number;
 }
 
 function buildFallbackGreeting({
@@ -54,7 +39,12 @@ serve(async (req) => {
   }
 
   try {
-    const body = (await req.json()) as RequestBody;
+    // Validate input
+    const validation = await parseAndValidate(req, sessionGreetingSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const body = validation.data;
 
     const studentName = body.studentName;
     const tutorName = body.tutorName ?? "Alex";

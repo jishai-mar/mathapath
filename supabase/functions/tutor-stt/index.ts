@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, tutorSttSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,15 +12,17 @@ serve(async (req) => {
   }
 
   try {
-    const { audio } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, tutorSttSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { audio } = validation.data;
+
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY is not configured');
-    }
-
-    if (!audio) {
-      throw new Error('No audio data provided');
     }
 
     console.log('Processing audio for transcription...');

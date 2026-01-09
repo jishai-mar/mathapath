@@ -1,28 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, sessionWrapupSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
-
-interface SessionProgress {
-  topicsCovered: string[];
-  problemsSolved: number;
-  hintsUsed: number;
-  correctAnswers: number;
-  totalAttempts: number;
-}
-
-interface RequestBody {
-  studentName?: string;
-  tutorName: string;
-  personality: string;
-  sessionGoal?: string;
-  progress: SessionProgress;
-  sessionDurationMinutes: number;
-  keyBreakthroughs?: string[];
-  struggles?: string[];
-}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -30,17 +12,26 @@ serve(async (req) => {
   }
 
   try {
-    const body = await req.json() as RequestBody;
-    const {
-      studentName,
-      tutorName = 'Alex',
-      personality = 'patient',
-      sessionGoal,
-      progress,
-      sessionDurationMinutes,
-      keyBreakthroughs = [],
-      struggles = [],
-    } = body;
+    // Validate input
+    const validation = await parseAndValidate(req, sessionWrapupSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const body = validation.data;
+    const studentName = body.studentName;
+    const tutorName = body.tutorName ?? 'Alex';
+    const personality = body.personality ?? 'patient';
+    const sessionGoal = body.sessionGoal;
+    const progress = {
+      topicsCovered: body.progress.topicsCovered ?? [],
+      problemsSolved: body.progress.problemsSolved ?? 0,
+      hintsUsed: body.progress.hintsUsed ?? 0,
+      correctAnswers: body.progress.correctAnswers ?? 0,
+      totalAttempts: body.progress.totalAttempts ?? 0,
+    };
+    const sessionDurationMinutes = body.sessionDurationMinutes ?? 0;
+    const keyBreakthroughs = body.keyBreakthroughs ?? [];
+    const struggles = body.struggles ?? [];
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {
