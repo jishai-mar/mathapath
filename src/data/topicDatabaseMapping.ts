@@ -42,3 +42,17 @@ export const TOPIC_DATABASE_IDS: Record<string, string> = {
 export function getDatabaseTopicId(topicSlug: string): string | undefined {
   return TOPIC_DATABASE_IDS[topicSlug];
 }
+
+/**
+ * Reverse mapping: database UUID → topic slug
+ */
+export const DATABASE_ID_TO_SLUG: Record<string, string> = Object.fromEntries(
+  Object.entries(TOPIC_DATABASE_IDS).map(([slug, uuid]) => [uuid, slug])
+);
+
+/**
+ * Get the theory topic slug from a database topic ID
+ */
+export function getTopicSlugFromDatabaseId(databaseId: string): string | undefined {
+  return DATABASE_ID_TO_SLUG[databaseId];
+}
