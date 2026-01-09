@@ -105,7 +105,7 @@ Consider mathematical equivalence (e.g., "x=2" equals "2" for solving equations,
         question.primaryMethodBlockId,
         ...(question.supportingTheoremIds || []),
         ...(question.definitionIds || [])
-      ].filter(Boolean);
+      ].filter((id): id is string => typeof id === 'string' && id.length > 0);
 
       for (const blockId of allBlockIds) {
         const score = blockScores.get(blockId);
@@ -118,10 +118,11 @@ Consider mathematical equivalence (e.g., "x=2" equals "2" for solving equations,
       // Update subtopic scores
       const subtopicId = question.subtopicId;
       if (subtopicId) {
+        const subtopicName = question.subtopicName || 'Unknown Subtopic';
         const existing = subtopicScores.get(subtopicId) || { 
           correct: 0, 
           total: 0, 
-          name: question.subtopicName 
+          name: subtopicName 
         };
         existing.total++;
         if (isCorrect) existing.correct++;
