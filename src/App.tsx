@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { TutorProvider, useTutor } from "@/contexts/TutorContext";
 import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
@@ -41,6 +41,20 @@ import TopicMasteryTest from "./pages/TopicMasteryTest";
 import TopicTheoryBlocks from "./pages/TopicTheoryBlocks";
 import AdminTheoryGenerator from "./pages/AdminTheoryGenerator";
 import History from "./pages/History";
+import { TOPIC_DATABASE_IDS } from "./data/topicDatabaseMapping";
+
+// Helper component to redirect /theory/:topicSlug to /topic-theory/:topicId
+function TheorySlugRedirect() {
+  const { topicSlug } = useParams<{ topicSlug: string }>();
+  const databaseId = topicSlug ? TOPIC_DATABASE_IDS[topicSlug] : null;
+  
+  if (databaseId) {
+    return <Navigate to={`/topic-theory/${databaseId}`} replace />;
+  }
+  
+  // If no valid mapping, redirect to dashboard
+  return <Navigate to="/" replace />;
+}
 
 const queryClient = new QueryClient();
 
@@ -84,7 +98,8 @@ function AppRoutes() {
       <Route path="/notebook" element={<Notebook />} />
       <Route path="/bookmarks" element={<Bookmarks />} />
       <Route path="/voice-tutor" element={<VoiceFirstTutoring />} />
-      {/* Theory route */}
+      {/* Theory routes */}
+      <Route path="/theory/:topicSlug" element={<TheorySlugRedirect />} />
       <Route path="/theory-legacy/:topicId" element={<TheoryTopic />} />
       <Route path="/practice-exam" element={<PracticeExam />} />
       <Route path="/find-your-level" element={<LevelAssessment />} />
