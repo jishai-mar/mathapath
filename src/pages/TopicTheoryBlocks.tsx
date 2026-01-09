@@ -199,8 +199,8 @@ export default function TopicTheoryBlocks() {
             </div>
           </aside>
 
-          {/* Main content area */}
-          <main className="col-span-12 lg:col-span-9 space-y-12">
+          {/* Main content area - max width for readable prose */}
+          <main className="col-span-12 lg:col-span-9 space-y-12 max-w-[860px]">
             {totalBlocks === 0 ? (
               <div className="text-center py-16 bg-muted/30 rounded-xl border border-border">
                 <BookOpen className="w-12 h-12 mx-auto text-muted-foreground mb-4" />

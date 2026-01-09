@@ -4,6 +4,7 @@ import MathRenderer from '@/components/MathRenderer';
 import { TheoryVisualizer } from '../TheoryVisualizer';
 import type { VisualBlock as VisualBlockType } from '../types/blocks';
 import type { VisualizerConfig } from '../types';
+import { TheoryProse } from '../TheoryProse';
 
 interface VisualBlockProps {
   block: VisualBlockType;
@@ -62,11 +63,11 @@ export function VisualBlock({ block, showBlockNumber = true }: VisualBlockProps)
       {/* Content */}
       <div className="p-5 space-y-4">
         {/* Description */}
-        <p className="text-foreground">
-          <MathRenderer latex={content.description} />
-        </p>
+        <TheoryProse>
+          <MathRenderer latex={content.description} className="text-foreground" />
+        </TheoryProse>
 
-        {/* Interactive Graph */}
+        {/* Interactive Graph - in its own container, never overlapping text */}
         <div className="rounded-lg overflow-hidden border border-border">
           <TheoryVisualizer config={visualizerConfig} />
         </div>
@@ -74,12 +75,14 @@ export function VisualBlock({ block, showBlockNumber = true }: VisualBlockProps)
         {/* Algebraic Interpretation */}
         <div className="p-4 bg-cyan-500/5 rounded-lg border border-cyan-500/20">
           <div className="flex items-start gap-2 mb-2">
-            <Info className="w-4 h-4 text-cyan-500 mt-0.5" />
+            <Info className="w-4 h-4 text-cyan-500 mt-0.5 flex-shrink-0" />
             <h4 className="text-sm font-semibold text-cyan-600 dark:text-cyan-400">
               Connecting Algebra to Geometry
             </h4>
           </div>
-          <MathRenderer latex={content.algebraicInterpretation} className="text-foreground text-sm leading-relaxed" />
+          <TheoryProse>
+            <MathRenderer latex={content.algebraicInterpretation} className="text-foreground text-sm" />
+          </TheoryProse>
         </div>
 
         {/* Key Observations */}
@@ -95,10 +98,12 @@ export function VisualBlock({ block, showBlockNumber = true }: VisualBlockProps)
                   transition={{ delay: idx * 0.1 }}
                   className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg"
                 >
-                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-bold flex items-center justify-center">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-xs font-bold flex items-center justify-center mt-0.5">
                     {idx + 1}
                   </span>
-                  <MathRenderer latex={observation} className="text-foreground text-sm" />
+                  <TheoryProse className="flex-1">
+                    <MathRenderer latex={observation} className="text-foreground text-sm" />
+                  </TheoryProse>
                 </motion.li>
               ))}
             </ul>

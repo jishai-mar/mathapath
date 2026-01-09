@@ -5,6 +5,7 @@ import MathRenderer from '@/components/MathRenderer';
 import type { DefinitionBlock as DefinitionBlockType } from '../types/blocks';
 import { TheoryBlockMedia } from '../TheoryBlockMedia';
 import { useTheoryBlockMedia } from '@/hooks/useTheoryBlockMedia';
+import { TheoryProse } from '../TheoryProse';
 
 interface DefinitionBlockProps {
   block: DefinitionBlockType;
@@ -86,16 +87,20 @@ export function DefinitionBlock({ block, showBlockNumber = true }: DefinitionBlo
           </div>
         </div>
 
-        {/* Formal Statement */}
+        {/* Formal Statement - Use TheoryProse for proper text flow */}
         <div className="p-4 bg-muted/30 rounded-lg border border-border">
-          <MathRenderer latex={content.formalStatement} displayMode className="text-foreground" />
+          <TheoryProse>
+            <MathRenderer latex={content.formalStatement} className="text-foreground" />
+          </TheoryProse>
         </div>
 
         {/* Domain Restrictions */}
         {content.domain && (
           <div className="flex items-start gap-2 text-sm">
             <span className="font-medium text-muted-foreground">Domain:</span>
-            <MathRenderer latex={content.domain} className="text-foreground" />
+            <TheoryProse>
+              <MathRenderer latex={content.domain} className="text-foreground" />
+            </TheoryProse>
           </div>
         )}
 
@@ -106,8 +111,10 @@ export function DefinitionBlock({ block, showBlockNumber = true }: DefinitionBlo
             <ul className="space-y-2 pl-4">
               {content.examples.map((example, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-blue-500 font-medium">•</span>
-                  <MathRenderer latex={example} className="text-foreground text-sm" />
+                  <span className="text-blue-500 font-medium mt-0.5">•</span>
+                  <TheoryProse className="flex-1">
+                    <MathRenderer latex={example} className="text-foreground text-sm" />
+                  </TheoryProse>
                 </li>
               ))}
             </ul>
@@ -121,8 +128,10 @@ export function DefinitionBlock({ block, showBlockNumber = true }: DefinitionBlo
             <ul className="space-y-1 pl-4">
               {content.counterexamples.map((ce, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-destructive font-medium">✗</span>
-                  <MathRenderer latex={ce} className="text-foreground text-sm" />
+                  <span className="text-destructive font-medium mt-0.5">✗</span>
+                  <TheoryProse className="flex-1">
+                    <MathRenderer latex={ce} className="text-foreground text-sm" />
+                  </TheoryProse>
                 </li>
               ))}
             </ul>
@@ -133,9 +142,9 @@ export function DefinitionBlock({ block, showBlockNumber = true }: DefinitionBlo
         {content.remarks && content.remarks.length > 0 && (
           <div className="space-y-2 pt-2 border-t border-border">
             {content.remarks.map((remark, idx) => (
-              <p key={idx} className="text-sm text-muted-foreground italic">
+              <TheoryProse key={idx} className="text-sm text-muted-foreground">
                 <MathRenderer latex={remark} />
-              </p>
+              </TheoryProse>
             ))}
           </div>
         )}

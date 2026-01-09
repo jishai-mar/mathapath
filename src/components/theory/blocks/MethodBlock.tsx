@@ -5,6 +5,7 @@ import MathRenderer from '@/components/MathRenderer';
 import type { MethodBlock as MethodBlockType, MethodStep } from '../types/blocks';
 import { TheoryBlockMedia } from '../TheoryBlockMedia';
 import { useTheoryBlockMedia } from '@/hooks/useTheoryBlockMedia';
+import { TheoryProse } from '../TheoryProse';
 
 interface MethodBlockProps {
   block: MethodBlockType;
@@ -62,13 +63,15 @@ export function MethodBlock({ block, showBlockNumber = true }: MethodBlockProps)
       <div className="p-5 space-y-4">
         {/* When to Apply */}
         <div className="p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/20">
-          <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-1">
+          <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide mb-2">
             When to use this method
           </h4>
-          <MathRenderer latex={content.applicableWhen} className="text-foreground text-sm" />
+          <TheoryProse>
+            <MathRenderer latex={content.applicableWhen} className="text-foreground text-sm" />
+          </TheoryProse>
         </div>
 
-        {/* Steps */}
+        {/* Steps - Vertical list layout */}
         <div className="space-y-3">
           <h4 className="text-sm font-semibold text-foreground">Procedure:</h4>
           {content.steps.map((step: MethodStep) => (
@@ -79,19 +82,27 @@ export function MethodBlock({ block, showBlockNumber = true }: MethodBlockProps)
               transition={{ delay: step.stepNumber * 0.1 }}
               className="flex gap-4 p-4 bg-muted/30 rounded-lg border border-border hover:border-emerald-500/30 transition-colors"
             >
+              {/* Step number */}
               <div className="flex-shrink-0">
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-emerald-500 text-white text-sm font-bold">
                   {step.stepNumber}
                 </span>
               </div>
+              
+              {/* Step content - vertical stack */}
               <div className="flex-1 space-y-2">
-                <p className="font-medium text-foreground">{step.action}</p>
+                {/* Action sentence */}
+                <p className="font-medium text-foreground leading-relaxed">{step.action}</p>
+                
+                {/* LaTeX formula (if any) - centered, display mode */}
                 {step.mathExpression && (
-                  <div className="p-2 bg-background rounded border border-border">
+                  <div className="p-3 bg-background rounded border border-border">
                     <MathRenderer latex={step.mathExpression} displayMode className="text-foreground" />
                   </div>
                 )}
-                <p className="text-sm text-muted-foreground">
+                
+                {/* Justification */}
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   <span className="font-medium">Justified by:</span>{' '}
                   <span className="text-emerald-600 dark:text-emerald-400">{step.justifiedBy}</span>
                 </p>
@@ -110,8 +121,8 @@ export function MethodBlock({ block, showBlockNumber = true }: MethodBlockProps)
             <ul className="space-y-1 pl-4">
               {content.warnings.map((warning, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-amber-500 font-medium">⚠</span>
-                  <span className="text-sm text-foreground">{warning}</span>
+                  <span className="text-amber-500 font-medium mt-0.5">⚠</span>
+                  <span className="text-sm text-foreground leading-relaxed">{warning}</span>
                 </li>
               ))}
             </ul>
@@ -125,8 +136,10 @@ export function MethodBlock({ block, showBlockNumber = true }: MethodBlockProps)
             <ul className="space-y-2 pl-4">
               {content.examples.map((example, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="text-emerald-500 font-medium">•</span>
-                  <MathRenderer latex={example} className="text-foreground text-sm" />
+                  <span className="text-emerald-500 font-medium mt-0.5">•</span>
+                  <TheoryProse className="flex-1">
+                    <MathRenderer latex={example} className="text-foreground text-sm" />
+                  </TheoryProse>
                 </li>
               ))}
             </ul>
