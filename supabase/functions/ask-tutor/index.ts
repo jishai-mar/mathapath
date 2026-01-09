@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, askTutorSchema } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,21 +46,27 @@ serve(async (req) => {
   }
 
   try {
-    const { 
-      question = '', 
-      subtopicName = 'General', 
-      theoryContext = '', 
-      conversationHistory = [], 
-      tutorName = 'Alex', 
-      personality = 'patient',
-      sessionPhase = 'learning',
-      sessionGoal,
-      studentName,
-      detectedEmotionalState = 'neutral',
-      userId,
-      tutoringMode = 'hint',
-      imageData,
-    } = await req.json() as RequestBody;
+    // Validate input
+    const validation = await parseAndValidate(req, askTutorSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const validatedData = validation.data;
+    
+    // Extract with safe defaults
+    const question = validatedData.question ?? '';
+    const subtopicName = validatedData.subtopicName ?? 'General';
+    const theoryContext = validatedData.theoryContext ?? '';
+    const conversationHistory = validatedData.conversationHistory ?? [];
+    const tutorName = validatedData.tutorName ?? 'Alex';
+    const personality: 'patient' | 'encouraging' | 'challenging' | 'humorous' = validatedData.personality ?? 'patient';
+    const sessionPhase: 'greeting' | 'goal-setting' | 'learning' | 'wrap-up' = validatedData.sessionPhase ?? 'learning';
+    const sessionGoal = validatedData.sessionGoal;
+    const studentName = validatedData.studentName;
+    const detectedEmotionalState: 'neutral' | 'engaged' | 'struggling' | 'frustrated' | 'confident' | 'anxious' = validatedData.detectedEmotionalState ?? 'neutral';
+    const userId = validatedData.userId;
+    const tutoringMode: 'hint' | 'solution' | 'quick-check' = validatedData.tutoringMode ?? 'hint';
+    const imageData = validatedData.imageData;
     
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, tutorTtsFullSchema } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,22 +30,26 @@ serve(async (req) => {
   }
 
   try {
-    const { text, voiceId, personality, context, stream } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, tutorTtsFullSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { text, voiceId, personality, context, stream } = validation.data;
+    
     const ELEVENLABS_API_KEY = Deno.env.get('ELEVENLABS_API_KEY');
 
     if (!ELEVENLABS_API_KEY) {
       throw new Error('ELEVENLABS_API_KEY is not configured');
     }
 
-    if (!text) {
-      throw new Error('Text is required');
-    }
-
     // Select voice based on personality or use provided voiceId
-    const selectedVoiceId = voiceId || tutorVoices[personality] || tutorVoices.patient;
+    const personalityKey = personality ?? 'patient';
+    const selectedVoiceId = voiceId || tutorVoices[personalityKey] || tutorVoices.patient;
     
     // Get voice settings based on context
-    const settings = contextSettings[context] || contextSettings.default;
+    const contextKey = context ?? 'default';
+    const settings = contextSettings[contextKey] || contextSettings.default;
 
     console.log(`TTS: personality=${personality}, context=${context}, voice=${selectedVoiceId}, stream=${stream}`);
 

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, checkExerciseAnswerSchema } from "../_shared/validation.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -166,7 +167,12 @@ serve(async (req) => {
   }
 
   try {
-    const { exerciseId, userAnswer, userId, hintsUsed, timeSpentSeconds, currentSubLevel, subtopicName } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, checkExerciseAnswerSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { exerciseId, userAnswer, userId, hintsUsed, timeSpentSeconds, currentSubLevel, subtopicName } = validation.data;
 
     // Prefer deriving user id from the auth token; keep body userId as backward-compatible fallback.
     let resolvedUserId = userId as string | undefined;
@@ -477,7 +483,8 @@ serve(async (req) => {
 
     // Enhanced difficulty progression with sub-levels
     let suggestedDifficulty: 'easy' | 'medium' | 'hard' = exercise.difficulty;
-    let suggestedSubLevel = currentSubLevel || 2;
+    const parsedSubLevel = typeof currentSubLevel === 'string' ? parseInt(currentSubLevel, 10) : (currentSubLevel ?? 2);
+    let suggestedSubLevel: number = isNaN(parsedSubLevel) ? 2 : parsedSubLevel;
     const currentDiff = exercise.difficulty;
     
     if (isCorrect) {

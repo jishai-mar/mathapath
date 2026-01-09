@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { parseAndValidate, elevenlabsConversationTokenSchema } from "../_shared/validation.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,8 +19,21 @@ serve(async (req) => {
       throw new Error('ELEVENLABS_API_KEY is not configured')
     }
 
-    // Get agent ID + request mode from request body (optional, has defaults)
-    const { agentId, mode } = await req.json().catch(() => ({}))
+    // Validate input - parse JSON with fallback to empty object for optional params
+    let agentId: string | undefined;
+    let mode: "token" | "signed_url" | undefined;
+    
+    try {
+      const body = await req.json();
+      const validation = elevenlabsConversationTokenSchema.safeParse(body);
+      if (validation.success) {
+        agentId = validation.data.agentId;
+        mode = validation.data.mode;
+      }
+    } catch {
+      // Empty body is allowed - use defaults
+    }
+
     const agent = agentId || 'agent_4501kd82684tegmad70k26kqzs17'
 
     const endpoint = mode === 'signed_url'
