@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { authenticatedFetch } from '@/hooks/useAuthenticatedFetch';
 
 export type MusicType = 'calm' | 'lofi' | 'classical' | 'nature' | 'focus';
 
@@ -23,18 +24,10 @@ export function useFocusMusic(options: UseFocusMusicOptions = {}) {
     try {
       setIsLoading(true);
       
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tutor-music`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ type, duration: 60 }), // Generate 60 seconds
-        }
-      );
+      const response = await authenticatedFetch('tutor-music', {
+        method: 'POST',
+        body: JSON.stringify({ type, duration: 60 }), // Generate 60 seconds
+      });
 
       if (!response.ok) {
         throw new Error(`Music request failed: ${response.status}`);

@@ -52,61 +52,61 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.tutor-tts]
-verify_jwt = false
+verify_jwt = true
 
 [functions.tutor-stt]
-verify_jwt = false
+verify_jwt = true
 
 [functions.tutor-stt-token]
-verify_jwt = false
+verify_jwt = true
 
 [functions.tutor-sfx]
-verify_jwt = false
+verify_jwt = true
 
 [functions.tutor-music]
-verify_jwt = false
+verify_jwt = true
 
 [functions.solve-exercise]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-practice-exam]
 verify_jwt = true
 
 [functions.exponential-tutor]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-test-yourself]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-general-work]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-learning-path]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-prerequisite-check]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-topic-exam]
-verify_jwt = false
+verify_jwt = true
 
 [functions.update-learning-path]
-verify_jwt = false
+verify_jwt = true
 
 [functions.grade-exam-answer]
-verify_jwt = false
+verify_jwt = true
 
 [functions.analyze-practice-exam]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-topic-mastery-test]
-verify_jwt = false
+verify_jwt = true
 
 [functions.grade-mastery-test]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-theory-media]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-theory-blocks]
-verify_jwt = false
+verify_jwt = true
