@@ -40,6 +40,7 @@ import LessonScreen from "./pages/LessonScreen";
 import TopicMasteryTest from "./pages/TopicMasteryTest";
 import TopicTheoryBlocks from "./pages/TopicTheoryBlocks";
 import AdminTheoryGenerator from "./pages/AdminTheoryGenerator";
+import History from "./pages/History";
 
 const queryClient = new QueryClient();
 
@@ -96,6 +97,7 @@ function AppRoutes() {
       <Route path="/topic-mastery-test/:topicId" element={<TopicMasteryTest />} />
       <Route path="/topic-theory/:topicId" element={<TopicTheoryBlocks />} />
       <Route path="/admin/theory-generator" element={<AdminTheoryGenerator />} />
+      <Route path="/history" element={<History />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
