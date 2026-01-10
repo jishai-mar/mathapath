@@ -253,7 +253,7 @@ export default function AdminTheoryGenerator() {
             <h1 className="text-3xl font-bold">Theory Block Generator</h1>
           </div>
           <p className="text-muted-foreground">
-            Generate rigorous, validated theory blocks for MathPath topics
+            Generate rigorous, validated theory blocks for Math Path topics
           </p>
         </div>
 
