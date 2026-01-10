@@ -354,6 +354,43 @@ export default function AdvancedGraphCalculator({
     }
   }, [isOpen]);
   
+  // Modal container ref for click-outside detection
+  const modalRef = useRef<HTMLDivElement>(null);
+  
+  // Close on Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [isOpen, onClose]);
+  
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    
+    if (isOpen) {
+      // Small delay to prevent immediate close on open click
+      const timeout = setTimeout(() => {
+        document.addEventListener('mousedown', handleClickOutside);
+      }, 100);
+      return () => {
+        clearTimeout(timeout);
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [isOpen, onClose]);
+  
   // Convert screen to graph coordinates
   const screenToGraph = useCallback((px: number, py: number) => {
     const x = xRange.min + ((px - padding) / (width - 2 * padding)) * (xRange.max - xRange.min);
@@ -590,6 +627,7 @@ export default function AdvancedGraphCalculator({
   return (
     <AnimatePresence>
       <motion.div
+        ref={modalRef}
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -616,7 +654,13 @@ export default function AdvancedGraphCalculator({
                 {isMinimized ? <Maximize2 className="w-3.5 h-3.5" /> : <Minimize2 className="w-3.5 h-3.5" />}
               </Button>
             )}
-            <Button variant="ghost" size="icon" className="w-7 h-7" onClick={onClose}>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="w-7 h-7 hover:bg-destructive/20 hover:text-destructive" 
+              onClick={onClose}
+              title="Close (Esc)"
+            >
               <X className="w-3.5 h-3.5" />
             </Button>
           </div>
@@ -1036,6 +1080,18 @@ export default function AdvancedGraphCalculator({
                 <div className="w-3 border-t-2 border-dashed border-amber-500" />
                 <span>asymptote</span>
               </div>
+            </div>
+            
+            {/* Close Button Footer */}
+            <div className="px-3 py-3 border-t border-border/30 bg-muted/20">
+              <Button 
+                variant="outline" 
+                className="w-full gap-2" 
+                onClick={onClose}
+              >
+                <X className="w-4 h-4" />
+                Close Graph
+              </Button>
             </div>
           </>
         )}
