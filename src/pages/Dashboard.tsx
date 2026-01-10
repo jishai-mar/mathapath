@@ -170,6 +170,7 @@ export default function Dashboard() {
         error
       } = await supabase.functions.invoke('generate-daily-insights', {
         body: {
+          userId: user!.id,
           studentName: profileData.display_name || 'Student',
           tutorName: tutorPrefs.tutorName,
           tutorPersonality: tutorPrefs.personality,
