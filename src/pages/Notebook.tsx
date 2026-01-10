@@ -28,7 +28,9 @@ import { NotebookSearch } from '@/components/notebook/NotebookSearch';
 import { NotebookEntryCard } from '@/components/notebook/NotebookEntryCard';
 import { NotebookTutor } from '@/components/notebook/NotebookTutor';
 import { XPDisplay } from '@/components/notebook/XPDisplay';
+import { PerspectiveInterestCard } from '@/components/notebook/PerspectiveInterestCard';
 import { exportSolutionsToPdf } from '@/utils/exportSolutionsPdf';
+import { supabase } from '@/integrations/supabase/client';
 
 type FilterType = 'all' | 'breakthrough' | 'struggle' | 'interest' | 'mastered' | 'worked_example';
 
@@ -122,6 +124,31 @@ export default function Notebook() {
   const handleAskTutor = (entry: NotebookEntry) => {
     setSelectedEntry(entry);
     setShowTutor(true);
+  };
+
+  const handleSaveInterestReflection = async (reflection: string, perspective: 'current' | 'two-state' | null) => {
+    if (!user) return;
+    
+    const perspectiveLabel = perspective === 'current' ? 'current situation' : 'two-state solution';
+    const content = `Reflection on Israel & Palestine perspectives:\n\nChose: ${perspectiveLabel}\n\n${reflection}`;
+    
+    const { error } = await supabase
+      .from('student_session_notes')
+      .insert({
+        user_id: user.id,
+        note_type: 'interest',
+        content,
+        subtopic_name: null,
+      });
+    
+    if (error) {
+      toast.error('Failed to save reflection');
+      throw error;
+    }
+    
+    toast.success('Reflection saved privately', {
+      description: 'Find it in your Interests entries',
+    });
   };
 
   const filterOptions: { value: FilterType; label: string; count: number; icon?: typeof Sparkles }[] = [
@@ -344,6 +371,11 @@ export default function Notebook() {
           ) : (
             <AnimatePresence mode="popLayout">
               <div className="space-y-3">
+                {/* Perspective Interest Card - only show under Interests filter */}
+                {filter === 'interest' && (
+                  <PerspectiveInterestCard onSaveReflection={handleSaveInterestReflection} />
+                )}
+                
                 {filteredEntries.map(entry => (
                   <NotebookEntryCard 
                     key={entry.id} 
