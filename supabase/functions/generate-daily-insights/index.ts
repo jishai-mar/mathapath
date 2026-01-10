@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { parseAndValidate, generateDailyInsightsSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,15 +11,19 @@ serve(async (req) => {
   }
 
   try {
-    // Validate input
-    const validation = await parseAndValidate(req, generateDailyInsightsSchema, corsHeaders);
-    if (!validation.success) {
-      return validation.response;
-    }
-    const { userId } = validation.data;
+    // Parse body once upfront
+    const rawBody = await req.json().catch(() => ({}));
     
-    // Get additional optional fields from request
-    const rawBody = await req.clone().json().catch(() => ({}));
+    // Validate required fields
+    const userId = rawBody.userId;
+    if (!userId || typeof userId !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "userId is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    // Get additional optional fields
     const studentName = rawBody.studentName || 'Student';
     const tutorName = rawBody.tutorName || 'Alex';
     const tutorPersonality = rawBody.tutorPersonality || 'patient';
