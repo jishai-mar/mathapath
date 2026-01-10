@@ -100,14 +100,16 @@ export function usePracticeExercise({
         hints: currentExercise.hints || []
       });
     }
-  }, [currentExercise?.id, exerciseContext]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentExercise?.id, subtopicName, subtopicId, topicName]);
 
   // Sync student answer with ExerciseContext
   useEffect(() => {
-    if (exerciseContext && studentAnswer !== undefined) {
+    if (exerciseContext) {
       exerciseContext.setStudentAnswer(studentAnswer);
     }
-  }, [studentAnswer, exerciseContext]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentAnswer]);
   const loadExerciseDetails = useCallback(async () => {
     if (!currentExercise) return;
 
