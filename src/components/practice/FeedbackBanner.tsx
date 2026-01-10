@@ -2,7 +2,6 @@ import { motion } from 'framer-motion';
 import { CheckCircle2, XCircle, ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MathRenderer from '@/components/MathRenderer';
-import { createSegmentsFromSolution } from '@/lib/solutionSegments';
 
 interface TutorFeedback {
   what_went_well?: string;
@@ -65,7 +64,9 @@ export function FeedbackBanner({
             >
               {isCorrect ? 'Correct!' : 'Not quite right'}
             </h3>
-            <p className="text-sm text-muted-foreground">{message}</p>
+            <div className="text-sm text-muted-foreground">
+              <MathRenderer latex={message} />
+            </div>
           </div>
         </div>
       </div>
@@ -81,7 +82,9 @@ export function FeedbackBanner({
           {tutorFeedback.emotional_support && (
             <div className="flex items-start gap-2 text-sm">
               <Sparkles className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-muted-foreground italic">{tutorFeedback.emotional_support}</p>
+              <div className="text-muted-foreground italic">
+                <MathRenderer latex={tutorFeedback.emotional_support} />
+              </div>
             </div>
           )}
           
@@ -90,7 +93,9 @@ export function FeedbackBanner({
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                 What went well
               </p>
-              <p className="text-sm">{tutorFeedback.what_went_well}</p>
+              <div className="text-sm">
+                <MathRenderer latex={tutorFeedback.what_went_well} />
+              </div>
             </div>
           )}
           
@@ -99,7 +104,9 @@ export function FeedbackBanner({
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                 Where to check
               </p>
-              <p className="text-sm">{tutorFeedback.where_it_breaks}</p>
+              <div className="text-sm">
+                <MathRenderer latex={tutorFeedback.where_it_breaks} />
+              </div>
             </div>
           )}
           
@@ -108,7 +115,9 @@ export function FeedbackBanner({
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
                 Tip
               </p>
-              <p className="text-sm text-primary">{tutorFeedback.what_to_focus_on_next}</p>
+              <div className="text-sm text-primary">
+                <MathRenderer latex={tutorFeedback.what_to_focus_on_next} />
+              </div>
             </div>
           )}
         </motion.div>
@@ -147,7 +156,7 @@ export function FeedbackBanner({
         <div className="p-3 rounded-lg bg-muted/30 border border-border">
           <p className="text-xs text-muted-foreground mb-1">Correct answer:</p>
           <div className="font-medium">
-            <MathRenderer segments={createSegmentsFromSolution(correctAnswer)} />
+            <MathRenderer latex={correctAnswer} />
           </div>
         </div>
       )}
