@@ -305,7 +305,7 @@ function FindYourLevelCard({ index }: { index: number }) {
       
       {/* Content */}
       <h3 className="font-semibold text-foreground mb-1 group-hover:text-primary transition-colors">
-        Let's find your level
+        Practise test
       </h3>
       <p className="text-xs text-muted-foreground line-clamp-2 mb-4 min-h-[32px]">
         Mixed questions from all topics. Perfect for exam prep!
