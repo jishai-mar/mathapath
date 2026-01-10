@@ -1,20 +1,64 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { create, all } from 'mathjs';
 
 interface InteractiveMathGraphProps {
   concept: string;
   subtopicName: string;
 }
 
-type GraphType = 'linear' | 'quadratic' | 'derivative' | 'logarithm' | 'exponential' | 'inequality' | 'fraction' | 'limit' | 'default';
+type GraphType = 'linear' | 'quadratic' | 'derivative' | 'logarithm' | 'exponential' | 'inequality' | 'fraction' | 'limit' | 'custom' | 'default';
+
+// Create mathjs instance
+const mathInstance = create(all, {});
 
 export default function InteractiveMathGraph({ concept, subtopicName }: InteractiveMathGraphProps) {
-  const [isAnimating, setIsAnimating] = useState(true);
   const [sliderValue, setSliderValue] = useState(50);
   const [hoverPoint, setHoverPoint] = useState<{ x: number; y: number } | null>(null);
 
+  // Try to extract a mathematical expression from the concept
+  const extractedExpression = useMemo((): string | null => {
+    // Common patterns for math expressions
+    const patterns = [
+      /f\s*\(\s*x\s*\)\s*=\s*([^,\n]+)/i,      // f(x) = ...
+      /y\s*=\s*([^,\n]+)/i,                     // y = ...
+      /g\s*\(\s*x\s*\)\s*=\s*([^,\n]+)/i,      // g(x) = ...
+      /h\s*\(\s*x\s*\)\s*=\s*([^,\n]+)/i,      // h(x) = ...
+    ];
+    
+    for (const pattern of patterns) {
+      const match = concept.match(pattern);
+      if (match && match[1]) {
+        // Clean up the expression
+        let expr = match[1].trim()
+          .replace(/²/g, '^2')
+          .replace(/³/g, '^3')
+          .replace(/√/g, 'sqrt')
+          .replace(/π/g, 'pi')
+          .replace(/\|([^|]+)\|/g, 'abs($1)');
+        return expr;
+      }
+    }
+    return null;
+  }, [concept]);
+
+  // Evaluate expression using mathjs
+  const evaluateExpression = useCallback((expr: string, x: number, param: number = 1): number => {
+    try {
+      const node = mathInstance.parse(expr);
+      const compiled = node.compile();
+      const result = compiled.evaluate({ x, a: param, b: param, c: 0 });
+      return typeof result === 'number' ? result : NaN;
+    } catch {
+      return NaN;
+    }
+  }, []);
+
   // Determine graph type from concept/subtopic name
   const graphType = useMemo((): GraphType => {
+    // If we found an expression, mark as custom
+    if (extractedExpression) return 'custom';
+    
     const lowerConcept = (concept + ' ' + subtopicName).toLowerCase();
     
     if (lowerConcept.includes('linear') || lowerConcept.includes('line')) return 'linear';
@@ -26,112 +70,106 @@ export default function InteractiveMathGraph({ concept, subtopicName }: Interact
     if (lowerConcept.includes('fraction') || lowerConcept.includes('algebraic')) return 'fraction';
     if (lowerConcept.includes('limit')) return 'limit';
     return 'default';
-  }, [concept, subtopicName]);
+  }, [concept, subtopicName, extractedExpression]);
 
-  // Generate path for different graph types
-  const generatePath = (type: GraphType, param: number): string => {
-    const scale = param / 50; // normalize 0-100 to 0-2
+  // Get the expression to graph
+  const expressionToGraph = useMemo((): string => {
+    if (extractedExpression) return extractedExpression;
     
-    switch (type) {
-      case 'linear': {
-        const slope = scale * 0.6;
-        return `M 20 ${70 - 20 * slope} L 180 ${70 - 60 * slope}`;
+    // Default expressions for each type
+    const defaults: Record<GraphType, string> = {
+      linear: 'a * x + b',
+      quadratic: 'a * x^2',
+      derivative: 'sin(a * x)',
+      logarithm: 'log(x + 1)',
+      exponential: 'exp(a * x / 3)',
+      inequality: 'x',
+      fraction: '1 / (x + 0.1)',
+      limit: '1 / (x - 2)',
+      custom: extractedExpression || 'x^2',
+      default: 'sin(x)',
+    };
+    return defaults[graphType];
+  }, [graphType, extractedExpression]);
+
+  // Generate path for the graph using mathjs evaluation
+  const generatePath = useCallback((param: number): string => {
+    const scale = param / 50; // normalize 0-100 to 0-2
+    const points: string[] = [];
+    const xMin = 20;
+    const xMax = 180;
+    const yMin = 10;
+    const yMax = 70;
+    const graphCenterY = 40;
+    
+    // Map graph coordinates to SVG coordinates
+    // x: 20-180 maps to domain -4 to 4
+    // y: SVG y is inverted, 10 is top, 70 is bottom
+    
+    for (let svgX = xMin; svgX <= xMax; svgX += 3) {
+      const mathX = ((svgX - 100) / 20); // Map to -4 to 4 range
+      let mathY: number;
+      
+      try {
+        mathY = evaluateExpression(expressionToGraph, mathX, scale);
+      } catch {
+        continue;
       }
-      case 'quadratic': {
-        const a = 0.01 * scale;
-        const points: string[] = [];
-        for (let x = 20; x <= 180; x += 5) {
-          const normalX = (x - 100) / 10;
-          const y = 50 - a * normalX * normalX * 40;
-          points.push(`${x},${Math.max(10, Math.min(70, y))}`);
-        }
-        return `M ${points.join(' L ')}`;
-      }
-      case 'derivative': {
-        const points: string[] = [];
-        for (let x = 20; x <= 180; x += 3) {
-          const normalX = (x - 100) / 50;
-          const y = 40 - Math.sin(normalX * Math.PI * scale) * 25;
-          points.push(`${x},${y}`);
-        }
-        return `M ${points.join(' L ')}`;
-      }
-      case 'logarithm': {
-        const points: string[] = [];
-        for (let x = 25; x <= 180; x += 5) {
-          const normalX = (x - 20) / 160;
-          const y = 65 - Math.log(normalX * 5 + 0.1) * 15 * scale;
-          points.push(`${x},${Math.max(10, Math.min(70, y))}`);
-        }
-        return `M ${points.join(' L ')}`;
-      }
-      case 'exponential': {
-        const points: string[] = [];
-        for (let x = 20; x <= 180; x += 5) {
-          const normalX = (x - 20) / 160;
-          const y = 65 - Math.exp(normalX * 2 * scale) * 3;
-          points.push(`${x},${Math.max(10, Math.min(70, y))}`);
-        }
-        return `M ${points.join(' L ')}`;
-      }
-      case 'limit': {
-        const points: string[] = [];
-        const asymptote = 100;
-        for (let x = 20; x <= 180; x += 3) {
-          if (Math.abs(x - asymptote) < 5) continue;
-          const normalX = (x - asymptote) / 50;
-          const y = 40 + (1 / normalX) * 10 * scale;
-          points.push(`${x},${Math.max(10, Math.min(70, y))}`);
-        }
-        return `M ${points.slice(0, points.length / 2).join(' L ')} M ${points.slice(points.length / 2).join(' L ')}`;
-      }
-      case 'inequality': {
-        return `M 20 40 L 100 40 M 100 40 L 180 ${40 - 20 * scale}`;
-      }
-      default: {
-        const points: string[] = [];
-        for (let x = 20; x <= 180; x += 5) {
-          const y = 40 + Math.sin((x - 20) / 25 + scale) * 20;
-          points.push(`${x},${y}`);
-        }
-        return `M ${points.join(' L ')}`;
-      }
+      
+      if (!isFinite(mathY) || Math.abs(mathY) > 100) continue;
+      
+      // Map math Y to SVG Y (invert and scale)
+      const svgY = graphCenterY - mathY * 8;
+      
+      // Clamp to visible area
+      const clampedY = Math.max(yMin, Math.min(yMax, svgY));
+      
+      points.push(`${svgX},${clampedY}`);
     }
-  };
+    
+    if (points.length < 2) {
+      // Fallback to a simple line if parsing failed
+      return `M 20 50 L 180 30`;
+    }
+    
+    return `M ${points.join(' L ')}`;
+  }, [expressionToGraph, evaluateExpression]);
 
   // Get label for graph type
-  const getGraphLabel = (type: GraphType): string => {
+  const getGraphLabel = (): string => {
+    if (extractedExpression) {
+      return `f(x) = ${extractedExpression}`;
+    }
     const labels: Record<GraphType, string> = {
-      linear: 'y = mx + b',
-      quadratic: 'y = ax² + bx + c',
-      derivative: "f'(x) = lim[h→0] (f(x+h) - f(x))/h",
-      logarithm: 'y = log_a(x)',
-      exponential: 'y = aˣ',
-      inequality: 'x > a',
-      fraction: '(a/b) · (c/d)',
-      limit: 'lim[x→a] f(x)',
-      default: 'f(x)',
+      linear: 'y = ax + b',
+      quadratic: 'y = ax²',
+      derivative: "y = sin(ax)",
+      logarithm: 'y = log(x+1)',
+      exponential: 'y = e^(ax/3)',
+      inequality: 'y = x',
+      fraction: 'y = 1/(x+0.1)',
+      limit: 'y = 1/(x-2)',
+      custom: `f(x) = ${extractedExpression}`,
+      default: 'y = sin(x)',
     };
-    return labels[type];
+    return labels[graphType];
   };
 
-  const path = generatePath(graphType, sliderValue);
+  const path = generatePath(sliderValue);
 
   // Key points for annotations
   const keyPoints = useMemo(() => {
     switch (graphType) {
       case 'quadratic':
-        return [{ x: 100, y: 50 - (sliderValue / 50) * 0.01 * 0 * 40, label: 'vertex' }];
+        return [{ x: 100, y: 40, label: 'vertex' }];
       case 'derivative':
-        return [
-          { x: 100, y: 40, label: 'inflection' },
-        ];
+        return [{ x: 100, y: 40, label: 'inflection' }];
       case 'limit':
         return [{ x: 100, y: 40, label: 'asymptote', isAsymptote: true }];
       default:
         return [];
     }
-  }, [graphType, sliderValue]);
+  }, [graphType]);
 
   return (
     <div className="rounded-2xl bg-card border border-border/50 overflow-hidden">
@@ -143,7 +181,7 @@ export default function InteractiveMathGraph({ concept, subtopicName }: Interact
           <div className="w-3 h-3 rounded-full bg-green-500/80" />
         </div>
         <span className="text-[10px] font-mono text-muted-foreground">
-          {getGraphLabel(graphType)}
+          {getGraphLabel()}
         </span>
       </div>
       
@@ -198,6 +236,10 @@ export default function InteractiveMathGraph({ concept, subtopicName }: Interact
           <line x1="20" y1="70" x2="180" y2="70" stroke="hsl(var(--muted-foreground))" strokeWidth="1" strokeOpacity="0.5" />
           <line x1="20" y1="10" x2="20" y2="70" stroke="hsl(var(--muted-foreground))" strokeWidth="1" strokeOpacity="0.5" />
           
+          {/* Center axis lines */}
+          <line x1="100" y1="10" x2="100" y2="70" stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" strokeOpacity="0.3" />
+          <line x1="20" y1="40" x2="180" y2="40" stroke="hsl(var(--muted-foreground))" strokeWidth="0.5" strokeOpacity="0.3" />
+          
           {/* Axis labels */}
           <text x="180" y="78" fontSize="8" fill="hsl(var(--muted-foreground))">x</text>
           <text x="12" y="15" fontSize="8" fill="hsl(var(--muted-foreground))">y</text>
@@ -224,14 +266,14 @@ export default function InteractiveMathGraph({ concept, subtopicName }: Interact
             filter="url(#glow)"
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ 
-              pathLength: isAnimating ? 1 : 1, 
+              pathLength: 1, 
               opacity: 1 
             }}
             transition={{ 
               pathLength: { duration: 1.5, ease: "easeInOut" },
               opacity: { duration: 0.3 }
             }}
-            key={`path-${sliderValue}`}
+            key={`path-${sliderValue}-${expressionToGraph}`}
           />
           
           {/* Key points */}
@@ -323,7 +365,7 @@ export default function InteractiveMathGraph({ concept, subtopicName }: Interact
         </div>
         
         <p className="text-xs text-muted-foreground text-center font-mono">
-          fig 1.1: Interactive {graphType} function
+          fig 1.1: Interactive {graphType === 'custom' ? 'function' : graphType} graph
         </p>
       </div>
     </div>
