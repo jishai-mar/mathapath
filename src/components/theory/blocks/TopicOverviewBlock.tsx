@@ -133,12 +133,13 @@ export function TopicOverviewBlock({ block }: TopicOverviewBlockProps) {
                     key={mIdx}
                     className="p-4 bg-destructive/5 border border-destructive/20 rounded-lg"
                   >
-                    <p className="font-medium text-destructive mb-2">
-                      ✗ {mistake.mistake}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {mistake.why}
-                    </p>
+                    <div className="font-medium text-destructive mb-2 flex items-start gap-2">
+                      <span>✗</span>
+                      <TheoryMathRenderer content={mistake.mistake} />
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      <TheoryMathRenderer content={mistake.why} />
+                    </div>
                   </div>
                 ))}
               </div>
