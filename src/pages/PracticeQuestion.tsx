@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,8 @@ import { usePracticeExercise } from '@/hooks/usePracticeExercise';
 import {
   PracticeQuestionCard,
   TheoryPanel,
-  SolutionPanel
+  SolutionPanel,
+  TheoryCheckPrompt
 } from '@/components/practice';
 
 export default function PracticeQuestion() {
@@ -84,36 +85,70 @@ export default function PracticeQuestion() {
 
       {/* Main Content */}
       <main className="p-4 md:p-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <PracticeQuestionCard
-            exercise={practice.currentExercise}
-            exerciseDetails={practice.exerciseDetails}
-            studentAnswer={practice.studentAnswer}
-            onAnswerChange={practice.setStudentAnswer}
-            onSubmit={practice.submitAnswer}
-            onOpenTheory={practice.openTheory}
-            onOpenSolution={practice.openSolution}
-            onRevealHint={practice.revealNextStep}
-            onNextExercise={handleNextExercise}
-            onStartWalkthrough={practice.startWalkthrough}
-            onSaveToNotebook={practice.saveToNotebook}
-            revealedStepCount={practice.revealedStepCount}
-            isCorrect={practice.isCorrect}
-            feedbackMessage={practice.feedbackMessage}
-            tutorFeedback={practice.tutorFeedback}
-            correctAnswer={practice.correctAnswer}
-            isSubmitting={practice.isSubmitting}
-            isLoading={practice.isLoading}
-            isSavedToNotebook={practice.isSavedToNotebook}
-            isSavingToNotebook={practice.isSavingToNotebook}
-            mode={practice.mode}
-            exerciseCount={practice.exerciseCount}
-            correctCount={practice.correctCount}
-          />
-        </motion.div>
+        <AnimatePresence mode="wait">
+          {/* Theory Check Prompt - shown before exercise */}
+          {practice.currentExercise && practice.showTheoryCheck && !practice.isLoading && (
+            <motion.div
+              key="theory-check"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <TheoryCheckPrompt
+                question={practice.currentExercise.question}
+                subtopicName={subtopicName}
+                linkedTheoryBlocks={practice.exerciseDetails?.linkedTheory}
+                onComplete={practice.completeTheoryCheck}
+                onOpenTheory={practice.openTheory}
+              />
+            </motion.div>
+          )}
+
+          {/* Practice Question Card - shown after theory check */}
+          {practice.currentExercise && !practice.showTheoryCheck && (
+            <motion.div
+              key="question"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <PracticeQuestionCard
+                exercise={practice.currentExercise}
+                exerciseDetails={practice.exerciseDetails}
+                studentAnswer={practice.studentAnswer}
+                onAnswerChange={practice.setStudentAnswer}
+                onSubmit={practice.submitAnswer}
+                onOpenTheory={practice.openTheory}
+                onOpenSolution={practice.openSolution}
+                onRevealHint={practice.revealNextStep}
+                onNextExercise={handleNextExercise}
+                onStartWalkthrough={practice.startWalkthrough}
+                onSaveToNotebook={practice.saveToNotebook}
+                revealedStepCount={practice.revealedStepCount}
+                isCorrect={practice.isCorrect}
+                feedbackMessage={practice.feedbackMessage}
+                tutorFeedback={practice.tutorFeedback}
+                correctAnswer={practice.correctAnswer}
+                isSubmitting={practice.isSubmitting}
+                isLoading={practice.isLoading}
+                isSavedToNotebook={practice.isSavedToNotebook}
+                isSavingToNotebook={practice.isSavingToNotebook}
+                mode={practice.mode}
+                exerciseCount={practice.exerciseCount}
+                correctCount={practice.correctCount}
+              />
+            </motion.div>
+          )}
+
+          {/* Loading state */}
+          {practice.isLoading && (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+          )}
+        </AnimatePresence>
       </main>
 
       {/* Panels */}
