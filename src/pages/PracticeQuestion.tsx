@@ -30,9 +30,15 @@ export default function PracticeQuestion() {
   });
 
   // Set current screen in ExerciseContext for tutor awareness
+  // Use stable references to avoid infinite re-render loop
+  const setCurrentScreen = exerciseContext?.setCurrentScreen;
+  const currentScreen = exerciseContext?.currentScreen;
+  
   useEffect(() => {
-    exerciseContext?.setCurrentScreen('PracticeQuestion');
-  }, [exerciseContext]);
+    if (setCurrentScreen && currentScreen !== 'PracticeQuestion') {
+      setCurrentScreen('PracticeQuestion');
+    }
+  }, [setCurrentScreen, currentScreen]);
 
   useEffect(() => {
     if (!authLoading && !user) {
