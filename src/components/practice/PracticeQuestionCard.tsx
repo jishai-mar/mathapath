@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   BookOpen, 
@@ -18,7 +19,7 @@ import { Exercise, ExerciseDetails, PracticeMode, LinkedTheoryBlock } from './ty
 import { HintStepper } from './HintStepper';
 import { FeedbackBanner } from './FeedbackBanner';
 import { TheoryLinkBadges } from '@/components/exercise/TheoryLinkBadge';
-import ToolPanel from '@/components/tools/ToolPanel';
+import { MathKeyboard } from '@/components/math/MathKeyboard';
 
 interface PracticeQuestionCardProps {
   exercise: Exercise | null;
@@ -67,10 +68,31 @@ export function PracticeQuestionCard({
   correctCount,
   linkedTheoryBlocks
 }: PracticeQuestionCardProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !isSubmitting && studentAnswer.trim()) {
       onSubmit();
     }
+  };
+
+  const handleInsertSymbol = (symbol: string) => {
+    const input = inputRef.current;
+    if (!input) {
+      onAnswerChange(studentAnswer + symbol);
+      return;
+    }
+    
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const newValue = studentAnswer.slice(0, start) + symbol + studentAnswer.slice(end);
+    onAnswerChange(newValue);
+    
+    // Set cursor position after inserted symbol
+    setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(start + symbol.length, start + symbol.length);
+    }, 0);
   };
 
   const difficultyColors = {
@@ -195,6 +217,13 @@ export function PracticeQuestionCard({
           </Button>
         </div>
 
+        {/* Math Tools - Keyboard, Calculator, Graph, Formula Sheet */}
+        <MathKeyboard 
+          onInsert={handleInsertSymbol}
+          topicName={exercise?.subtopicName}
+          currentQuestion={exercise?.question}
+        />
+
         {/* Hint Stepper - Show revealed hints */}
         {revealedStepCount > 0 && (
           <HintStepper
@@ -211,6 +240,7 @@ export function PracticeQuestionCard({
           </label>
           <div className="flex gap-3">
             <Input
+              ref={inputRef}
               value={studentAnswer}
               onChange={(e) => onAnswerChange(e.target.value)}
               onKeyDown={handleKeyDown}
@@ -237,12 +267,6 @@ export function PracticeQuestionCard({
           />
         )}
       </CardContent>
-      
-      {/* Graph Calculator */}
-      <ToolPanel 
-        subtopicName={exercise?.subtopicName || ''} 
-        suggestion={{ graph: true, calculator: true }}
-      />
     </Card>
   );
 }
