@@ -74,7 +74,7 @@ export default function Auth() {
             toast.error(error.message);
           }
         } else {
-          toast.success('Account created successfully! Welcome to MathPath.');
+          toast.success('Account created successfully! Welcome to Math Path.');
         }
       } else if (view === 'login') {
         const { error } = await signIn(email, password);
@@ -159,7 +159,7 @@ export default function Auth() {
               <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
                 <Calculator className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="text-xl font-bold text-foreground">MathPath</span>
+              <span className="text-xl font-bold text-foreground">Math Path</span>
             </div>
             <Button
               variant="outline"
@@ -381,7 +381,7 @@ export default function Auth() {
               <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
                 <Calculator className="w-6 h-6 text-primary-foreground" />
               </div>
-              <span className="text-2xl font-bold text-foreground">MathPath</span>
+              <span className="text-2xl font-bold text-foreground">Math Path</span>
             </motion.div>
 
             <motion.div
@@ -599,7 +599,7 @@ export default function Auth() {
       {/* Footer - hidden on forgot password */}
       {view !== 'forgot-password' && (
         <footer className="absolute bottom-0 left-0 right-0 py-6 text-center text-sm text-muted-foreground border-t border-border/30 bg-background/50 backdrop-blur-sm">
-          © 2024 MathPath. All rights reserved.
+          © 2024 Math Path. All rights reserved.
         </footer>
       )}
     </div>

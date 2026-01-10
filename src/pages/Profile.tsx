@@ -227,7 +227,7 @@ export default function Profile() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <span className="text-primary-foreground font-bold text-sm">M</span>
             </div>
-            <span className="text-xl font-bold text-foreground">MathPath</span>
+            <span className="text-xl font-bold text-foreground">Math Path</span>
           </Link>
           
           <div className="flex items-center gap-4">
