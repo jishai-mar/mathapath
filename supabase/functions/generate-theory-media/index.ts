@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import { parseAndValidate, generateTheoryMediaSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,11 +28,12 @@ serve(async (req) => {
   }
 
   try {
-    const { theoryBlockId } = await req.json();
-    
-    if (!theoryBlockId) {
-      throw new Error('theoryBlockId is required');
+    // Validate input
+    const validation = await parseAndValidate(req, generateTheoryMediaSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { theoryBlockId } = validation.data;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, generateConversationalTheorySchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -27,7 +28,20 @@ serve(async (req) => {
   }
 
   try {
-    const { subtopicName, topicName, existingTheory, existingExamples, pastResponses, learningProfile } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, generateConversationalTheorySchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { subtopicName, currentStep } = validation.data;
+    
+    // Get additional optional fields from request
+    const rawBody = await req.clone().json().catch(() => ({}));
+    const topicName = rawBody.topicName;
+    const existingTheory = rawBody.existingTheory;
+    const existingExamples = rawBody.existingExamples;
+    const pastResponses = rawBody.pastResponses;
+    const learningProfile = rawBody.learningProfile;
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {

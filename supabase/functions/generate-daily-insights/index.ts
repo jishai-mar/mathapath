@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, generateDailyInsightsSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,16 +12,23 @@ serve(async (req) => {
   }
 
   try {
-    const {
-      studentName,
-      tutorName,
-      tutorPersonality,
-      currentStreak,
-      totalXp,
-      topicProgress,
-      weakSubtopics,
-      recentActivity,
-    } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, generateDailyInsightsSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { userId } = validation.data;
+    
+    // Get additional optional fields from request
+    const rawBody = await req.clone().json().catch(() => ({}));
+    const studentName = rawBody.studentName || 'Student';
+    const tutorName = rawBody.tutorName || 'Alex';
+    const tutorPersonality = rawBody.tutorPersonality || 'patient';
+    const currentStreak = rawBody.currentStreak || 0;
+    const totalXp = rawBody.totalXp || 0;
+    const topicProgress = rawBody.topicProgress || [];
+    const weakSubtopics = rawBody.weakSubtopics || [];
+    const recentActivity = rawBody.recentActivity;
 
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {

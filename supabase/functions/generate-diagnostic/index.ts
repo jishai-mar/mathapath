@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, generateDiagnosticSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,14 +28,12 @@ serve(async (req) => {
   }
 
   try {
-    const { topicId, userId } = await req.json();
-
-    if (!topicId || !userId) {
-      return new Response(
-        JSON.stringify({ error: "topicId and userId are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Validate input
+    const validation = await parseAndValidate(req, generateDiagnosticSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { topicId, userId } = validation.data;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;

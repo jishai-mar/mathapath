@@ -104,13 +104,20 @@ const BOOKLET_TOPICS = [
   "Rational Functions"
 ];
 
+import { parseAndValidate, generatePracticeExamSchema } from '../_shared/validation.ts';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { difficulty = 'standard' } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, generatePracticeExamSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { difficulty = 'medium' } = validation.data as any;
     
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     if (!OPENAI_API_KEY) {

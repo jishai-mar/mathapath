@@ -220,6 +220,8 @@ function calculateTopicDistribution(selectedTopicIds: string[]): string[] {
   return distribution.sort(() => Math.random() - 0.5);
 }
 
+import { parseAndValidate, generateTestYourselfSchema } from '../_shared/validation.ts';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -231,9 +233,16 @@ serve(async (req) => {
       throw new Error("OPENAI_API_KEY is not configured");
     }
 
-    // Parse request body for topic filter
-    const body = await req.json().catch(() => ({}));
-    const requestedTopicIds: string[] = body.selectedTopics || [];
+    // Validate input
+    const validation = await parseAndValidate(req, generateTestYourselfSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { subtopicIds } = validation.data;
+    
+    // Get selectedTopics from validated subtopicIds or raw body
+    const rawBody = await req.clone().json().catch(() => ({}));
+    const requestedTopicIds: string[] = rawBody.selectedTopics || subtopicIds || [];
 
     // Validate we have at least 1 topic
     if (requestedTopicIds.length < 1) {
