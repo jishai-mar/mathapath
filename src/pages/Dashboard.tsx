@@ -3,13 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/contexts/AuthContext';
 import { useTutor } from '@/contexts/TutorContext';
+import { useSession } from '@/contexts/SessionContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import TopicGrid from '@/components/TopicGrid';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import TutorChat from '@/components/TutorChat';
-import { Sparkles, Star, Flame, Target, TrendingUp, AlertTriangle, ArrowRight, Play, MessageCircle, Pentagon, Lightbulb, BookOpen, Mic, Bookmark, ScanLine } from 'lucide-react';
+import { SessionStartModal } from '@/components/session/SessionStartModal';
+import { Sparkles, Star, Flame, Target, TrendingUp, AlertTriangle, ArrowRight, Play, MessageCircle, Pentagon, Lightbulb, BookOpen, Bookmark, ScanLine, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 interface Topic {
   id: string;
@@ -57,6 +59,7 @@ export default function Dashboard() {
   const [diagnosticStatuses, setDiagnosticStatuses] = useState<DiagnosticStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showTutorChat, setShowTutorChat] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
   const [tutorMood, setTutorMood] = useState<'idle' | 'happy' | 'encouraging'>('happy');
   const [aiInsights, setAiInsights] = useState<{
     greeting?: string;
@@ -68,6 +71,8 @@ export default function Dashboard() {
     motivationalNote?: string;
   } | null>(null);
   const [insightsLoading, setInsightsLoading] = useState(false);
+  
+  const { isSessionActive } = useSession();
 
   // Prevent spammy re-fetches (which can trigger AI rate limits)
   const insightsInFlightRef = useRef(false);
@@ -406,17 +411,19 @@ export default function Dashboard() {
               
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3 pt-2">
-              <Button onClick={() => navigate('/find-your-level')} className="px-6 py-3 h-auto rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
+                {!isSessionActive && (
+                  <Button onClick={() => setShowSessionModal(true)} className="px-6 py-3 h-auto rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-lg shadow-primary/20">
+                    <Clock className="w-4 h-4 mr-2" />
+                    Start Learning Session
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => navigate('/find-your-level')} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
                   <Play className="w-4 h-4 mr-2" />
-                  Make practice quiz
+                  Quick Practice
                 </Button>
                 <Button variant="outline" onClick={() => setShowTutorChat(true)} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Ask {tutorName}
-                </Button>
-                <Button variant="outline" onClick={() => navigate('/bookmarks')} className="px-6 py-3 h-auto rounded-xl bg-card border-border text-muted-foreground hover:bg-surface-highlight hover:text-foreground">
-                  <Bookmark className="w-4 h-4 mr-2" />
-                  Bookmarks
                 </Button>
               </div>
             </div>
@@ -618,5 +625,12 @@ export default function Dashboard() {
 
       {/* Tutor Chat Panel */}
       {showTutorChat && <TutorChat subtopicName="General Help" onClose={() => setShowTutorChat(false)} />}
+      
+      {/* Session Start Modal */}
+      <SessionStartModal 
+        open={showSessionModal} 
+        onOpenChange={setShowSessionModal}
+        onSessionStart={() => setShowSessionModal(false)}
+      />
     </div>;
 }

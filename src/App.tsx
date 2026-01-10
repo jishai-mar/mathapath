@@ -8,10 +8,11 @@ import { TutorProvider, useTutor } from "@/contexts/TutorContext";
 import { TutorSessionProvider } from "@/contexts/TutorSessionContext";
 import { ExerciseProvider } from "@/contexts/ExerciseContext";
 import { AppProvider } from "@/contexts/AppContext";
+import { SessionProvider } from "@/contexts/SessionContext";
 import { GlobalTutorButton } from "@/components/tutor/GlobalTutorButton";
+import { FloatingTutorWidget } from "@/components/session/FloatingTutorWidget";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-// import { PersistentGilbert } from "@/components/tutor/PersistentGilbert";
 // Pages
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
@@ -127,12 +128,15 @@ const App = () => (
           <TutorSessionProvider>
             <ExerciseProvider>
               <AppProvider>
-                <Toaster />
-                <Sonner />
-                <BrowserRouter>
-                  <AppRoutes />
-                  <GlobalTutorButton />
-                </BrowserRouter>
+                <SessionProvider>
+                  <Toaster />
+                  <Sonner />
+                  <BrowserRouter>
+                    <AppRoutes />
+                    <GlobalTutorButton />
+                    <FloatingTutorWidget />
+                  </BrowserRouter>
+                </SessionProvider>
               </AppProvider>
             </ExerciseProvider>
           </TutorSessionProvider>
