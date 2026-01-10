@@ -138,3 +138,16 @@ export function validateExerciseTheory(linkedTheory: LinkedTheoryBlock[] | undef
   }
   return null;
 }
+
+/**
+ * Parameters for saving an exercise to the notebook
+ */
+export interface SaveExerciseParams {
+  question: string;
+  correctAnswer?: string;
+  subtopicName: string;
+  solutionSteps?: SolutionStep[];
+  finalAnswer?: string;
+  tip?: string;
+  personalNote?: string;
+}

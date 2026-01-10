@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { CheckCircle2, XCircle, ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowRight, Sparkles, RefreshCw, BookmarkPlus, BookmarkCheck, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import MathRenderer from '@/components/MathRenderer';
 
@@ -17,6 +17,9 @@ interface FeedbackBannerProps {
   correctAnswer?: string;
   onNextExercise?: () => void;
   onStartWalkthrough?: () => void;
+  onSaveToNotebook?: () => void;
+  isSavedToNotebook?: boolean;
+  isSavingToNotebook?: boolean;
   mode: 'practice' | 'walkthrough' | 'review';
 }
 
@@ -27,6 +30,9 @@ export function FeedbackBanner({
   correctAnswer,
   onNextExercise,
   onStartWalkthrough,
+  onSaveToNotebook,
+  isSavedToNotebook = false,
+  isSavingToNotebook = false,
   mode
 }: FeedbackBannerProps) {
   if (isCorrect === null) return null;
@@ -124,14 +130,51 @@ export function FeedbackBanner({
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-3">
         {isCorrect ? (
-          <Button onClick={onNextExercise} className="flex-1 gap-2">
-            <ArrowRight className="w-4 h-4" />
-            Next Exercise
-          </Button>
+          <>
+            {onSaveToNotebook && (
+              <Button 
+                variant="outline" 
+                onClick={onSaveToNotebook}
+                disabled={isSavingToNotebook || isSavedToNotebook}
+                className={`gap-2 ${isSavedToNotebook ? 'text-green-600 border-green-500/30 bg-green-500/10' : ''}`}
+              >
+                {isSavingToNotebook ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isSavedToNotebook ? (
+                  <BookmarkCheck className="w-4 h-4" />
+                ) : (
+                  <BookmarkPlus className="w-4 h-4" />
+                )}
+                {isSavedToNotebook ? 'Saved' : 'Save to Notebook'}
+              </Button>
+            )}
+            <Button onClick={onNextExercise} className="flex-1 gap-2">
+              <ArrowRight className="w-4 h-4" />
+              Next Exercise
+            </Button>
+          </>
         ) : (
           <>
+            {onSaveToNotebook && (
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={onSaveToNotebook}
+                disabled={isSavingToNotebook || isSavedToNotebook}
+                className={`gap-2 ${isSavedToNotebook ? 'text-green-600' : ''}`}
+              >
+                {isSavingToNotebook ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isSavedToNotebook ? (
+                  <BookmarkCheck className="w-4 h-4" />
+                ) : (
+                  <BookmarkPlus className="w-4 h-4" />
+                )}
+                {isSavedToNotebook ? 'Saved' : 'Save'}
+              </Button>
+            )}
             <Button 
               variant="outline" 
               onClick={onStartWalkthrough}

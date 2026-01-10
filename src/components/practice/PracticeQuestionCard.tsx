@@ -7,7 +7,9 @@ import {
   Send,
   Loader2,
   Trophy,
-  AlertTriangle
+  AlertTriangle,
+  BookmarkPlus,
+  BookmarkCheck
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +34,7 @@ interface PracticeQuestionCardProps {
   onRevealHint: () => void;
   onNextExercise: () => void;
   onStartWalkthrough: () => void;
+  onSaveToNotebook?: () => void;
   revealedStepCount: number;
   isCorrect: boolean | null;
   feedbackMessage: string;
@@ -39,6 +42,8 @@ interface PracticeQuestionCardProps {
   correctAnswer?: string;
   isSubmitting: boolean;
   isLoading: boolean;
+  isSavedToNotebook?: boolean;
+  isSavingToNotebook?: boolean;
   mode: PracticeMode;
   exerciseCount: number;
   correctCount: number;
@@ -56,6 +61,7 @@ export function PracticeQuestionCard({
   onRevealHint,
   onNextExercise,
   onStartWalkthrough,
+  onSaveToNotebook,
   revealedStepCount,
   isCorrect,
   feedbackMessage,
@@ -63,6 +69,8 @@ export function PracticeQuestionCard({
   correctAnswer,
   isSubmitting,
   isLoading,
+  isSavedToNotebook = false,
+  isSavingToNotebook = false,
   mode,
   exerciseCount,
   correctCount,
@@ -183,6 +191,23 @@ export function PracticeQuestionCard({
             <CheckCircle2 className="w-4 h-4" />
             <span className="hidden sm:inline">Full Solution</span>
             <span className="sm:hidden">Solution</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSaveToNotebook}
+            disabled={isSavingToNotebook || isSavedToNotebook || !onSaveToNotebook}
+            className={`gap-2 ${isSavedToNotebook ? 'text-green-600 border-green-500/30 bg-green-500/10' : ''}`}
+          >
+            {isSavingToNotebook ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isSavedToNotebook ? (
+              <BookmarkCheck className="w-4 h-4" />
+            ) : (
+              <BookmarkPlus className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">{isSavedToNotebook ? 'Saved' : 'Save'}</span>
           </Button>
           
           <Button

@@ -30,6 +30,10 @@ interface UsePracticeExerciseReturn extends PracticeState {
   resetState: () => void;
   tutorFeedback: any;
   correctAnswer: string | undefined;
+  // Notebook integration
+  isSavedToNotebook: boolean;
+  isSavingToNotebook: boolean;
+  saveToNotebook: () => Promise<void>;
 }
 
 const COMPLIMENTS = [
@@ -74,6 +78,10 @@ export function usePracticeExercise({
   const [correctAnswer, setCorrectAnswer] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Notebook integration
+  const [isSavedToNotebook, setIsSavedToNotebook] = useState(false);
+  const [isSavingToNotebook, setIsSavingToNotebook] = useState(false);
   
   // Progress tracking
   const [exerciseCount, setExerciseCount] = useState(0);
@@ -298,6 +306,7 @@ export function usePracticeExercise({
     setTutorFeedback(null);
     setCorrectAnswer(undefined);
     setMode('practice');
+    setIsSavedToNotebook(false);
   }, []);
 
   const resetState = useCallback(() => {
@@ -311,6 +320,61 @@ export function usePracticeExercise({
     // Clear global exercise context
     exerciseContext?.clearExercise();
   }, [initialDifficulty, resetExerciseState, exerciseContext]);
+
+  // Save current exercise to notebook
+  const saveToNotebook = useCallback(async () => {
+    if (!currentExercise || isSavingToNotebook || isSavedToNotebook) return;
+
+    setIsSavingToNotebook(true);
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { toast } = await import('sonner');
+
+      // Build content
+      let content = `**Problem:**\n${currentExercise.question}\n\n`;
+      
+      if (exerciseDetails?.solutionSteps && exerciseDetails.solutionSteps.length > 0) {
+        content += '**Solution:**\n';
+        exerciseDetails.solutionSteps.forEach((step, index) => {
+          content += `**Step ${index + 1}: ${step.title}**\n`;
+          if (step.action) content += `${step.action}\n`;
+          if (step.calculation) content += `$$${step.calculation}$$\n`;
+          if (step.explanation) content += `*${step.explanation}*\n`;
+          if (step.theoryCitation) content += `📚 ${step.theoryCitation}\n`;
+          content += '\n';
+        });
+      }
+      
+      if (exerciseDetails?.finalAnswer) {
+        content += `**Final Answer:** $${exerciseDetails.finalAnswer}$\n`;
+      }
+      
+      if (exerciseDetails?.tip) {
+        content += `\n💡 **Tip:** ${exerciseDetails.tip}\n`;
+      }
+
+      const { error } = await supabase
+        .from('student_session_notes')
+        .insert({
+          user_id: user?.id,
+          note_type: 'worked_example',
+          content,
+          subtopic_name: subtopicName,
+        });
+
+      if (error) throw error;
+
+      setIsSavedToNotebook(true);
+      toast.success('Exercise saved to notebook!');
+    } catch (error) {
+      console.error('Error saving to notebook:', error);
+      const { toast } = await import('sonner');
+      toast.error('Failed to save exercise');
+    } finally {
+      setIsSavingToNotebook(false);
+    }
+  }, [currentExercise, exerciseDetails, user?.id, subtopicName, isSavingToNotebook, isSavedToNotebook]);
 
   return {
     // State
@@ -329,6 +393,8 @@ export function usePracticeExercise({
     correctCount,
     tutorFeedback,
     correctAnswer,
+    isSavedToNotebook,
+    isSavingToNotebook,
     
     // Actions
     setStudentAnswer,
@@ -340,6 +406,7 @@ export function usePracticeExercise({
     openSolution: () => setIsSolutionOpen(true),
     closeSolution: () => setIsSolutionOpen(false),
     startWalkthrough,
-    resetState
+    resetState,
+    saveToNotebook
   };
 }

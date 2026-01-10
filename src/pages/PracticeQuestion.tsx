@@ -93,6 +93,7 @@ export default function PracticeQuestion() {
             onRevealHint={practice.revealNextStep}
             onNextExercise={handleNextExercise}
             onStartWalkthrough={practice.startWalkthrough}
+            onSaveToNotebook={practice.saveToNotebook}
             revealedStepCount={practice.revealedStepCount}
             isCorrect={practice.isCorrect}
             feedbackMessage={practice.feedbackMessage}
@@ -100,6 +101,8 @@ export default function PracticeQuestion() {
             correctAnswer={practice.correctAnswer}
             isSubmitting={practice.isSubmitting}
             isLoading={practice.isLoading}
+            isSavedToNotebook={practice.isSavedToNotebook}
+            isSavingToNotebook={practice.isSavingToNotebook}
             mode={practice.mode}
             exerciseCount={practice.exerciseCount}
             correctCount={practice.correctCount}
