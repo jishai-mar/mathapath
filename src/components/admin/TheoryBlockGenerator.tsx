@@ -174,7 +174,7 @@ export function TheoryBlockGenerator() {
             Theory Block Generator
           </CardTitle>
           <CardDescription>
-            Generate rigorous theory blocks for Math Path topics using AI
+            Generate rigorous theory blocks for MathPath topics using AI
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

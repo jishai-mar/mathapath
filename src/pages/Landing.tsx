@@ -58,7 +58,7 @@ export default function Landing() {
                 <Sigma className="w-full h-full" />
               </div>
               <h2 className="text-foreground text-lg font-bold tracking-tight hidden sm:block font-sans">
-                Math Path
+                MathPath
               </h2>
             </div>
 
@@ -176,7 +176,7 @@ export default function Landing() {
               transition={{ duration: 0.5 }}
             >
               <h2 className="text-3xl sm:text-4xl text-foreground font-medium">
-                Why Math Path?
+                Why MathPath?
               </h2>
               <p className="text-muted-foreground max-w-xl font-sans">
                 We stripped away the fluff to focus on building intuition first. See the patterns behind the formulas.
@@ -421,7 +421,7 @@ export default function Landing() {
               <div className="size-6 text-muted-foreground">
                 <Sigma className="w-full h-full" />
               </div>
-              <span className="text-muted-foreground font-medium font-sans">Math Path © 2024</span>
+              <span className="text-muted-foreground font-medium font-sans">MathPath © 2024</span>
             </div>
             <div className="flex gap-8">
               <a className="text-muted-foreground hover:text-primary transition-colors text-sm font-sans" href="#">Terms</a>

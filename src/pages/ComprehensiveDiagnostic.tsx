@@ -400,7 +400,7 @@ export default function ComprehensiveDiagnostic() {
       >
         <QuestionHeader
           tag="Learning Style"
-          question="What's your primary goal with Math Path?"
+          question="What's your primary goal with MathPath?"
         />
 
         <div className="space-y-4 mb-8">
