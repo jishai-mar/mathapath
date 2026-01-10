@@ -324,12 +324,35 @@ export default function AdvancedGraphCalculator({
     setTangentLines(prev => [...prev, { functionId: funcId, x, slope, yIntercept }]);
   }, [functions, computeDerivative, parseExpression]);
   
-  // Handle tangent from prop
+  // Track if tangent from prop has been processed
+  const processedTangentRef = useRef<string | null>(null);
+  
+  // Handle tangent from prop - fixed to prevent infinite loop
   useEffect(() => {
     if (showTangentAt && functions[showTangentAt.functionIndex]) {
-      addTangentLine(functions[showTangentAt.functionIndex].id, showTangentAt.x);
+      const tangentKey = `${showTangentAt.functionIndex}-${showTangentAt.x}`;
+      if (processedTangentRef.current !== tangentKey) {
+        processedTangentRef.current = tangentKey;
+        const func = functions[showTangentAt.functionIndex];
+        const slope = computeDerivative(func.expression, showTangentAt.x);
+        const y = parseExpression(func.expression, showTangentAt.x);
+        const yIntercept = y - slope * showTangentAt.x;
+        setTangentLines(prev => [...prev, { 
+          functionId: func.id, 
+          x: showTangentAt.x, 
+          slope, 
+          yIntercept 
+        }]);
+      }
     }
-  }, [showTangentAt, functions, addTangentLine]);
+  }, [showTangentAt, functions, computeDerivative, parseExpression]);
+  
+  // Reset processed tangent ref when component closes
+  useEffect(() => {
+    if (!isOpen) {
+      processedTangentRef.current = null;
+    }
+  }, [isOpen]);
   
   // Convert screen to graph coordinates
   const screenToGraph = useCallback((px: number, py: number) => {
