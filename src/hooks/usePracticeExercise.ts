@@ -34,6 +34,11 @@ interface UsePracticeExerciseReturn extends PracticeState {
   isSavedToNotebook: boolean;
   isSavingToNotebook: boolean;
   saveToNotebook: () => Promise<void>;
+  // Theory check integration
+  showTheoryCheck: boolean;
+  theoryCheckResponse: string;
+  theoryCheckSkipped: boolean;
+  completeTheoryCheck: (response: string, skipped: boolean) => void;
 }
 
 const COMPLIMENTS = [
@@ -78,6 +83,11 @@ export function usePracticeExercise({
   const [correctAnswer, setCorrectAnswer] = useState<string | undefined>();
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Theory check state
+  const [showTheoryCheck, setShowTheoryCheck] = useState(true);
+  const [theoryCheckResponse, setTheoryCheckResponse] = useState<string>('');
+  const [theoryCheckSkipped, setTheoryCheckSkipped] = useState(false);
   
   // Notebook integration
   const [isSavedToNotebook, setIsSavedToNotebook] = useState(false);
@@ -307,6 +317,17 @@ export function usePracticeExercise({
     setCorrectAnswer(undefined);
     setMode('practice');
     setIsSavedToNotebook(false);
+    // Reset theory check for new exercise
+    setShowTheoryCheck(true);
+    setTheoryCheckResponse('');
+    setTheoryCheckSkipped(false);
+  }, []);
+
+  // Handle theory check completion
+  const completeTheoryCheck = useCallback((response: string, skipped: boolean) => {
+    setTheoryCheckResponse(response);
+    setTheoryCheckSkipped(skipped);
+    setShowTheoryCheck(false);
   }, []);
 
   const resetState = useCallback(() => {
@@ -395,6 +416,10 @@ export function usePracticeExercise({
     correctAnswer,
     isSavedToNotebook,
     isSavingToNotebook,
+    // Theory check state
+    showTheoryCheck,
+    theoryCheckResponse,
+    theoryCheckSkipped,
     
     // Actions
     setStudentAnswer,
@@ -407,6 +432,7 @@ export function usePracticeExercise({
     closeSolution: () => setIsSolutionOpen(false),
     startWalkthrough,
     resetState,
-    saveToNotebook
+    saveToNotebook,
+    completeTheoryCheck
   };
 }
