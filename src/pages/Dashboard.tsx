@@ -314,7 +314,7 @@ export default function Dashboard() {
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center text-primary ring-1 ring-white/5">
               <Pentagon className="w-6 h-6" />
             </div>
-            <h2 className="text-lg font-serif font-medium tracking-tight text-foreground">Math Path</h2>
+            <h2 className="text-lg font-serif font-medium tracking-tight text-foreground">MathPath</h2>
           </div>
           
           <nav className="hidden md:flex items-center gap-1 bg-surface-highlight/50 p-1 rounded-full border border-white/5">

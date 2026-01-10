@@ -246,7 +246,7 @@ export function exportSolutionsToPdf(
   // Footer on last page
   doc.setFontSize(8);
   doc.setTextColor(150, 150, 150);
-  doc.text('Generated with Math Path', pageWidth / 2, pageHeight - 10, { align: 'center' });
+  doc.text('Generated with MathPath', pageWidth / 2, pageHeight - 10, { align: 'center' });
 
   // Save the PDF
   const fileName = `study-guide-${new Date().toISOString().split('T')[0]}.pdf`;

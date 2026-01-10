@@ -196,7 +196,7 @@ export default function Notebook() {
             </Button>
             <Link to="/" className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
               <Pentagon className="w-5 h-5" />
-              <span className="text-sm font-medium hidden sm:inline">Math Path</span>
+              <span className="text-sm font-medium hidden sm:inline">MathPath</span>
             </Link>
           </div>
         </div>
