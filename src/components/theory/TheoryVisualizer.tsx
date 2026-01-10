@@ -3,9 +3,8 @@ import { motion } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { VisualizerConfig } from './types';
+import { create, all } from 'mathjs';
 import {
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -19,6 +18,9 @@ interface TheoryVisualizerProps {
   config: VisualizerConfig;
   onControlChange?: (controlId: string, value: number) => void;
 }
+
+// Create a mathjs instance
+const mathInstance = create(all, {});
 
 export function TheoryVisualizer({ config, onControlChange }: TheoryVisualizerProps) {
   // Initialize control values
@@ -36,32 +38,53 @@ export function TheoryVisualizer({ config, onControlChange }: TheoryVisualizerPr
     onControlChange?.(controlId, newValue);
   }, [onControlChange]);
 
+  // Parse and evaluate mathematical expression
+  const evaluateExpression = useCallback((expr: string, x: number, vars: Record<string, number> = {}): number => {
+    try {
+      // Normalize the expression for mathjs
+      let normalizedExpr = expr
+        .replace(/\^/g, '^') // already correct
+        .replace(/²/g, '^2')
+        .replace(/³/g, '^3')
+        .replace(/√/g, 'sqrt')
+        .replace(/π/g, 'pi')
+        .replace(/\|([^|]+)\|/g, 'abs($1)'); // |x| -> abs(x)
+      
+      const node = mathInstance.parse(normalizedExpr);
+      const compiled = node.compile();
+      const result = compiled.evaluate({ x, ...vars });
+      return typeof result === 'number' ? result : NaN;
+    } catch {
+      return NaN;
+    }
+  }, []);
+
   // Generate graph data based on config
   const graphData = useMemo(() => {
     if (!config.graphConfig) return [];
     
-    const { domain } = config.graphConfig;
+    const { domain, function: funcExpr } = config.graphConfig;
+    const expression = funcExpr || 'x^2'; // fallback to simple parabola
     const points: Array<{ x: number; y: number }> = [];
     const step = (domain[1] - domain[0]) / 100;
     
-    // Simple function evaluator for demo - in production, use a proper math parser
-    const epsilon = controlValues['epsilon'] ?? 0.5;
-    const delta = controlValues['delta'] ?? 0.25;
-    const targetX = 2; // x approaches c
-    const targetY = 4; // L = limit value
-    
     for (let x = domain[0]; x <= domain[1]; x += step) {
-      // Demo: f(x) = x^2 approaching limit at x=2
-      let y = x * x;
+      const y = evaluateExpression(expression, x, controlValues);
       
-      // Add some wave effect for visual interest
-      y = y + Math.sin(x * 3) * 0.3;
-      
-      points.push({ x: parseFloat(x.toFixed(3)), y: parseFloat(y.toFixed(3)) });
+      // Only include valid, finite points within reasonable range
+      if (isFinite(y) && Math.abs(y) < 1000) {
+        points.push({ 
+          x: parseFloat(x.toFixed(3)), 
+          y: parseFloat(y.toFixed(3)) 
+        });
+      }
     }
     
     return points;
-  }, [config.graphConfig, controlValues]);
+  }, [config.graphConfig, controlValues, evaluateExpression]);
+
+  // Get display expression
+  const displayExpression = config.graphConfig?.function || 'x²';
 
   const badgeVariantClass = config.badgeVariant === 'success' 
     ? 'bg-secondary/20 text-secondary border-secondary/30'
@@ -92,6 +115,10 @@ export function TheoryVisualizer({ config, onControlChange }: TheoryVisualizerPr
         {config.description && (
           <p className="text-sm text-muted-foreground mt-1">{config.description}</p>
         )}
+        {/* Show the function being graphed */}
+        <div className="mt-2 px-2 py-1 bg-muted/50 rounded text-xs font-mono text-muted-foreground">
+          f(x) = {displayExpression}
+        </div>
       </div>
 
       {/* Graph area */}
@@ -121,16 +148,17 @@ export function TheoryVisualizer({ config, onControlChange }: TheoryVisualizerPr
               fontSize={10}
               tickLine={false}
               axisLine={{ stroke: 'hsl(var(--border))' }}
+              domain={config.graphConfig?.range || ['auto', 'auto']}
             />
-            {/* Reference lines for epsilon-delta */}
+            {/* Reference lines at origin */}
             <ReferenceLine 
-              x={2} 
+              x={0} 
               stroke="hsl(var(--muted-foreground))" 
               strokeDasharray="4 4" 
               opacity={0.6}
             />
             <ReferenceLine 
-              y={4} 
+              y={0} 
               stroke="hsl(var(--muted-foreground))" 
               strokeDasharray="4 4" 
               opacity={0.6}
