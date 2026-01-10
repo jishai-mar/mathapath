@@ -8,7 +8,9 @@ import { StreakSection } from '@/components/history/StreakSection';
 import { FriendsLeaderboard } from '@/components/history/FriendsLeaderboard';
 import { PracticeHistoryList } from '@/components/history/PracticeHistoryList';
 import { AchievementsSection } from '@/components/history/AchievementsSection';
+import { SessionHistorySection } from '@/components/history/SessionHistorySection';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function History() {
   const navigate = useNavigate();
@@ -80,11 +82,24 @@ export default function History() {
           />
         )}
 
+        {/* Tabbed History Sections */}
+        <Tabs defaultValue="sessions" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="sessions">Learning Sessions</TabsTrigger>
+            <TabsTrigger value="practice">Practice History</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="sessions" className="mt-4">
+            <SessionHistorySection />
+          </TabsContent>
+          
+          <TabsContent value="practice" className="mt-4">
+            <PracticeHistoryList />
+          </TabsContent>
+        </Tabs>
+
         {/* Friends Leaderboard */}
         <FriendsLeaderboard />
-
-        {/* Practice History */}
-        <PracticeHistoryList />
 
         {/* Achievements */}
         <AchievementsSection />

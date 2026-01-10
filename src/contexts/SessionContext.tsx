@@ -1,8 +1,15 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { ActiveSession, SessionPlan, SessionMessage, SessionDuration, SessionExercise } from '@/types/session';
+import { ActiveSession, SessionPlan, SessionMessage, SessionDuration, SessionExercise, PerformanceSnapshot } from '@/types/session';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+
+interface AdaptationResult {
+  shouldAdjustDifficulty: boolean;
+  newDifficulty?: 'easy' | 'medium' | 'hard';
+  tutorTip?: string;
+  tipType?: 'encouragement' | 'guidance' | 'celebration' | 'tip' | 'adaptation';
+}
 
 interface SessionContextType {
   activeSession: ActiveSession | null;
@@ -14,16 +21,40 @@ interface SessionContextType {
   // Actions
   startPlanning: (duration: SessionDuration, selectedTopicIds?: string[]) => Promise<SessionPlan | null>;
   startSession: (plan: SessionPlan) => void;
-  endSession: () => void;
+  endSession: () => Promise<void>;
   pauseSession: () => void;
   resumeSession: () => void;
-  markExerciseComplete: (wasCorrect: boolean) => void;
+  markExerciseComplete: (wasCorrect: boolean, hintsUsed?: number) => AdaptationResult | null;
   skipExercise: () => void;
   addTutorMessage: (content: string, type?: SessionMessage['type']) => void;
   goToExercise: (index: number) => void;
+  getAdaptedExercise: () => SessionExercise | null;
 }
 
 const SessionContext = createContext<SessionContextType | undefined>(undefined);
+
+const TUTOR_TIPS = {
+  struggling: [
+    "Take your time! Understanding is more important than speed.",
+    "Would you like me to show you the step-by-step solution?",
+    "Let's try a simpler version of this problem first.",
+    "Don't worry about mistakes - they help you learn!",
+  ],
+  excelling: [
+    "Excellent! Ready for a tougher challenge?",
+    "You're mastering this! Let's increase the difficulty.",
+    "Impressive accuracy! Time to level up.",
+  ],
+  improving: [
+    "Nice progress! You're getting the hang of this.",
+    "Good work! Try to explain your reasoning out loud.",
+    "You're building momentum - keep it up!",
+  ],
+  comeback: [
+    "Great job bouncing back!",
+    "That's the persistence I like to see!",
+  ],
+};
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -31,6 +62,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [isPlanning, setIsPlanning] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const dbSessionIdRef = useRef<string | null>(null);
 
   // Timer logic
   useEffect(() => {
@@ -38,7 +70,6 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       timerRef.current = setInterval(() => {
         setTimeRemaining(prev => {
           if (prev <= 1) {
-            // Session time is up
             addTutorMessage("Time's up! Great work today. Let's wrap up this session.", 'celebration');
             return 0;
           }
@@ -96,7 +127,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const startSession = useCallback((plan: SessionPlan) => {
+  const startSession = useCallback(async (plan: SessionPlan) => {
+    const initialPerformance: PerformanceSnapshot = {
+      recentAccuracy: 0,
+      consecutiveCorrect: 0,
+      consecutiveWrong: 0,
+      currentDifficulty: plan.exercises[0]?.difficulty || 'medium',
+      adaptationsMade: 0,
+    };
+
     const session: ActiveSession = {
       id: crypto.randomUUID(),
       plan,
@@ -105,7 +144,9 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       currentExerciseIndex: 0,
       exercisesCompleted: 0,
       exercisesCorrect: 0,
+      hintsUsedTotal: 0,
       isPaused: false,
+      performance: initialPerformance,
       messages: [{
         id: crypto.randomUUID(),
         role: 'tutor',
@@ -115,21 +156,68 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       }]
     };
     
+    // Save session to database
+    if (user) {
+      const { data } = await supabase
+        .from('learning_sessions')
+        .insert({
+          user_id: user.id,
+          session_goal: plan.focusAreas.join(', '),
+          started_at: session.startedAt.toISOString(),
+          starting_difficulty: initialPerformance.currentDifficulty,
+        })
+        .select('id')
+        .single();
+      
+      if (data) {
+        dbSessionIdRef.current = data.id;
+      }
+    }
+
     setActiveSession(session);
     setTimeRemaining(plan.totalMinutes * 60);
-  }, []);
+  }, [user]);
 
-  const endSession = useCallback(() => {
-    if (activeSession) {
-      // Could save session summary here
-      toast.success(`Session complete! You solved ${activeSession.exercisesCompleted} exercises.`);
+  const endSession = useCallback(async () => {
+    if (!activeSession) return;
+
+    const durationMinutes = Math.round((Date.now() - activeSession.startedAt.getTime()) / 60000);
+    const accuracy = activeSession.exercisesCompleted > 0
+      ? Math.round((activeSession.exercisesCorrect / activeSession.exercisesCompleted) * 100)
+      : 0;
+
+    // Generate AI summary
+    let summaryText = `Completed ${activeSession.exercisesCompleted} exercises with ${accuracy}% accuracy.`;
+
+    // Save to database
+    if (user && dbSessionIdRef.current) {
+      const topicsCovered = [...new Set(activeSession.plan.exercises.map(e => e.topicName))];
+      
+      await supabase
+        .from('learning_sessions')
+        .update({
+          ended_at: new Date().toISOString(),
+          duration_minutes: durationMinutes,
+          problems_solved: activeSession.exercisesCompleted,
+          correct_answers: activeSession.exercisesCorrect,
+          hints_used: activeSession.hintsUsedTotal,
+          topics_covered: topicsCovered,
+          final_difficulty: activeSession.performance.currentDifficulty,
+          session_summary: summaryText,
+          xp_earned: activeSession.exercisesCorrect * 10 + activeSession.exercisesCompleted * 5,
+        })
+        .eq('id', dbSessionIdRef.current);
     }
+
+    toast.success(`Session complete! You solved ${activeSession.exercisesCompleted} exercises with ${accuracy}% accuracy.`);
+    
     setActiveSession(null);
     setTimeRemaining(0);
+    dbSessionIdRef.current = null;
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-  }, [activeSession]);
+  }, [activeSession, user]);
 
   const pauseSession = useCallback(() => {
     setActiveSession(prev => prev ? { ...prev, isPaused: true } : null);
@@ -139,7 +227,40 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     setActiveSession(prev => prev ? { ...prev, isPaused: false } : null);
   }, []);
 
-  const markExerciseComplete = useCallback((wasCorrect: boolean) => {
+  const evaluateAdaptation = useCallback((performance: PerformanceSnapshot, currentDifficulty: 'easy' | 'medium' | 'hard'): AdaptationResult => {
+    const result: AdaptationResult = { shouldAdjustDifficulty: false };
+
+    // Student is struggling
+    if (performance.consecutiveWrong >= 2 || (performance.recentAccuracy < 40 && performance.consecutiveWrong >= 1)) {
+      result.shouldAdjustDifficulty = currentDifficulty !== 'easy';
+      result.newDifficulty = currentDifficulty === 'hard' ? 'medium' : 'easy';
+      result.tutorTip = TUTOR_TIPS.struggling[Math.floor(Math.random() * TUTOR_TIPS.struggling.length)];
+      result.tipType = 'guidance';
+    }
+    // Student is excelling
+    else if (performance.consecutiveCorrect >= 3 && performance.recentAccuracy >= 80) {
+      result.shouldAdjustDifficulty = currentDifficulty !== 'hard';
+      result.newDifficulty = currentDifficulty === 'easy' ? 'medium' : 'hard';
+      result.tutorTip = TUTOR_TIPS.excelling[Math.floor(Math.random() * TUTOR_TIPS.excelling.length)];
+      result.tipType = 'celebration';
+    }
+    // Student just recovered from struggling
+    else if (performance.consecutiveCorrect === 1 && performance.consecutiveWrong === 0 && performance.recentAccuracy < 60) {
+      result.tutorTip = TUTOR_TIPS.comeback[Math.floor(Math.random() * TUTOR_TIPS.comeback.length)];
+      result.tipType = 'encouragement';
+    }
+    // Student is improving steadily
+    else if (performance.consecutiveCorrect >= 2) {
+      result.tutorTip = TUTOR_TIPS.improving[Math.floor(Math.random() * TUTOR_TIPS.improving.length)];
+      result.tipType = 'encouragement';
+    }
+
+    return result;
+  }, []);
+
+  const markExerciseComplete = useCallback((wasCorrect: boolean, hintsUsed: number = 0): AdaptationResult | null => {
+    let adaptationResult: AdaptationResult | null = null;
+
     setActiveSession(prev => {
       if (!prev) return null;
       
@@ -148,22 +269,61 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         updatedExercises[prev.currentExerciseIndex] = {
           ...updatedExercises[prev.currentExerciseIndex],
           completed: true,
-          wasCorrect
+          wasCorrect,
+          hintsUsed,
         };
+      }
+
+      // Update performance metrics
+      const newExercisesCompleted = prev.exercisesCompleted + 1;
+      const newExercisesCorrect = prev.exercisesCorrect + (wasCorrect ? 1 : 0);
+      const recentAccuracy = (newExercisesCorrect / newExercisesCompleted) * 100;
+
+      const newPerformance: PerformanceSnapshot = {
+        recentAccuracy,
+        consecutiveCorrect: wasCorrect ? prev.performance.consecutiveCorrect + 1 : 0,
+        consecutiveWrong: wasCorrect ? 0 : prev.performance.consecutiveWrong + 1,
+        currentDifficulty: prev.performance.currentDifficulty,
+        adaptationsMade: prev.performance.adaptationsMade,
+      };
+
+      // Evaluate if we should adapt
+      adaptationResult = evaluateAdaptation(newPerformance, prev.performance.currentDifficulty);
+      
+      if (adaptationResult.shouldAdjustDifficulty && adaptationResult.newDifficulty) {
+        newPerformance.currentDifficulty = adaptationResult.newDifficulty;
+        newPerformance.adaptationsMade++;
       }
 
       const nextIndex = prev.currentExerciseIndex + 1;
       const isLastExercise = nextIndex >= prev.plan.exercises.length;
 
+      // Add tutor message if there's a tip
+      let newMessages = [...prev.messages];
+      if (adaptationResult.tutorTip) {
+        newMessages.push({
+          id: crypto.randomUUID(),
+          role: 'tutor',
+          content: adaptationResult.tutorTip,
+          timestamp: new Date(),
+          type: adaptationResult.tipType,
+        });
+      }
+
       return {
         ...prev,
         plan: { ...prev.plan, exercises: updatedExercises },
-        exercisesCompleted: prev.exercisesCompleted + 1,
-        exercisesCorrect: prev.exercisesCorrect + (wasCorrect ? 1 : 0),
+        exercisesCompleted: newExercisesCompleted,
+        exercisesCorrect: newExercisesCorrect,
+        hintsUsedTotal: prev.hintsUsedTotal + hintsUsed,
         currentExerciseIndex: isLastExercise ? prev.currentExerciseIndex : nextIndex,
+        performance: newPerformance,
+        messages: newMessages,
       };
     });
-  }, []);
+
+    return adaptationResult;
+  }, [evaluateAdaptation]);
 
   const skipExercise = useCallback(() => {
     setActiveSession(prev => {
@@ -197,6 +357,29 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Get an exercise adapted to current difficulty
+  const getAdaptedExercise = useCallback((): SessionExercise | null => {
+    if (!activeSession) return null;
+    
+    const currentDifficulty = activeSession.performance.currentDifficulty;
+    const currentIndex = activeSession.currentExerciseIndex;
+    const exercises = activeSession.plan.exercises;
+    
+    // If current exercise matches adapted difficulty, return it
+    const current = exercises[currentIndex];
+    if (current && current.difficulty === currentDifficulty) {
+      return current;
+    }
+    
+    // Otherwise, modify the exercise to use adapted difficulty
+    if (current) {
+      return { ...current, difficulty: currentDifficulty };
+    }
+    
+    return null;
+  }, [activeSession]);
+
+
   const currentExercise = activeSession?.plan.exercises[activeSession.currentExerciseIndex] || null;
 
   return (
@@ -215,6 +398,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       skipExercise,
       addTutorMessage,
       goToExercise,
+      getAdaptedExercise,
     }}>
       {children}
     </SessionContext.Provider>
