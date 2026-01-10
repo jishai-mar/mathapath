@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import MathCalculator from '@/components/tools/MathCalculator';
 import AdvancedGraphCalculator from '@/components/tools/AdvancedGraphCalculator';
 import FormulaSheet from '@/components/tools/FormulaSheet';
+import { GraphErrorBoundary } from '@/components/tools/GraphErrorBoundary';
 
 interface MathKeyboardProps {
   onInsert: (symbol: string) => void;
@@ -331,27 +332,35 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
       </div>
 
       {/* Graph Calculator Component */}
-      <div className="fixed bottom-20 left-4 z-50">
-        <AdvancedGraphCalculator
-          isOpen={showGraph}
-          onClose={() => setShowGraph(false)}
-          initialFunctions={['x^2']}
-          currentQuestion={currentQuestion}
-        />
-      </div>
+      {showGraph && (
+        <div className="fixed bottom-20 left-4 z-50">
+          <GraphErrorBoundary fallbackMessage="Graph calculator failed to load">
+            <AdvancedGraphCalculator
+              isOpen={showGraph}
+              onClose={() => setShowGraph(false)}
+              initialFunctions={['x^2']}
+              currentQuestion={currentQuestion}
+            />
+          </GraphErrorBoundary>
+        </div>
+      )}
 
       {/* Formula Sheet Component */}
-      <div className="fixed bottom-20 right-80 z-50">
-        <FormulaSheet
-          isOpen={showFormulas}
-          onClose={() => setShowFormulas(false)}
-          onInsert={(formula) => {
-            onInsert(formula);
-            setShowFormulas(false);
-          }}
-          topicName={topicName}
-        />
-      </div>
+      {showFormulas && (
+        <div className="fixed bottom-20 right-80 z-50">
+          <GraphErrorBoundary fallbackMessage="Formula sheet failed to load">
+            <FormulaSheet
+              isOpen={showFormulas}
+              onClose={() => setShowFormulas(false)}
+              onInsert={(formula) => {
+                onInsert(formula);
+                setShowFormulas(false);
+              }}
+              topicName={topicName}
+            />
+          </GraphErrorBoundary>
+        </div>
+      )}
 
       {/* Keyboard Panel */}
       <AnimatePresence>
