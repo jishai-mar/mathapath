@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, analyzeHandwrittenWorkSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,29 +13,25 @@ interface PreviousAttempt {
   ai_feedback: string | null;
 }
 
-interface RequestBody {
-  imageBase64: string;
-  exerciseId: string;
-  question: string;
-  difficulty: string;
-  previousAttempts?: PreviousAttempt[];
-  subtopicName?: string;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { 
-      imageBase64, 
-      exerciseId,
-      question, 
-      difficulty,
-      previousAttempts = [],
-      subtopicName = ''
-    } = await req.json() as RequestBody;
+    // Validate input
+    const validation = await parseAndValidate(req, analyzeHandwrittenWorkSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { imageData: imageBase64, subtopicName, exerciseContext } = validation.data;
+    
+    // Parse additional fields from request for backward compatibility
+    const rawBody = await req.clone().json().catch(() => ({}));
+    const exerciseId = rawBody.exerciseId;
+    const question = rawBody.question || exerciseContext || '';
+    const difficulty = rawBody.difficulty || 'medium';
+    const previousAttempts = rawBody.previousAttempts || [];
 
     if (!imageBase64 || !exerciseId || !question) {
       return new Response(
@@ -70,7 +67,7 @@ serve(async (req) => {
     const correctAnswer = exercise.correct_answer;
 
     // Determine explanation variant based on previous attempts
-    const incorrectAttempts = previousAttempts.filter(a => {
+    const incorrectAttempts = previousAttempts.filter((a: PreviousAttempt) => {
       if (!a.ai_feedback) return false;
       try {
         const parsed = JSON.parse(a.ai_feedback);
@@ -82,7 +79,7 @@ serve(async (req) => {
     
     const attemptCount = incorrectAttempts.length + 1;
     const previousFeedback = incorrectAttempts.length > 0 
-      ? incorrectAttempts.map(a => {
+      ? incorrectAttempts.map((a: PreviousAttempt) => {
           try {
             return JSON.parse(a.ai_feedback || '{}');
           } catch {

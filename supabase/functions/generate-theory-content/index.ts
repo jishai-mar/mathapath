@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parseAndValidate, generateTheoryContentSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,12 @@ serve(async (req) => {
   }
 
   try {
-    const { subtopicName, topicName } = await req.json();
+    // Validate input
+    const validation = await parseAndValidate(req, generateTheoryContentSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { subtopicName, topicName } = validation.data;
     
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {

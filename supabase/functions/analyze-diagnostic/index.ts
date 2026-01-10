@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, analyzeDiagnosticSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -32,20 +33,33 @@ serve(async (req) => {
   }
 
   try {
-    const { diagnosticTestId, userId, topicId } = await req.json();
-
-    if (!diagnosticTestId || !userId || !topicId) {
+    // Validate input
+    const validation = await parseAndValidate(req, analyzeDiagnosticSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { diagnosticTestId, userId } = validation.data;
+    
+    // Fetch the topicId from the diagnostic test
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    
+    const { data: testData } = await supabase
+      .from("diagnostic_tests")
+      .select("topic_id")
+      .eq("id", diagnosticTestId)
+      .single();
+    
+    const topicId = testData?.topic_id;
+    if (!topicId) {
       return new Response(
-        JSON.stringify({ error: "diagnosticTestId, userId, and topicId are required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Diagnostic test not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const openaiApiKey = Deno.env.get("OPENAI_API_KEY")!;
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get all responses for this diagnostic test
     const { data: questions, error: questionsError } = await supabase

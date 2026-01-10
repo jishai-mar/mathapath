@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, generateLearningPathSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,11 +37,16 @@ serve(async (req) => {
   }
 
   try {
-    const { userId, goalId, targetDate, selectedTopics } = await req.json();
-
-    if (!userId || !goalId || !targetDate || !selectedTopics?.length) {
+    // Validate input
+    const validation = await parseAndValidate(req, generateLearningPathSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
+    }
+    const { userId, goalId, targetDate, topicsToMaster: selectedTopics } = validation.data;
+    
+    if (!goalId || !targetDate || !selectedTopics?.length) {
       return new Response(
-        JSON.stringify({ error: "Missing required parameters" }),
+        JSON.stringify({ error: "Missing required parameters: goalId, targetDate, or selectedTopics" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

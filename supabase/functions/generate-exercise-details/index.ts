@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, generateExerciseDetailsSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,14 +13,20 @@ serve(async (req) => {
   }
 
   try {
-    const { exerciseId, subtopicId, subtopicName, topicName, question, difficulty } = await req.json();
-
-    if (!question) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required field: question' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Validate input
+    const validation = await parseAndValidate(req, generateExerciseDetailsSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { exerciseId, includeHints, includeExplanation } = validation.data;
+    
+    // Get additional optional fields from request
+    const rawBody = await req.clone().json().catch(() => ({}));
+    const subtopicId = rawBody.subtopicId;
+    const subtopicName = rawBody.subtopicName;
+    const topicName = rawBody.topicName;
+    const question = rawBody.question || '';
+    const difficulty = rawBody.difficulty;
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');

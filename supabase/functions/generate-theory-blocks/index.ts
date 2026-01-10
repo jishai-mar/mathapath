@@ -484,6 +484,8 @@ INSTRUCTIONS:
 Return ONLY valid JSON: { "blocks": [ ...corrected blocks... ] }`;
 }
 
+import { parseAndValidate, generateTheoryBlocksSchema } from '../_shared/validation.ts';
+
 // ============= MAIN HANDLER =============
 
 serve(async (req) => {
@@ -498,16 +500,18 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    const { 
-      topicId, 
-      mode = 'generate',
-      existingBlocks,
-      regenerate = false 
-    }: GenerationRequest = await req.json();
-    
-    if (!topicId) {
-      throw new Error('topicId is required');
+    // Validate input
+    const inputValidation = await parseAndValidate(req, generateTheoryBlocksSchema, corsHeaders);
+    if (!inputValidation.success) {
+      return inputValidation.response;
     }
+    const { topicId, subtopicId, blockTypes } = inputValidation.data;
+    
+    // Get additional optional fields from request
+    const rawBody = await req.clone().json().catch(() => ({}));
+    const regenerate = rawBody.regenerate || false;
+    const mode = rawBody.mode || 'generate';
+    const existingBlocks: any[] = rawBody.existingBlocks || [];
 
     console.log(`[generate-theory-blocks] Mode: ${mode}, Topic: ${topicId}`);
 

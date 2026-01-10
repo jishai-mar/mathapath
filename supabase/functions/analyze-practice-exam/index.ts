@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { parseAndValidate, analyzePracticeExamSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -57,11 +58,20 @@ serve(async (req) => {
   }
 
   try {
-    const { questions, userAnswers, userId, topicId } = await req.json();
-
-    if (!questions || !userAnswers) {
-      throw new Error('Questions and userAnswers are required');
+    // Validate input
+    const validation = await parseAndValidate(req, analyzePracticeExamSchema, corsHeaders);
+    if (!validation.success) {
+      return validation.response;
     }
+    const { questions: rawQuestions, answers: rawAnswers, userId, examId } = validation.data;
+    
+    // Convert the validated data to the expected format
+    const questions = rawQuestions as unknown as ExamQuestion[];
+    const userAnswers = Object.entries(rawAnswers).map(([key, value]) => {
+      const [questionId, partLabel] = key.split('_');
+      return { questionId, partLabel: partLabel || 'a', answer: value as string };
+    }) as UserAnswer[];
+    const topicId = undefined; // Not in the validated schema, can be added if needed
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     if (!OPENAI_API_KEY) {
