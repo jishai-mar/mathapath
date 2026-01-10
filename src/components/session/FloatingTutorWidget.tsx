@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, X, Clock, Play, Pause, CheckCircle2, 
   ChevronUp, ChevronDown, Target, Sparkles, ArrowRight,
-  SkipForward, StopCircle
+  SkipForward, StopCircle, TrendingUp, TrendingDown, Lightbulb
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +13,19 @@ import { useSession } from '@/contexts/SessionContext';
 import { useTutor } from '@/contexts/TutorContext';
 import { TutorAvatar } from '@/components/tutor/TutorAvatar';
 import { useNavigate } from 'react-router-dom';
+
+const PROACTIVE_TIPS = {
+  time: [
+    { threshold: 300, message: "5 minutes left! Let's finish strong with one more exercise." },
+    { threshold: 600, message: "10 minutes remaining. Great pacing so far!" },
+  ],
+  progress: [
+    { percent: 25, message: "Quarter of the way done! Keep the momentum going." },
+    { percent: 50, message: "Halfway there! You're doing great." },
+    { percent: 75, message: "Almost done! Just a few more to go." },
+    { percent: 90, message: "Final stretch! You've got this." },
+  ],
+};
 
 export function FloatingTutorWidget() {
   const navigate = useNavigate();
@@ -25,14 +38,61 @@ export function FloatingTutorWidget() {
     resumeSession,
     endSession,
     skipExercise,
-    goToExercise
+    goToExercise,
+    addTutorMessage,
+    getAdaptedExercise,
   } = useSession();
   const { preferences: tutorPrefs } = useTutor();
   
   const [isExpanded, setIsExpanded] = useState(false);
   const [showPlanPanel, setShowPlanPanel] = useState(false);
+  const [showNewTip, setShowNewTip] = useState(false);
+  const shownTipsRef = useRef<Set<string>>(new Set());
+  const lastMessageCountRef = useRef(0);
+
+  // Proactive tip generation based on time and progress
+  useEffect(() => {
+    if (!activeSession || activeSession.isPaused) return;
+
+    const progressPercent = activeSession.plan.exercises.length > 0
+      ? (activeSession.exercisesCompleted / activeSession.plan.exercises.length) * 100
+      : 0;
+
+    // Check time-based tips
+    for (const tip of PROACTIVE_TIPS.time) {
+      const tipKey = `time-${tip.threshold}`;
+      if (timeRemaining <= tip.threshold && timeRemaining > tip.threshold - 10 && !shownTipsRef.current.has(tipKey)) {
+        shownTipsRef.current.add(tipKey);
+        addTutorMessage(tip.message, 'tip');
+        break;
+      }
+    }
+
+    // Check progress-based tips
+    for (const tip of PROACTIVE_TIPS.progress) {
+      const tipKey = `progress-${tip.percent}`;
+      if (progressPercent >= tip.percent && progressPercent < tip.percent + 5 && !shownTipsRef.current.has(tipKey)) {
+        shownTipsRef.current.add(tipKey);
+        addTutorMessage(tip.message, 'encouragement');
+        break;
+      }
+    }
+  }, [timeRemaining, activeSession, addTutorMessage]);
+
+  // Flash indicator when new message arrives
+  useEffect(() => {
+    if (activeSession && activeSession.messages.length > lastMessageCountRef.current) {
+      setShowNewTip(true);
+      const timer = setTimeout(() => setShowNewTip(false), 3000);
+      lastMessageCountRef.current = activeSession.messages.length;
+      return () => clearTimeout(timer);
+    }
+  }, [activeSession?.messages.length]);
 
   if (!isSessionActive || !activeSession) return null;
+
+  const adaptedExercise = getAdaptedExercise();
+  const displayExercise = adaptedExercise || currentExercise;
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

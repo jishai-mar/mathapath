@@ -8,6 +8,8 @@ export interface SessionExercise {
   estimatedMinutes: number;
   completed?: boolean;
   wasCorrect?: boolean;
+  hintsUsed?: number;
+  timeSpent?: number;
 }
 
 export interface SessionPlan {
@@ -19,6 +21,14 @@ export interface SessionPlan {
   estimatedExerciseCount: number;
 }
 
+export interface PerformanceSnapshot {
+  recentAccuracy: number;
+  consecutiveCorrect: number;
+  consecutiveWrong: number;
+  currentDifficulty: 'easy' | 'medium' | 'hard';
+  adaptationsMade: number;
+}
+
 export interface ActiveSession {
   id: string;
   plan: SessionPlan;
@@ -27,8 +37,10 @@ export interface ActiveSession {
   currentExerciseIndex: number;
   exercisesCompleted: number;
   exercisesCorrect: number;
+  hintsUsedTotal: number;
   isPaused: boolean;
   messages: SessionMessage[];
+  performance: PerformanceSnapshot;
 }
 
 export interface SessionMessage {
@@ -36,7 +48,21 @@ export interface SessionMessage {
   role: 'tutor' | 'user' | 'system';
   content: string;
   timestamp: Date;
-  type?: 'greeting' | 'tip' | 'encouragement' | 'guidance' | 'celebration';
+  type?: 'greeting' | 'tip' | 'encouragement' | 'guidance' | 'celebration' | 'adaptation';
+}
+
+export interface SessionSummaryData {
+  overallFeedback: string;
+  strengths: string[];
+  areasToImprove: string[];
+  nextSteps: string;
+  encouragement: string;
+  recommendedAction: 'retry' | 'next-topic' | 'review-theory' | 'take-break';
+  accuracy: number;
+  exercisesCompleted: number;
+  durationMinutes: number;
+  xpEarned: number;
+  difficultyProgression: string;
 }
 
 export type SessionDuration = 15 | 30 | 45 | 60;
