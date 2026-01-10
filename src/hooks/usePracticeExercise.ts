@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useExerciseContext } from '@/contexts/ExerciseContext';
 import { 
   Exercise, 
   ExerciseDetails, 
@@ -57,6 +58,7 @@ export function usePracticeExercise({
   initialDifficulty = 'easy'
 }: UsePracticeExerciseProps): UsePracticeExerciseReturn {
   const { user } = useAuth();
+  const exerciseContext = useExerciseContext();
   
   // Core state
   const [currentExercise, setCurrentExercise] = useState<Exercise | null>(null);
@@ -86,6 +88,26 @@ export function usePracticeExercise({
     }
   }, [currentExercise?.id]);
 
+  // Sync current exercise with global ExerciseContext for tutor awareness
+  useEffect(() => {
+    if (currentExercise && exerciseContext) {
+      exerciseContext.setCurrentExercise({
+        question: currentExercise.question,
+        subtopicName: currentExercise.subtopicName || subtopicName,
+        subtopicId: currentExercise.subtopicId || subtopicId,
+        topicName: topicName || 'Mathematics',
+        difficulty: currentExercise.difficulty,
+        hints: currentExercise.hints || []
+      });
+    }
+  }, [currentExercise?.id, exerciseContext]);
+
+  // Sync student answer with ExerciseContext
+  useEffect(() => {
+    if (exerciseContext && studentAnswer !== undefined) {
+      exerciseContext.setStudentAnswer(studentAnswer);
+    }
+  }, [studentAnswer, exerciseContext]);
   const loadExerciseDetails = useCallback(async () => {
     if (!currentExercise) return;
 
@@ -284,7 +306,9 @@ export function usePracticeExercise({
     setCorrectCount(0);
     setUsedExercises([]);
     setCurrentDifficulty(initialDifficulty);
-  }, [initialDifficulty, resetExerciseState]);
+    // Clear global exercise context
+    exerciseContext?.clearExercise();
+  }, [initialDifficulty, resetExerciseState, exerciseContext]);
 
   return {
     // State

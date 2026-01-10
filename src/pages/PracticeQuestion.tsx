@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Home } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
+import { useExerciseContext } from '@/contexts/ExerciseContext';
 import { usePracticeExercise } from '@/hooks/usePracticeExercise';
 import {
   PracticeQuestionCard,
@@ -15,6 +16,7 @@ export default function PracticeQuestion() {
   const { subtopicId } = useParams<{ subtopicId: string }>();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const exerciseContext = useExerciseContext();
 
   // For demo purposes, using hardcoded values - in production, fetch from DB
   const subtopicName = "Practice Exercise";
@@ -26,6 +28,11 @@ export default function PracticeQuestion() {
     topicName,
     initialDifficulty: 'easy'
   });
+
+  // Set current screen in ExerciseContext for tutor awareness
+  useEffect(() => {
+    exerciseContext?.setCurrentScreen('PracticeQuestion');
+  }, [exerciseContext]);
 
   useEffect(() => {
     if (!authLoading && !user) {
