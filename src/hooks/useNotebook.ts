@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+import { SaveExerciseParams, SolutionStep } from '@/components/practice/types';
 
 export interface NotebookEntry {
   id: string;
@@ -253,6 +255,77 @@ export function useNotebook() {
     }
   }, [user]);
 
+  // Format solution steps for notebook content
+  const formatSolutionSteps = useCallback((steps: SolutionStep[]): string => {
+    return steps.map((step, index) => {
+      let stepContent = `**Step ${index + 1}: ${step.title}**\n`;
+      if (step.action) stepContent += `${step.action}\n`;
+      if (step.calculation) stepContent += `$$${step.calculation}$$\n`;
+      if (step.explanation) stepContent += `*${step.explanation}*\n`;
+      if (step.theoryCitation) stepContent += `📚 ${step.theoryCitation}\n`;
+      return stepContent;
+    }).join('\n');
+  }, []);
+
+  // Save an exercise to the notebook as a worked example
+  const saveExercise = useCallback(async (params: SaveExerciseParams): Promise<boolean> => {
+    if (!user) {
+      toast.error('Please log in to save exercises');
+      return false;
+    }
+
+    try {
+      // Build the content with markdown formatting
+      let content = `**Problem:**\n${params.question}\n\n`;
+      
+      if (params.solutionSteps && params.solutionSteps.length > 0) {
+        content += `**Solution:**\n${formatSolutionSteps(params.solutionSteps)}\n`;
+      }
+      
+      if (params.finalAnswer) {
+        content += `\n**Final Answer:** $${params.finalAnswer}$\n`;
+      }
+      
+      if (params.tip) {
+        content += `\n💡 **Tip:** ${params.tip}\n`;
+      }
+
+      const { data, error } = await supabase
+        .from('student_session_notes')
+        .insert({
+          user_id: user.id,
+          note_type: 'worked_example',
+          content,
+          subtopic_name: params.subtopicName,
+          personal_note: params.personalNote || null,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error saving exercise:', error);
+        toast.error('Failed to save exercise');
+        return false;
+      }
+
+      // Update local state
+      if (data) {
+        setEntries(prev => {
+          const updated = [data as NotebookEntry, ...prev];
+          setStats(calculateStats(updated));
+          return updated;
+        });
+      }
+
+      toast.success('Exercise saved to notebook!');
+      return true;
+    } catch (err) {
+      console.error('Error in saveExercise:', err);
+      toast.error('Failed to save exercise');
+      return false;
+    }
+  }, [user, calculateStats, formatSolutionSteps]);
+
   useEffect(() => {
     fetchEntries();
   }, [fetchEntries]);
@@ -267,5 +340,6 @@ export function useNotebook() {
     unmarkMastered,
     getRelatedEntry,
     updatePersonalNote,
+    saveExercise,
   };
 }
