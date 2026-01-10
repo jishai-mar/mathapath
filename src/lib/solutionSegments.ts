@@ -19,6 +19,16 @@ export function sanitizeMath(math: string): string {
   
   let result = math.trim();
   
+  // Fix corrupted LaTeX commands: \f\frac → \frac, \f\sqrt → \sqrt
+  result = result.replace(/\\f\\frac/g, '\\frac');
+  result = result.replace(/\\f\\sqrt/g, '\\sqrt');
+  
+  // Handle standalone \f followed by subscript/superscript (malformed fraction notation)
+  result = result.replace(/\\f\^(\d+)_\{([^}]+)\}/g, '\\frac{$1}{$2}');
+  result = result.replace(/\\f\^(\d+)_([a-zA-Z0-9])/g, '\\frac{$1}{$2}');
+  result = result.replace(/\\f_\{([^}]+)\}\^(\d+)/g, '\\frac{$2}{$1}');
+  result = result.replace(/\\f_([a-zA-Z0-9])\^(\d+)/g, '\\frac{$2}{$1}');
+  
   // 1. Collapse nested/duplicated aligned environments
   // Handle aligned + alignedat combinations
   result = result.replace(/\\begin\{aligned\}\s*\\begin\{alignedat\}\{[^}]*\}/g, '\\begin{aligned}');
