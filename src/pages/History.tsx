@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHistoryStats } from '@/hooks/useHistoryStats';
+import { useWeeklyProgress } from '@/hooks/useWeeklyProgress';
 import { SummaryStats } from '@/components/history/SummaryStats';
 import { StreakSection } from '@/components/history/StreakSection';
 import { FriendsLeaderboard } from '@/components/history/FriendsLeaderboard';
@@ -11,6 +12,7 @@ import { PracticeHistoryList } from '@/components/history/PracticeHistoryList';
 import { AchievementsSection } from '@/components/history/AchievementsSection';
 import { SessionHistorySection } from '@/components/history/SessionHistorySection';
 import { WelcomeBanner } from '@/components/history/WelcomeBanner';
+import { WeeklyProgressCard } from '@/components/history/WeeklyProgressCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,6 +21,7 @@ export default function History() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { stats, loading: statsLoading } = useHistoryStats();
+  const { weeklyStats, loading: weeklyLoading } = useWeeklyProgress();
   const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -99,6 +102,13 @@ export default function History() {
             bestTopic={stats.bestTopic}
           />
         )}
+
+        {/* Weekly Progress Card */}
+        {weeklyLoading ? (
+          <Skeleton className="h-48" />
+        ) : weeklyStats ? (
+          <WeeklyProgressCard weeklyStats={weeklyStats} />
+        ) : null}
 
         {/* Streak Section */}
         {statsLoading ? (
