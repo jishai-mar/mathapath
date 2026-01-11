@@ -26,7 +26,7 @@ interface MathKey {
 
 const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
   basic: {
-    name: 'Basis',
+    name: 'Basic',
     keys: [
       { display: '+', insert: ' + ' },
       { display: '−', insert: ' - ' },
@@ -44,7 +44,7 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: '±', insert: ' ± ' },
       { display: '∞', insert: '∞' },
       { display: 'π', insert: 'π' },
-      { display: '!', insert: '!', label: 'faculteit' },
+      { display: '!', insert: '!', label: 'factorial' },
       { display: '%', insert: '%' },
     ],
   },
@@ -59,21 +59,21 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: 'c', insert: 'c' },
       { display: 'n', insert: 'n' },
       { display: 'm', insert: 'm' },
-      { display: 'x²', insert: 'x²', label: 'kwadraat' },
-      { display: 'x³', insert: 'x³', label: 'derdemacht' },
-      { display: 'xⁿ', insert: '^', label: 'macht' },
-      { display: '√', insert: '√(', label: 'wortel' },
-      { display: '∛', insert: '∛(', label: 'derdemachtswortel' },
-      { display: 'ⁿ√', insert: 'ⁿ√(', label: 'n-de machtswortel' },
-      { display: '|x|', insert: '|', label: 'absolute waarde' },
-      { display: 'log₁₀', insert: 'log₁₀(', label: 'logaritme basis 10' },
-      { display: 'logₐ', insert: 'log_', label: 'logaritme basis a' },
+      { display: 'x²', insert: 'x²', label: 'square' },
+      { display: 'x³', insert: 'x³', label: 'cube' },
+      { display: 'xⁿ', insert: '^', label: 'power' },
+      { display: '√', insert: '√(', label: 'square root' },
+      { display: '∛', insert: '∛(', label: 'cube root' },
+      { display: 'ⁿ√', insert: 'ⁿ√(', label: 'nth root' },
+      { display: '|x|', insert: '|', label: 'absolute value' },
+      { display: 'log₁₀', insert: 'log₁₀(', label: 'logarithm base 10' },
+      { display: 'logₐ', insert: 'log_', label: 'logarithm base a' },
     ],
   },
   fractions: {
-    name: 'Breuken',
+    name: 'Fractions',
     keys: [
-      { display: '/', insert: '/', label: 'deelstreep' },
+      { display: '/', insert: '/', label: 'division bar' },
       { display: '½', insert: '½' },
       { display: '⅓', insert: '⅓' },
       { display: '⅔', insert: '⅔' },
@@ -89,12 +89,12 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: '⅜', insert: '⅜' },
       { display: '⅝', insert: '⅝' },
       { display: '⅞', insert: '⅞' },
-      { display: 'a/b', insert: '/b', label: 'breuk invoeren', wide: true },
-      { display: '(a+b)/c', insert: '()/c', label: 'breuk met teller', wide: true },
+      { display: 'a/b', insert: '/b', label: 'enter fraction', wide: true },
+      { display: '(a+b)/c', insert: '()/c', label: 'fraction with numerator', wide: true },
     ],
   },
   comparison: {
-    name: 'Vergelijking',
+    name: 'Comparison',
     keys: [
       { display: '<', insert: ' < ' },
       { display: '>', insert: ' > ' },
@@ -102,8 +102,8 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: '≥', insert: ' ≥ ' },
       { display: '≠', insert: ' ≠ ' },
       { display: '≈', insert: ' ≈ ' },
-      { display: '≡', insert: ' ≡ ', label: 'identiek aan' },
-      { display: '∝', insert: ' ∝ ', label: 'evenredig met' },
+      { display: '≡', insert: ' ≡ ', label: 'identical to' },
+      { display: '∝', insert: ' ∝ ', label: 'proportional to' },
       { display: '∈', insert: ' ∈ ' },
       { display: '∉', insert: ' ∉ ' },
       { display: '⊂', insert: ' ⊂ ' },
@@ -113,7 +113,7 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: '∪', insert: ' ∪ ' },
       { display: '∩', insert: ' ∩ ' },
       { display: '∅', insert: '∅' },
-      { display: '∴', insert: ' ∴ ', label: 'daarom' },
+      { display: '∴', insert: ' ∴ ', label: 'therefore' },
     ],
   },
   functions: {
@@ -131,34 +131,34 @@ const keyCategories: Record<KeyCategory, { name: string; keys: MathKey[] }> = {
       { display: 'eˣ', insert: 'e^', label: 'e tot de macht' },
       { display: 'f(x)', insert: 'f(x)' },
       { display: 'g(x)', insert: 'g(x)' },
-      { display: "f'(x)", insert: "f'(x)", label: 'afgeleide' },
-      { display: "f''(x)", insert: "f''(x)", label: 'tweede afgeleide' },
-      { display: 'lim', insert: 'lim ', label: 'limiet' },
-      { display: '∫', insert: '∫', label: 'integraal' },
-      { display: '∫ᵃᵇ', insert: '∫ᵃᵇ', label: 'bepaalde integraal' },
-      { display: 'Σ', insert: 'Σ', label: 'som' },
+      { display: "f'(x)", insert: "f'(x)", label: 'derivative' },
+      { display: "f''(x)", insert: "f''(x)", label: 'second derivative' },
+      { display: 'lim', insert: 'lim ', label: 'limit' },
+      { display: '∫', insert: '∫', label: 'integral' },
+      { display: '∫ᵃᵇ', insert: '∫ᵃᵇ', label: 'definite integral' },
+      { display: 'Σ', insert: 'Σ', label: 'sum' },
       { display: '∏', insert: '∏', label: 'product' },
-      { display: '∂', insert: '∂', label: 'partiële afgeleide' },
-      { display: 'd/dx', insert: 'd/dx ', label: 'differentiatie' },
-      { display: '∇', insert: '∇', label: 'nabla/gradiënt' },
+      { display: '∂', insert: '∂', label: 'partial derivative' },
+      { display: 'd/dx', insert: 'd/dx ', label: 'differentiation' },
+      { display: '∇', insert: '∇', label: 'nabla/gradient' },
     ],
   },
   arrows: {
-    name: 'Pijlen',
+    name: 'Arrows',
     keys: [
-      { display: '→', insert: ' → ', label: 'naar' },
+      { display: '→', insert: ' → ', label: 'to' },
       { display: '←', insert: ' ← ' },
-      { display: '↔', insert: ' ↔ ', label: 'als en slechts als' },
-      { display: '⇒', insert: ' ⇒ ', label: 'impliceert' },
+      { display: '↔', insert: ' ↔ ', label: 'if and only if' },
+      { display: '⇒', insert: ' ⇒ ', label: 'implies' },
       { display: '⇐', insert: ' ⇐ ' },
       { display: '⇔', insert: ' ⇔ ', label: 'equivalent' },
       { display: '↑', insert: '↑' },
       { display: '↓', insert: '↓' },
-      { display: '∧', insert: ' ∧ ', label: 'en (logisch)' },
-      { display: '∨', insert: ' ∨ ', label: 'of (logisch)' },
-      { display: '¬', insert: '¬', label: 'niet (logisch)' },
-      { display: '∀', insert: '∀', label: 'voor alle' },
-      { display: '∃', insert: '∃', label: 'er bestaat' },
+      { display: '∧', insert: ' ∧ ', label: 'and (logical)' },
+      { display: '∨', insert: ' ∨ ', label: 'or (logical)' },
+      { display: '¬', insert: '¬', label: 'not (logical)' },
+      { display: '∀', insert: '∀', label: 'for all' },
+      { display: '∃', insert: '∃', label: 'exists' },
     ],
   },
   greek: {
@@ -205,12 +205,12 @@ const superscripts: MathKey[] = [
   { display: '⁸', insert: '⁸' },
   { display: '⁹', insert: '⁹' },
   { display: '⁺', insert: '⁺', label: 'plus' },
-  { display: '⁻', insert: '⁻', label: 'min (negatief)' },
-  { display: '⁼', insert: '⁼', label: 'gelijk aan' },
-  { display: '⁽', insert: '⁽', label: 'haakje openen' },
-  { display: '⁾', insert: '⁾', label: 'haakje sluiten' },
-  { display: '⁄', insert: '⁄', label: 'breukstreep' },
-  { display: '·', insert: '·', label: 'decimaalpunt' },
+  { display: '⁻', insert: '⁻', label: 'minus (negative)' },
+  { display: '⁼', insert: '⁼', label: 'equals' },
+  { display: '⁽', insert: '⁽', label: 'open parenthesis' },
+  { display: '⁾', insert: '⁾', label: 'close parenthesis' },
+  { display: '⁄', insert: '⁄', label: 'fraction bar' },
+  { display: '·', insert: '·', label: 'decimal point' },
   { display: 'ⁿ', insert: 'ⁿ' },
   { display: 'ˣ', insert: 'ˣ' },
   { display: 'ʸ', insert: 'ʸ' },
@@ -230,10 +230,10 @@ const subscripts: MathKey[] = [
   { display: '₈', insert: '₈' },
   { display: '₉', insert: '₉' },
   { display: '₊', insert: '₊', label: 'plus' },
-  { display: '₋', insert: '₋', label: 'min' },
-  { display: '₌', insert: '₌', label: 'gelijk aan' },
-  { display: '₍', insert: '₍', label: 'haakje openen' },
-  { display: '₎', insert: '₎', label: 'haakje sluiten' },
+  { display: '₋', insert: '₋', label: 'minus' },
+  { display: '₌', insert: '₌', label: 'equals' },
+  { display: '₍', insert: '₍', label: 'open parenthesis' },
+  { display: '₎', insert: '₎', label: 'close parenthesis' },
   { display: 'ₓ', insert: 'ₓ' },
   { display: 'ₙ', insert: 'ₙ' },
   { display: 'ₐ', insert: 'ₐ' },
@@ -413,7 +413,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
               onClick={() => setShowExtras(!showExtras)}
               className="text-xs text-muted-foreground w-full justify-center gap-1"
             >
-              {showExtras ? 'Minder opties' : 'Meer opties (machten, breuken)'}
+              {showExtras ? 'Fewer options' : 'More options (powers, fractions)'}
               {showExtras ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
             </Button>
 
@@ -428,7 +428,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
                 >
                   {/* Superscripts */}
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Machten (superscript)</p>
+                    <p className="text-xs text-muted-foreground mb-1">Powers (superscript)</p>
                     <div className="flex flex-wrap gap-1">
                       {superscripts.map((key, index) => (
                         <Button
@@ -466,7 +466,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
 
                   {/* Common separators */}
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Leestekens</p>
+                    <p className="text-xs text-muted-foreground mb-1">Punctuation</p>
                     <div className="flex flex-wrap gap-1">
                       <Button
                         type="button"
@@ -520,7 +520,7 @@ export function MathKeyboard({ onInsert, className, topicName, currentQuestion }
                 className="text-xs text-muted-foreground gap-1"
               >
                 <X className="w-3 h-3" />
-                Sluiten
+                Close
               </Button>
             </div>
           </motion.div>
