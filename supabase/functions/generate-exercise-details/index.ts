@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { parseAndValidate, generateExerciseDetailsSchema } from '../_shared/validation.ts';
+import { validateRequestBody, generateExerciseDetailsSchema } from '../_shared/validation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,20 +13,30 @@ serve(async (req) => {
   }
 
   try {
-    // Validate input
-    const validation = await parseAndValidate(req, generateExerciseDetailsSchema, corsHeaders);
+    // Parse body ONCE
+    let rawBody: Record<string, unknown>;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate required fields using the schema
+    const validation = validateRequestBody(rawBody, generateExerciseDetailsSchema, corsHeaders);
     if (!validation.success) {
       return validation.response;
     }
     const { exerciseId, includeHints, includeExplanation } = validation.data;
     
-    // Get additional optional fields from request
-    const rawBody = await req.clone().json().catch(() => ({}));
-    const subtopicId = rawBody.subtopicId;
-    const subtopicName = rawBody.subtopicName;
-    const topicName = rawBody.topicName;
-    const question = rawBody.question || '';
-    const difficulty = rawBody.difficulty;
+    // Get additional optional fields from the same parsed body
+    const subtopicId = rawBody.subtopicId as string | undefined;
+    const subtopicName = rawBody.subtopicName as string | undefined;
+    const topicName = rawBody.topicName as string | undefined;
+    const question = (rawBody.question as string) || '';
+    const difficulty = rawBody.difficulty as string | undefined;
 
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
