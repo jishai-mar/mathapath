@@ -125,10 +125,10 @@ Return a JSON object with these fields:
 - For multiple solutions: "$x = 2$ of $x = -2$" or "$x = 2, -2$"
 
 === LANGUAGE ===
-Use Dutch for explanations:
-- "Stap" for step
-- "We beginnen met..." for starting explanations
-- "Dus..." for conclusions
+Use English for explanations:
+- "Step" for step
+- "We start with..." for starting explanations
+- "Therefore..." for conclusions
 
 Return ONLY valid JSON. No markdown code blocks.`;
 
@@ -232,8 +232,8 @@ Return valid JSON only.`;
     // Ensure theory exists
     if (!result.theory) {
       result.theory = {
-        title: actualSubtopicName || "Wiskundige Methode",
-        explanation: "Pas de juiste wiskundige operaties systematisch toe.",
+        title: actualSubtopicName || "Mathematical Method",
+        explanation: "Apply the correct mathematical operations systematically.",
         keyFormulas: [],
         miniExample: null
       };
@@ -270,46 +270,46 @@ function createFallbackSolution(question: string, correctAnswer: string, subtopi
   
   if (isDerivative) {
     theory = {
-      title: "Afgeleiden (Derivatives)",
-      explanation: "De afgeleide van een functie geeft de helling van de raaklijn in elk punt. Gebruik de machtsregel: als f(x) = xⁿ, dan f'(x) = n·xⁿ⁻¹.",
+      title: "Derivatives",
+      explanation: "The derivative of a function gives the slope of the tangent line at each point. Use the power rule: if f(x) = xⁿ, then f'(x) = n·xⁿ⁻¹.",
       keyFormulas: ["$\\frac{d}{dx}(x^n) = n \\cdot x^{n-1}$", "$\\frac{d}{dx}(c) = 0$"],
       miniExample: { problem: "$f(x) = x^3$", solution: "$f'(x) = 3x^2$" }
     };
     steps = [
-      { stepNumber: 1, title: "Identificeer de functie", action: "Bekijk de gegeven functie", calculation: question, explanation: "We identificeren eerst welke termen we moeten afleiden." },
-      { stepNumber: 2, title: "Pas de machtsregel toe", action: "Gebruik de regel: d/dx(xⁿ) = n·xⁿ⁻¹", calculation: "Voor elke term: vermenigvuldig met de exponent en verlaag de exponent met 1", explanation: "De machtsregel is de basis voor het afleiden van polynomen." },
-      { stepNumber: 3, title: "Eindantwoord", action: "Schrijf het resultaat op", calculation: correctAnswer ? `$f'(x) = ${correctAnswer}$` : "Zie de volledige uitwerking", explanation: "Dit is de afgeleide van de oorspronkelijke functie." }
+      { stepNumber: 1, title: "Identify the function", action: "Examine the given function", calculation: question, explanation: "We first identify which terms we need to differentiate." },
+      { stepNumber: 2, title: "Apply the power rule", action: "Use the rule: d/dx(xⁿ) = n·xⁿ⁻¹", calculation: "For each term: multiply by the exponent and decrease the exponent by 1", explanation: "The power rule is the foundation for differentiating polynomials." },
+      { stepNumber: 3, title: "Final answer", action: "Write down the result", calculation: correctAnswer ? `$f'(x) = ${correctAnswer}$` : "See the full solution", explanation: "This is the derivative of the original function." }
     ];
   } else if (isQuadratic) {
     theory = {
-      title: "Kwadratische Vergelijkingen",
-      explanation: "Een kwadratische vergelijking heeft de vorm ax² + bx + c = 0. Los op door: factoriseren, de abc-formule, of door vereenvoudiging.",
+      title: "Quadratic Equations",
+      explanation: "A quadratic equation has the form ax² + bx + c = 0. Solve by: factoring, the quadratic formula, or simplification.",
       keyFormulas: ["$x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}$"],
       miniExample: { problem: "$x^2 - 4 = 0$", solution: "$x = \\pm 2$" }
     };
     steps = [
-      { stepNumber: 1, title: "Herken de vergelijking", action: "Identificeer a, b, en c", calculation: question, explanation: "We identificeren de coëfficiënten in de standaardvorm." },
-      { stepNumber: 2, title: "Los op", action: "Gebruik de geschikte methode", calculation: "Pas factorisatie of de abc-formule toe", explanation: "Kies de methode die het beste past bij deze vergelijking." },
-      { stepNumber: 3, title: "Eindantwoord", action: "Noteer alle oplossingen", calculation: correctAnswer ? `$x = ${correctAnswer}$` : "Zie de volledige uitwerking", explanation: "Een kwadratische vergelijking kan 0, 1 of 2 oplossingen hebben." }
+      { stepNumber: 1, title: "Recognize the equation", action: "Identify a, b, and c", calculation: question, explanation: "We identify the coefficients in standard form." },
+      { stepNumber: 2, title: "Solve", action: "Use the appropriate method", calculation: "Apply factorization or the quadratic formula", explanation: "Choose the method that best fits this equation." },
+      { stepNumber: 3, title: "Final answer", action: "Write down all solutions", calculation: correctAnswer ? `$x = ${correctAnswer}$` : "See the full solution", explanation: "A quadratic equation can have 0, 1, or 2 solutions." }
     ];
   } else {
     theory = {
-      title: subtopicName || "Wiskundige Methode",
-      explanation: "Los de vergelijking stap voor stap op door inverse operaties toe te passen.",
-      keyFormulas: ["Behoud balans: wat je aan één kant doet, doe je ook aan de andere kant"],
-      miniExample: { problem: "$2x + 3 = 7$", solution: "$2x = 4$, dus $x = 2$" }
+      title: subtopicName || "Mathematical Method",
+      explanation: "Solve the equation step by step by applying inverse operations.",
+      keyFormulas: ["Keep balance: what you do on one side, do on the other side too"],
+      miniExample: { problem: "$2x + 3 = 7$", solution: "$2x = 4$, so $x = 2$" }
     };
     steps = [
-      { stepNumber: 1, title: "Analyseer het probleem", action: "Bekijk wat er gevraagd wordt", calculation: question, explanation: "We identificeren eerst het type probleem en de aanpak." },
-      { stepNumber: 2, title: "Werk stap voor stap", action: "Pas de juiste operaties toe", calculation: "Gebruik inverse operaties om te vereenvoudigen", explanation: "Door systematisch te vereenvoudigen komen we tot het antwoord." },
-      { stepNumber: 3, title: "Eindantwoord", action: "Noteer de oplossing", calculation: correctAnswer ? `$${correctAnswer}$` : "Zie de volledige uitwerking", explanation: "Controleer je antwoord door terug te substitueren." }
+      { stepNumber: 1, title: "Analyze the problem", action: "Examine what is being asked", calculation: question, explanation: "We first identify the type of problem and the approach." },
+      { stepNumber: 2, title: "Work step by step", action: "Apply the correct operations", calculation: "Use inverse operations to simplify", explanation: "By systematically simplifying, we arrive at the answer." },
+      { stepNumber: 3, title: "Final answer", action: "Write down the solution", calculation: correctAnswer ? `$${correctAnswer}$` : "See the full solution", explanation: "Check your answer by substituting back." }
     ];
   }
 
   return {
     theory,
     solutionSteps: steps,
-    finalAnswer: correctAnswer || "Zie de uitwerking hierboven",
-    tip: "Controleer altijd je antwoord door het terug te substitueren in de oorspronkelijke vergelijking."
+    finalAnswer: correctAnswer || "See the solution above",
+    tip: "Always check your answer by substituting it back into the original equation."
   };
 }

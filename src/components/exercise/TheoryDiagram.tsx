@@ -29,7 +29,7 @@ function QuadraticGraphDiagram() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Target className="w-4 h-4 text-accent-foreground" />
-        <p className="text-sm font-semibold text-accent-foreground">Visueel: Parabool en nulpunten</p>
+        <p className="text-sm font-semibold text-accent-foreground">Visual: Parabola and Roots</p>
       </div>
       <div className="flex items-center justify-center">
         <svg viewBox="0 0 200 120" className="w-full max-w-xs h-32">
@@ -99,7 +99,7 @@ function QuadraticGraphDiagram() {
         </svg>
       </div>
       <p className="text-xs text-muted-foreground text-center">
-        De nulpunten (x₁ en x₂) zijn de oplossingen van de vergelijking
+        The roots (x₁ and x₂) are the solutions of the equation
       </p>
     </div>
   );
@@ -110,7 +110,7 @@ function ChainRuleDiagram() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <GitBranch className="w-4 h-4 text-accent-foreground" />
-        <p className="text-sm font-semibold text-accent-foreground">Visueel: Kettingregel</p>
+        <p className="text-sm font-semibold text-accent-foreground">Visual: Chain Rule</p>
       </div>
       <div className="flex items-center justify-center gap-2">
         <motion.div 
@@ -122,7 +122,7 @@ function ChainRuleDiagram() {
           <div className="w-16 h-16 rounded-xl bg-primary/20 border-2 border-primary flex items-center justify-center">
             <span className="text-sm font-bold text-primary">f</span>
           </div>
-          <span className="text-xs text-muted-foreground mt-1">Buitenste</span>
+          <span className="text-xs text-muted-foreground mt-1">Outer</span>
         </motion.div>
         
         <motion.div
@@ -142,7 +142,7 @@ function ChainRuleDiagram() {
           <div className="w-16 h-16 rounded-xl bg-secondary/50 border-2 border-secondary flex items-center justify-center">
             <span className="text-sm font-bold text-secondary-foreground">g</span>
           </div>
-          <span className="text-xs text-muted-foreground mt-1">Binnenste</span>
+          <span className="text-xs text-muted-foreground mt-1">Inner</span>
         </motion.div>
       </div>
       
@@ -156,7 +156,7 @@ function ChainRuleDiagram() {
       </motion.div>
       
       <p className="text-xs text-muted-foreground text-center">
-        Differentieer de buitenste functie en vermenigvuldig met de afgeleide van de binnenste
+        Differentiate the outer function and multiply by the derivative of the inner
       </p>
     </div>
   );
@@ -167,7 +167,7 @@ function DerivativeSlopeDiagram() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <TrendingUp className="w-4 h-4 text-accent-foreground" />
-        <p className="text-sm font-semibold text-accent-foreground">Visueel: Afgeleide als helling</p>
+        <p className="text-sm font-semibold text-accent-foreground">Visual: Derivative as Slope</p>
       </div>
       <div className="flex items-center justify-center">
         <svg viewBox="0 0 200 120" className="w-full max-w-xs h-32">
@@ -214,7 +214,7 @@ function DerivativeSlopeDiagram() {
             animate={{ opacity: 1 }}
             transition={{ delay: 1.3 }}
           >
-            raaklijn
+            tangent
           </motion.text>
           
           <motion.text 
@@ -229,7 +229,7 @@ function DerivativeSlopeDiagram() {
         </svg>
       </div>
       <p className="text-xs text-muted-foreground text-center">
-        De afgeleide f'(a) geeft de helling van de raaklijn in het punt (a, f(a))
+        The derivative f'(a) gives the slope of the tangent line at point (a, f(a))
       </p>
     </div>
   );
@@ -240,7 +240,7 @@ function NumberLineDiagram() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Minus className="w-4 h-4 text-accent-foreground" />
-        <p className="text-sm font-semibold text-accent-foreground">Visueel: Getallenlijn</p>
+        <p className="text-sm font-semibold text-accent-foreground">Visual: Number Line</p>
       </div>
       <div className="flex items-center justify-center">
         <svg viewBox="0 0 200 60" className="w-full max-w-xs h-16">
@@ -291,7 +291,7 @@ function NumberLineDiagram() {
         </svg>
       </div>
       <p className="text-xs text-muted-foreground text-center">
-        Markeer de oplossingen op de getallenlijn
+        Mark the solutions on the number line
       </p>
     </div>
   );
@@ -302,7 +302,7 @@ function FormulaBreakdownDiagram() {
     <div className="space-y-3">
       <div className="flex items-center gap-2">
         <Plus className="w-4 h-4 text-accent-foreground" />
-        <p className="text-sm font-semibold text-accent-foreground">Visueel: Vergelijking in balans</p>
+        <p className="text-sm font-semibold text-accent-foreground">Visual: Equation in Balance</p>
       </div>
       <div className="flex items-center justify-center gap-4">
         <motion.div 
@@ -312,7 +312,7 @@ function FormulaBreakdownDiagram() {
           transition={{ delay: 0.2 }}
         >
           <div className="w-20 h-12 rounded-lg bg-primary/20 border-2 border-primary flex items-center justify-center">
-            <span className="text-xs font-bold text-primary">Linkerkant</span>
+            <span className="text-xs font-bold text-primary">Left side</span>
           </div>
         </motion.div>
         
@@ -332,7 +332,7 @@ function FormulaBreakdownDiagram() {
           transition={{ delay: 0.6 }}
         >
           <div className="w-20 h-12 rounded-lg bg-secondary/50 border-2 border-secondary flex items-center justify-center">
-            <span className="text-xs font-bold text-secondary-foreground">Rechterkant</span>
+            <span className="text-xs font-bold text-secondary-foreground">Right side</span>
           </div>
         </motion.div>
       </div>
@@ -344,12 +344,12 @@ function FormulaBreakdownDiagram() {
         transition={{ delay: 0.8 }}
       >
         <ArrowRight className="w-3 h-3" />
-        <span>Wat je links doet, doe je ook rechts</span>
+        <span>What you do on the left, do on the right</span>
         <ArrowRight className="w-3 h-3 rotate-180" />
       </motion.div>
       
       <p className="text-xs text-muted-foreground text-center">
-        Houd de vergelijking in balans door dezelfde bewerking aan beide kanten uit te voeren
+        Keep the equation balanced by performing the same operation on both sides
       </p>
     </div>
   );

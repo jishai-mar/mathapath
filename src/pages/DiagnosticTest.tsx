@@ -928,7 +928,7 @@ export default function DiagnosticTest() {
                       <div className="flex items-start gap-3">
                         <Eye className="w-5 h-5 text-primary mt-0.5 shrink-0" />
                         <div>
-                          <p className="text-xs font-medium text-primary mb-1">Correct antwoord</p>
+                          <p className="text-xs font-medium text-primary mb-1">Correct answer</p>
                           <div className="text-base font-medium">
                             <MathRenderer segments={createSegmentsFromSolution(currentQuestion.correct_answer)} />
                           </div>
@@ -993,7 +993,7 @@ export default function DiagnosticTest() {
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">
                   <GraduationCap className="w-5 h-5 text-primary" />
-                  Theorie opfrissen
+                  Refresh Theory
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
