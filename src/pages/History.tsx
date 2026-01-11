@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -9,13 +10,29 @@ import { FriendsLeaderboard } from '@/components/history/FriendsLeaderboard';
 import { PracticeHistoryList } from '@/components/history/PracticeHistoryList';
 import { AchievementsSection } from '@/components/history/AchievementsSection';
 import { SessionHistorySection } from '@/components/history/SessionHistorySection';
+import { WelcomeBanner } from '@/components/history/WelcomeBanner';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function History() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { stats, loading: statsLoading } = useHistoryStats();
+  const [userName, setUserName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      supabase
+        .from('profiles')
+        .select('first_name, display_name')
+        .eq('id', user.id)
+        .single()
+        .then(({ data }) => {
+          setUserName(data?.first_name || data?.display_name || null);
+        });
+    }
+  }, [user]);
 
   if (authLoading) {
     return (
@@ -54,7 +71,19 @@ export default function History() {
           </div>
         </div>
 
-        {/* Summary Stats */}
+        {/* Welcome Banner */}
+        {statsLoading ? (
+          <Skeleton className="h-32" />
+        ) : (
+          <WelcomeBanner
+            userName={userName}
+            currentStreak={stats.currentStreak}
+            totalQuestions={stats.totalQuestions}
+            averageAccuracy={stats.averageAccuracy}
+            bestTopic={stats.bestTopic}
+          />
+        )}
+
         {statsLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {[1, 2, 3, 4, 5].map(i => (
